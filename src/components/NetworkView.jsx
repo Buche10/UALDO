@@ -33,7 +33,7 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
   };
 
   const handleLogoutClick = async () => {
-    if (confirm('¿Deseas cerrar sesión en el Motor UaldoBusiness?')) {
+    if (confirm('¿Deseas cerrar sesión de Ualdo?')) {
       await logout();
       window.location.reload();
     }
@@ -44,7 +44,7 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
       <div>
         <h2 className="section-title" style={{ margin: 0 }}>
           <Network size={20} color="var(--secondary)" />
-          <span>Conexión al Motor UaldoBusiness & Red</span>
+          <span>Conexión a Ualdo Negocios</span>
         </h2>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Configuración de la API del motor Laravel 12 y estado del nodo de IA.
@@ -117,7 +117,7 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
             value={provider} 
             onChange={e => setProvider(e.target.value)}
           >
-            <option value="motor">UaldoBusiness Motor (Laravel 12 API + Prism)</option>
+            <option value="motor">Ualdo Negocios (servidor)</option>
             <option value="ollama">Ollama (Servidor Local / LAN)</option>
             <option value="lmstudio">LM Studio (OpenAI Compatible Endpoint)</option>
             <option value="local_web">Simulación Local Off-line</option>

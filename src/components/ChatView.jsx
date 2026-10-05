@@ -169,8 +169,8 @@ export default function ChatView({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Sparkles size={16} color="var(--primary)" />
           <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Proveedor IA:</span>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--secondary)' }}>
-            {!settings.aiProvider || settings.aiProvider === 'motor' ? 'UaldoBusiness Motor (IA Real + Prism)' : settings.aiProvider === 'ollama' ? `Ollama (${settings.activeModel})` : 'Simulación Local'}
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)' }}>
+            {!settings.aiProvider || settings.aiProvider === 'motor' ? 'Asistente IA Ualdo' : settings.aiProvider === 'ollama' ? `Servidor Local (${settings.activeModel})` : 'Modo Off-line'}
           </span>
         </div>
 

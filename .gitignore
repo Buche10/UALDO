@@ -1,4 +1,17 @@
 node_modules
 dist
 .env
+.env.local
+.env.*.local
 .DS_Store
+
+# Android build artifacts
+android/app/build/
+android/.gradle/
+android/build/
+*.jks
+android/keystore.properties
+
+# Task inbox & local tooling
+tasks/
+.claude/

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">UALDO</string>
+    <string name="title_activity_main">UALDO</string>
+    <string name="package_name">com.ualdo.ecosystem</string>
+    <string name="custom_url_scheme">com.ualdo.ecosystem</string>
+</resources>

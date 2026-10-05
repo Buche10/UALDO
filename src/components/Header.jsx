@@ -1,25 +1,27 @@
 import React from 'react';
-import { Cpu, Wifi, Smartphone, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 export default function Header({ nodeStatus, onRefreshStatus, activeTab }) {
   const getTabTitle = () => {
     switch (activeTab) {
-      case 'chat': return 'IA Conversacional';
-      case 'ecosystem': return 'Apps & Servicios Locales';
-      case 'network': return 'Nodos & Red Local';
-      case 'settings': return 'Configuración';
-      default: return 'Ecosistema';
+      case 'trabajo': return 'Ualdo Teams';
+      case 'negocios': return 'Ualdo Negocios';
+      case 'asistente': return 'Asistente';
+      case 'settings': return 'Ajustes';
+      default: return 'Ualdo';
     }
   };
 
   return (
     <header className="app-header">
       <div className="brand-section">
-        <div className="brand-logo">
-          <Cpu size={22} color="#ffffff" />
-        </div>
+        <img 
+          src="/brand/ualdo-claro.png" 
+          alt="UALDO" 
+          className="brand-logo-img" 
+          style={{ height: '32px', width: 'auto' }} 
+        />
         <div>
-          <h1 className="brand-title">UALDO</h1>
           <div className="brand-sub">{getTabTitle()}</div>
         </div>
       </div>
@@ -27,7 +29,7 @@ export default function Header({ nodeStatus, onRefreshStatus, activeTab }) {
       <div 
         className="node-status-badge glass-card-interactive" 
         onClick={onRefreshStatus}
-        title="Toca para re-escanear nodo local"
+        title="Toca para re-escanear estado de red"
       >
         <span className={`status-dot ${nodeStatus.online ? 'online' : 'connecting'}`}></span>
         <span>

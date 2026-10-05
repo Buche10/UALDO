@@ -3,17 +3,18 @@ import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import ChatView from './components/ChatView';
 import EcosystemView from './components/EcosystemView';
-import NetworkView from './components/NetworkView';
 import SettingsView from './components/SettingsView';
 import LoginView from './components/LoginView';
+import TrabajoView from './components/TrabajoView';
 
 import { getSettings, saveSettings, getConversations, saveConversations } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
 import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
+import { setTeamsToken } from './services/teamsClient';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('trabajo');
   const [settings, setSettings] = useState(getSettings);
   const [conversations, setConversations] = useState(getConversations);
   const [registeredApps, setRegisteredApps] = useState(getRegisteredApps);
@@ -73,9 +74,12 @@ export default function App() {
     checkConnection();
   }, [settings.nodeIp, settings.nodePort, settings.aiProvider, authenticated]);
 
-  const handleLoginSuccess = (userData) => {
+  const handleLoginSuccess = (userData, token) => {
     setUser(userData);
     setAuthenticated(true);
+    if (token) {
+      setTeamsToken(token);
+    }
     checkConnection();
   };
 
@@ -96,7 +100,7 @@ export default function App() {
         {
           id: `msg_${Date.now()}`,
           role: 'assistant',
-          content: 'Chat reiniciado. ¿En qué te puedo asistir ahora con el ecosistema y el motor UaldoBusiness?',
+          content: 'Chat reiniciado. ¿En qué te puedo asistir hoy con tus tareas o tu negocio?',
           timestamp: Date.now()
         }
       ];
@@ -113,14 +117,10 @@ export default function App() {
 
   if (authChecking) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)', color: 'var(--text-muted)', fontSize: '13px' }}>
-        Verificando sesión con el Motor UaldoBusiness...
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', color: 'var(--text-muted)', fontSize: '13px' }}>
+        Iniciando UALDO Mobile...
       </div>
     );
-  }
-
-  if (!authenticated) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
   const currentConversation = conversations.find(c => c.id === 'default') || conversations[0];
@@ -134,35 +134,46 @@ export default function App() {
       />
 
       <main className="view-container">
-        {activeTab === 'chat' && (
-          <ChatView
-            conversation={currentConversation}
-            onUpdateMessages={handleUpdateMessages}
-            onClearChat={handleClearChat}
-            settings={settings}
-            nodeStatus={nodeStatus}
-          />
+        {/* Pestaña 1: Trabajo (Ualdo Teams) */}
+        {activeTab === 'trabajo' && (
+          authenticated ? (
+            <TrabajoView onLogout={() => { setAuthenticated(false); setUser(null); }} />
+          ) : (
+            <LoginView onLoginSuccess={handleLoginSuccess} />
+          )
         )}
 
-        {activeTab === 'ecosystem' && (
-          <EcosystemView
-            registeredApps={registeredApps}
-            onUpdateApps={setRegisteredApps}
-            onSendChatPrompt={(prompt) => {
-              setActiveTab('chat');
-            }}
-          />
+        {/* Pestaña 2: Negocios (Ualdo Negocios / DobleFilo) */}
+        {activeTab === 'negocios' && (
+          authenticated ? (
+            <EcosystemView
+              registeredApps={registeredApps}
+              onUpdateApps={setRegisteredApps}
+              onSendChatPrompt={(prompt) => {
+                setActiveTab('asistente');
+              }}
+            />
+          ) : (
+            <LoginView onLoginSuccess={handleLoginSuccess} />
+          )
         )}
 
-        {activeTab === 'network' && (
-          <NetworkView
-            settings={settings}
-            onSaveSettings={handleSaveSettings}
-            nodeStatus={nodeStatus}
-            onRefreshStatus={checkConnection}
-          />
+        {/* Pestaña 3: Asistente (Chat Conversacional) */}
+        {activeTab === 'asistente' && (
+          authenticated ? (
+            <ChatView
+              conversation={currentConversation}
+              onUpdateMessages={handleUpdateMessages}
+              onClearChat={handleClearChat}
+              settings={settings}
+              nodeStatus={nodeStatus}
+            />
+          ) : (
+            <LoginView onLoginSuccess={handleLoginSuccess} />
+          )
         )}
 
+        {/* Pestaña 4: Ajustes (Perfil, Tema, Acerca de & Avanzado) */}
         {activeTab === 'settings' && (
           <SettingsView
             settings={settings}

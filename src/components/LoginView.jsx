@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, LogIn, Building, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { Lock, Mail, LogIn, Building, AlertCircle, Loader2 } from 'lucide-react';
 import { login } from '../services/auth';
 
 export default function LoginView({ onLoginSuccess }) {
@@ -23,7 +23,7 @@ export default function LoginView({ onLoginSuccess }) {
 
     if (res.success) {
       if (onLoginSuccess) {
-        onLoginSuccess(res.user);
+        onLoginSuccess(res.user, res.token);
       }
     } else {
       setError(res.error || 'Credenciales inválidas');
@@ -38,29 +38,23 @@ export default function LoginView({ onLoginSuccess }) {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '20px',
-      background: 'radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 40%), radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.15), transparent 40%)'
+      background: 'radial-gradient(circle at top right, rgba(0, 115, 127, 0.2), transparent 45%), radial-gradient(circle at bottom left, rgba(98, 201, 200, 0.15), transparent 45%)'
     }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '32px 24px', borderRadius: '24px' }}>
-        {/* Header Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '20px',
-            background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px auto',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)'
-          }}>
-            <Sparkles size={32} color="#ffffff" />
-          </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 6px 0', background: 'linear-gradient(90deg, #fff, var(--text-muted))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            UALDO Motor
-          </h1>
+      <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '36px 24px 28px 24px', borderRadius: '24px', textAlign: 'center' }}>
+        {/* Header Branding: Mascota + Logo Claro */}
+        <div style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img 
+            src="/brand/mascota.png" 
+            alt="Mascota Ualdo" 
+            style={{ width: '96px', height: 'auto', marginBottom: '12px', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }} 
+          />
+          <img 
+            src="/brand/ualdo-claro.png" 
+            alt="Ualdo" 
+            style={{ height: '36px', width: 'auto', marginBottom: '8px' }} 
+          />
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-            Conéctate con tu cuenta de UaldoBusiness
+            Ingresa a tu cuenta Ualdo
           </p>
         </div>
 
@@ -75,17 +69,18 @@ export default function LoginView({ onLoginSuccess }) {
             border: '1px solid rgba(244, 63, 94, 0.3)',
             color: 'var(--error)',
             fontSize: '13px',
-            marginBottom: '20px'
+            marginBottom: '20px',
+            textAlign: 'left'
           }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Mail size={14} color="var(--secondary)" />
+              <Mail size={14} color="var(--accent)" />
               <span>Correo Electrónico</span>
             </label>
             <input
@@ -102,7 +97,7 @@ export default function LoginView({ onLoginSuccess }) {
 
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Lock size={14} color="var(--secondary)" />
+              <Lock size={14} color="var(--accent)" />
               <span>Contraseña</span>
             </label>
             <input
@@ -125,13 +120,12 @@ export default function LoginView({ onLoginSuccess }) {
               marginTop: '8px',
               padding: '14px',
               fontSize: '14px',
-              fontWeight: 700,
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              borderRadius: '14px',
-              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)'
+              borderRadius: '14px'
             }}
           >
             {loading ? (
@@ -142,16 +136,16 @@ export default function LoginView({ onLoginSuccess }) {
             ) : (
               <>
                 <LogIn size={18} />
-                <span>Iniciar Sesión en el Motor</span>
+                <span>Iniciar Sesión</span>
               </>
             )}
           </button>
         </form>
 
-        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
+        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-subtle)' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Building size={12} />
-            <span>Acceso seguro multi-tenant con Sanctum Bearer</span>
+            <span>Acceso seguro multi-tenant con Sanctum</span>
           </div>
         </div>
       </div>

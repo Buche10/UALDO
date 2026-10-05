@@ -1,22 +1,29 @@
-// Universal AI Engine Connector for UALDO Mobile
 import { executeLocalTool } from './appEcosystem';
 import { request } from './apiClient';
+import { getSettings } from './storage';
+import { checkRunfoodConnection } from './doblefiloEngine';
 
 export const checkNodeStatus = async (ip, port, provider = 'motor') => {
   const startTime = Date.now();
   try {
     if (provider === 'motor') {
-      const res = await request('/me', { timeout: 4000 });
-      const latency = Date.now() - startTime;
-      if (res.ok) {
+      // The connection that matters for the pilot is the local RunFood POS. Report it HONESTLY:
+      // online only when /check-health actually responds, offline otherwise (no fake success).
+      const rf = await checkRunfoodConnection();
+      if (rf.online) {
         return {
           online: true,
-          latency,
-          models: ['UaldoAdminService (DeepSeek/Prism)'],
-          businessName: res.data?.user?.business_name
+          latency: rf.latency,
+          models: [`RunFood POS (${rf.url})`],
+          businessName: 'DOBLE FILO - PRINCIPAL'
         };
       }
-      return { online: false, latency: 0, models: [], error: res.error || 'Motor no disponible' };
+      return {
+        online: false,
+        latency: 0,
+        models: [],
+        error: rf.error || 'RunFood no responde en ' + rf.url
+      };
     }
 
     let url = '';
@@ -48,7 +55,7 @@ export const checkNodeStatus = async (ip, port, provider = 'motor') => {
     }
     return { online: false, latency: 0, models: [] };
   } catch (e) {
-    return { online: false, latency: 0, error: e.message, models: [] };
+    return { online: false, latency: 0, models: [], error: e.message };
   }
 };
 
@@ -61,6 +68,84 @@ export const sendChatMessage = async ({
   const { nodeIp, nodePort, lmStudioPort, aiProvider, activeModel, systemPrompt } = settings;
   const lastUserMessageObj = messages[messages.length - 1];
   const lastUserText = lastUserMessageObj?.content || '';
+  const lastTextLower = lastUserText.toLowerCase();
+
+  // 0. IMMEDIATE DISPATCH FOR WAITER ORDER ACTIONS (Agrega, Pone, Sirve, Pedido, Pido, Pide, Trae, Dame)
+  const isOrderAction = 
+    lastTextLower.includes('tomar') || 
+    lastTextLower.includes('crear') || 
+    lastTextLower.includes('registrar') || 
+    lastTextLower.includes('pedió') || 
+    lastTextLower.includes('pidió') || 
+    lastTextLower.includes('pidio') || 
+    lastTextLower.includes('pido') || 
+    lastTextLower.includes('pide') || 
+    lastTextLower.includes('pideme') || 
+    lastTextLower.includes('pedir') || 
+    lastTextLower.includes('pedido') ||
+    lastTextLower.includes('agrega') ||
+    lastTextLower.includes('añade') ||
+    lastTextLower.includes('anadir') ||
+    lastTextLower.includes('pone') ||
+    lastTextLower.includes('pon') ||
+    lastTextLower.includes('sirve') ||
+    lastTextLower.includes('servir') ||
+    lastTextLower.includes('trae') ||
+    lastTextLower.includes('traeme') ||
+    lastTextLower.includes('dame') ||
+    lastTextLower.includes('adiciona') ||
+    lastTextLower.includes('orden');
+
+  if (isOrderAction) {
+    const mesaMatch = lastTextLower.match(/mesa\s*(\d+)/i) || lastTextLower.match(/(\d+)/);
+    const numMesa = mesaMatch ? parseInt(mesaMatch[1]) : 19;
+
+    // Extract the product phrase safely (no destructive letter-stripping): take the text
+    // after the action verb and drop the "... a/en la mesa N" tail. The actual product is
+    // resolved against RunFood's REAL catalog inside createDoblefiloOrder.
+    let itemPhrase = lastUserText
+      .replace(/^\s*(por favor\s+)?(agr[eé]gale|agr[eé]game|agrega|a[nñ][aá]de|adiciona|pon(?:le|me|er)?|sirve(?:le|me)?|servir|tr[aá]e(?:me)?|dame|tomar|crear|registrar|pedir|p[ií]d[eo]|orden[ae]?)\b/i, '')
+      .replace(/\b(a|en|para|de)\s+(la\s+)?mesa\s*\d+.*$/i, '')
+      .replace(/\bmesa\s*\d+.*$/i, '')
+      .replace(/^\s*(un|una|unos|unas|el|la|los|las)\s+/i, '')
+      .trim();
+
+    // Optional leading quantity ("2 picaditas").
+    let cantidad = 1;
+    const qtyMatch = itemPhrase.match(/^(\d+)\s+/);
+    if (qtyMatch) {
+      cantidad = Math.max(1, parseInt(qtyMatch[1]));
+      itemPhrase = itemPhrase.replace(/^\d+\s+/, '').trim();
+    }
+    if (itemPhrase.length < 2) itemPhrase = 'gaseosa';
+
+    const toolExecuted = await executeLocalTool('doblefilo_create_order', {
+      numeroMesa: numMesa,
+      items: [{ nombre: itemPhrase, cantidad }],
+      observacion: 'Pedido agregado a través de UALDO'
+    });
+    if (onToolCalled) onToolCalled('doblefilo_create_order', {}, toolExecuted);
+
+    if (toolExecuted?.success && toolExecuted.orderDetails) {
+      const d = toolExecuted.orderDetails;
+      const content = `🍽️ **Comanda registrada en RunFood POS (DOBLE FILO)**\n\n` +
+        `- **Mesa**: ${d.mesa}\n` +
+        `- **Producto**: ${d.cantidad}x ${d.producto}\n` +
+        `- **Precio**: $${Number(d.precio).toFixed(2)}  (Total: ${d.total})\n` +
+        `- **Comanda #**: ${d.orderId ?? 's/n'}\n` +
+        `- **Estado**: ✅ Guardado en RunFood (${d.source || 'SQL Server'})`;
+      return { role: 'assistant', content, toolExecuted };
+    }
+
+    // Honest failure — never claim it was added when it wasn't.
+    const errMsg = toolExecuted?.error || 'No se pudo registrar la comanda en RunFood.';
+    return {
+      role: 'assistant',
+      content: `⚠️ **No se agregó el pedido a la Mesa ${numMesa}.**\n\n${errMsg}\n\n` +
+        `Verifica que RunFood esté encendido y que el producto exista en la carta.`,
+      toolExecuted
+    };
+  }
 
   // 1. Primary: UaldoBusiness Motor API (IA Real + DeepSeek + ApprovalGate)
   if (!aiProvider || aiProvider === 'motor') {
@@ -129,38 +214,36 @@ export const sendChatMessage = async ({
   }
 
   // 3. Intelligent Offline Fallback Dispatcher
-  const lastTextLower = lastUserText.toLowerCase();
-
   let simResponse = '';
   let toolExecuted = null;
 
   // WAITER ORDERS COMMANDS
-  if (lastTextLower.includes('pedido') || lastTextLower.includes('mesero') || lastTextLower.includes('comanda') || lastTextLower.includes('mesa')) {
-    if (lastTextLower.includes('tomar') || lastTextLower.includes('crear') || lastTextLower.includes('registrar') || lastTextLower.includes('pedió') || lastTextLower.includes('pidió')) {
-      const mesaMatch = lastTextLower.match(/mesa\s*(\d+)/i);
-      const numMesa = mesaMatch ? parseInt(mesaMatch[1]) : 3;
-
-      let orderedItems = [
-        { nombre: 'Hamburguesa DobleFilo Especial', cantidad: 2, precio: 6.50 },
-        { nombre: 'Cerveza Artesanal 330ml', cantidad: 1, precio: 3.50 }
-      ];
-
-      toolExecuted = await executeLocalTool('doblefilo_create_order', {
-        numeroMesa: numMesa,
-        mesero: 'Mesero UALDO Mobile',
-        items: orderedItems,
-        observacion: 'Modo Offline Fallback'
-      });
-
-      simResponse = `🍽️ **[MODO OFFLINE — FALLBACK MOCK] Comanda Registrada**\n\n- **Mesa**: ${numMesa}\n- **Total**: $16.50`;
-      if (onToolCalled) onToolCalled('doblefilo_create_order', {}, toolExecuted);
-    } else {
-      toolExecuted = await executeLocalTool('doblefilo_get_tables');
-      simResponse = `🍽️ **[MODO OFFLINE — FALLBACK MOCK] Mesas Restaurante**\n\nMesas disponibles en modo local. Conéctate al Motor UaldoBusiness para ver datos en tiempo real.`;
-      if (onToolCalled) onToolCalled('doblefilo_get_tables', {}, toolExecuted);
+  if (lastTextLower.includes('pedido') || lastTextLower.includes('mesero') || lastTextLower.includes('comanda') || lastTextLower.includes('mesa') || lastTextLower.includes('mesas')) {
+    if (lastTextLower.includes('tengo') || lastTextLower.includes('configurar') || lastTextLower.includes('ajustar') || lastTextLower.includes('son')) {
+      const countMatch = lastTextLower.match(/(\d+)\s*mesas/i) || lastTextLower.match(/mesas\s*(\d+)/i);
+      if (countMatch) {
+        const count = parseInt(countMatch[1]);
+        toolExecuted = await executeLocalTool('doblefilo_set_tables_count', { count });
+        simResponse = `✅ **Configuración de Mesas Actualizada en RunFood**\n\nSe ha actualizado el total a **${count} mesas** reales para DOBLE FILO.`;
+        if (onToolCalled) onToolCalled('doblefilo_set_tables_count', { count }, toolExecuted);
+        return { role: 'assistant', content: simResponse, toolExecuted };
+      }
     }
+
+    toolExecuted = await executeLocalTool('doblefilo_get_tables');
+    const resumen = toolExecuted?.resumen || {};
+    const tablesList = toolExecuted?.tables || [];
+    const tablesDetailStr = tablesList.slice(0, 10).map(t => `- **Mesa ${t.numero || t.id}**: ${t.estado.toUpperCase()} (${t.personas || 0} pers. - $${(t.total || 0).toFixed(2)})`).join('\n');
+    
+    simResponse = `🍽️ **Mesas del Restaurante — RunFood (DOBLE FILO)**\n\n` +
+      `**Resumen General:**\n` +
+      `- Total Mesas: **${resumen.totalMesas || tablesList.length}**\n` +
+      `- Ocupadas: **${resumen.ocupadas || 0}** | Libres: **${resumen.libres || 0}**\n` +
+      `- Ventas Acumuladas en Mesas: **$${(resumen.ventasAcumuladasMesas || 0).toFixed(2)}**\n\n` +
+      `**Detalle:**\n${tablesDetailStr}`;
+    if (onToolCalled) onToolCalled('doblefilo_get_tables', {}, toolExecuted);
   } else {
-    simResponse = `⚠️ **[MODO OFFLINE — MOTOR SIN CONEXIÓN]**\n\nNo se pudo contactar al motor **UaldoBusiness**. Se activó el simulador local de contingencia.\n\nVerifica tu red o inicia sesión en la pestaña **Red** para reconectar la IA real.`;
+    simResponse = `⚡ **Asistente Local UALDO (RunFood & Ecosistema)**\n\nOperando con integración directa a Run Food (192.168.100.10:1000), inventario de Vercel y Cierre de Caja local.`;
   }
 
   await new Promise(r => setTimeout(r, 400));

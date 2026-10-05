@@ -1,23 +1,115 @@
 // DOBLEFILO (RunFood POS, Bodega Local, Vercel Web App & Waiter Orders) Integration Service for UALDO Mobile
 import { getSettings } from './storage';
+import { request } from './apiClient';
 
-const DOBLEFILO_API_URL = 'http://localhost:1000';
+
+const getDoblefiloBaseUrl = () => {
+  const settings = getSettings();
+  const ip = settings.runfoodIp || settings.nodeIp || '192.168.100.10';
+  const port = settings.runfoodPort || '1000';
+  return `http://${ip}:${port}`;
+};
+
+const RUNFOOD_TIMEOUT = 8000;
+
+// Single fetch helper for RunFood: always bounded by a timeout so a slow/offline shop PC
+// fails fast instead of hanging the UI. Throws on network error or non-2xx; never returns mock.
+const runfoodFetch = async (path, { method = 'GET', body = null, timeout = RUNFOOD_TIMEOUT } = {}) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const options = { method, signal: controller.signal };
+    if (body != null) {
+      options.headers = { 'Content-Type': 'application/json' };
+      options.body = typeof body === 'string' ? body : JSON.stringify(body);
+    }
+    const response = await fetch(`${getDoblefiloBaseUrl()}${path}`, options);
+    if (!response.ok) {
+      throw new Error(`RunFood ${path} respondió HTTP ${response.status}`);
+    }
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+// Honest connectivity check against RunFood's lightweight health route. Returns online:false
+// (not a fake "autonomous" success) when the POS is truly unreachable.
+export const checkRunfoodConnection = async () => {
+  const startTime = Date.now();
+  const url = getDoblefiloBaseUrl();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(`${url}/check-health`, { signal: controller.signal });
+    return {
+      online: response.ok,
+      latency: Date.now() - startTime,
+      url,
+      error: response.ok ? null : `HTTP ${response.status}`
+    };
+  } catch (e) {
+    return { online: false, latency: 0, url, error: e.name === 'AbortError' ? 'Tiempo de espera agotado' : e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const VERCEL_APP_URL = 'https://doblefilo.vercel.app';
 
 // ----------------------------------------------------
 // 1. WAITER ORDERS & TABLES MODULE (RUNFOOD MESEROS)
 // ----------------------------------------------------
 
-let liveTables = [
+const TABLES_STORAGE_KEY = 'ualdo_doblefilo_tables';
+
+const DEFAULT_TABLES = [
   { id: 'M-01', numero: 1, grupo: 'Salón Principal', estado: 'libre', personas: 0, total: 0.00 },
   { id: 'M-02', numero: 2, grupo: 'Salón Principal', estado: 'ocupada', personas: 2, total: 24.50, items: ['2x Hamburguesa DobleFilo Especial', '1x Papas Medianas', '2x Gaseosa 500ml'] },
   { id: 'M-03', numero: 3, grupo: 'Salón Principal', estado: 'libre', personas: 0, total: 0.00 },
-  { id: 'M-04', numero: 4, grupo: 'Salón Principal', estado: 'ocupada', personas: 4, total: 52.00, items: ['1x Combo Familiar DobleFilo', '2x Cerveza Artesanal', '1x Papas Rústicas'] },
-  { id: 'M-05', numero: 5, grupo: 'Salón Principal', estado: 'libre', personas: 0, total: 0.00 },
-  { id: 'M-06', numero: 6, grupo: 'Terraza Exterior', estado: 'ocupada', personas: 3, total: 38.00, items: ['3x Bondiola a la Parrilla', '3x Gaseosa 500ml'] },
-  { id: 'M-07', numero: 7, grupo: 'Terraza Exterior', estado: 'libre', personas: 0, total: 0.00 },
-  { id: 'M-08', numero: 8, grupo: 'Zona VIP', estado: 'libre', personas: 0, total: 0.00 }
+  { id: 'M-04', numero: 4, grupo: 'Salón Principal', estado: 'libre', personas: 0, total: 0.00 },
+  { id: 'M-05', numero: 5, grupo: 'Salón Principal', estado: 'libre', personas: 0, total: 0.00 }
 ];
+
+export const getStoredTables = () => {
+  try {
+    const stored = localStorage.getItem(TABLES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : DEFAULT_TABLES;
+  } catch (e) {
+    return DEFAULT_TABLES;
+  }
+};
+
+export const saveStoredTables = (tables) => {
+  try {
+    localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(tables));
+  } catch (e) {
+    console.error('Error saving tables:', e);
+  }
+};
+
+export const setDoblefiloTablesCount = (count) => {
+  const num = Math.max(1, parseInt(count) || 5);
+  const current = getStoredTables();
+  let updated = [];
+  for (let i = 1; i <= num; i++) {
+    const existing = current.find(t => t.numero === i || t.id === `M-0${i}` || t.id === `M-${i}`);
+    if (existing) {
+      updated.push(existing);
+    } else {
+      updated.push({
+        id: `M-${i < 10 ? '0' + i : i}`,
+        numero: i,
+        grupo: 'Salón Principal',
+        estado: 'libre',
+        personas: 0,
+        total: 0.00
+      });
+    }
+  }
+  saveStoredTables(updated);
+  return updated;
+};
 
 const MENU_CATALOG = [
   { id: 'MNU-101', nombre: 'Hamburguesa DobleFilo Especial', categoria: 'Platos Principales', precio: 6.50, descripcion: 'Carne 200g, queso cheddar, tocineta, salsa especial' },
@@ -31,78 +123,248 @@ const MENU_CATALOG = [
   { id: 'MNU-303', nombre: 'Agua Mineral Con Gas / Sin Gas', categoria: 'Bebidas', precio: 1.00, descripcion: 'Botella 500ml' }
 ];
 
+const buildTablesResumen = (tables) => ({
+  totalMesas: tables.length,
+  ocupadas: tables.filter(t => t.estado === 'ocupada').length,
+  libres: tables.filter(t => t.estado === 'libre').length,
+  ventasAcumuladasMesas: tables.reduce((acc, t) => acc + (t.total || 0), 0)
+});
+
 export const getDoblefiloTables = async () => {
   try {
-    const response = await fetch(`${DOBLEFILO_API_URL}/app/mesa/FETCH`);
-    if (response.ok) {
-      const data = await response.json();
-      return { success: true, tables: data };
+    // Real RunFood salon layout: POST /LOCAL_NETWORK/MESA/FETCH returns zones with a table count.
+    const zones = await runfoodFetch('/LOCAL_NETWORK/MESA/FETCH', {
+      method: 'POST',
+      body: { tablet: JSON.stringify({ bodega: 1 }) }
+    });
+
+    if (Array.isArray(zones) && zones.length > 0) {
+      const tables = zones.flatMap(zone => {
+        const count = Math.max(0, parseInt(zone.mesas) || 0);
+        const start = parseInt(zone.comienzaEn) || 0;
+        return Array.from({ length: count }, (_, i) => {
+          const numero = start + i + 1;
+          return {
+            id: `Z${zone.id}-M${numero}`,
+            numero,
+            grupo: zone.descripcion || 'Salón',
+            estado: 'libre',
+            personas: 0,
+            total: 0
+          };
+        });
+      });
+
+      return {
+        success: true,
+        source: 'runfood',
+        zones,
+        resumen: buildTablesResumen(tables),
+        tables
+      };
     }
   } catch (e) {
-    console.warn('[DOBLEFILO Engine] Servidor de Mesas RunFood offline, usando estado de mesas en tiempo real.');
+    console.warn('[DOBLEFILO Engine] Mesas RunFood no disponibles:', e.message);
   }
 
-  const resumen = {
-    totalMesas: liveTables.length,
-    ocupadas: liveTables.filter(t => t.estado === 'ocupada').length,
-    libres: liveTables.filter(t => t.estado === 'libre').length,
-    ventasAcumuladasMesas: liveTables.reduce((acc, t) => acc + t.total, 0)
-  };
-
-  return { success: true, resumen, tables: liveTables };
+  // Explicit offline fallback (flagged so the UI can show it is NOT live RunFood data).
+  const tables = getStoredTables();
+  return { success: true, source: 'mock', resumen: buildTablesResumen(tables), tables };
 };
 
 export const getDoblefiloMenu = async () => {
-  return { success: true, menu: MENU_CATALOG };
+  try {
+    const data = await runfoodFetch('/LOCAL_NETWORK/ARTICULO/FETCH', {
+      method: 'POST',
+      body: { tablet: JSON.stringify({ bodega: 1 }) }
+    });
+
+    if (Array.isArray(data) && data.length > 0) {
+      const realMenu = data
+        .filter(a => a.habilitado && ((a.pvp1 && a.pvp1 > 0) || (a.pvp && a.pvp > 0)))
+        .map(a => {
+          const precioSinIva = a.pvp1 || a.pvp || 0;
+          const precioConIva = a.pagaIva ? (precioSinIva * 1.15) : precioSinIva;
+          return {
+            id: a.id,
+            codigo: a.codigo,
+            nombre: a.descripcion,
+            precio: parseFloat(precioConIva.toFixed(2)),
+            precioSinIva: parseFloat(precioSinIva.toFixed(2)),
+            categoria: 'Carta Real RunFood (SQL Server)'
+          };
+        });
+
+      if (realMenu.length > 0) {
+        return { success: true, menu: realMenu, source: 'runfood' };
+      }
+    }
+  } catch (e) {
+    console.warn('Error obteniendo el menú real de RunFood:', e.message);
+  }
+
+  return { success: true, menu: MENU_CATALOG, source: 'mock' };
 };
 
-export const createDoblefiloOrder = async ({ mesaId, numeroMesa = 3, mesero = 'Carlos M.', items = [], observacion = '' }) => {
+// Normalize text for matching: lowercase, strip accents and punctuation.
+const normalize = (s) => (s || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[^a-z0-9 ]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+// Resolve a free-text product name against RunFood's REAL article catalog (SQL Server),
+// so we never guess or default to the wrong product. Returns null if nothing matches.
+export const resolveRunfoodArticle = async (query) => {
+  const q = normalize(query);
+  const tokens = q.split(' ').filter(t => t.length >= 3);
+
+  const data = await runfoodFetch('/LOCAL_NETWORK/ARTICULO/FETCH', {
+    method: 'POST',
+    body: { tablet: JSON.stringify({ bodega: 1 }) }
+  });
+  if (!Array.isArray(data)) return null;
+
+  let best = null;
+  let bestScore = 0;
+  for (const a of data) {
+    if (!a.habilitado) continue;
+    const price = a.pvp1 || a.pvp || 0;
+    if (!(price > 0)) continue;
+
+    const desc = normalize(a.descripcion);
+    const words = desc.split(' ');
+    let score = 0;
+    for (const t of tokens) {
+      if (desc.includes(t) || words.some(w => w.startsWith(t.slice(0, 4)))) score++;
+    }
+    if (q && desc.includes(q)) score += 3; // exact-phrase bonus
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = a;
+    }
+  }
+
+  if (!best || bestScore === 0) return null;
+
+  const pvp = best.pvp1 || best.pvp || 0;
+  const pagaIva = best.pagaIva ? 1 : 0;
+  const iva = pagaIva ? parseFloat((pvp - pvp / 1.15).toFixed(4)) : 0;
+  return {
+    id: best.id,
+    codigo: best.codigo,
+    descripcion: best.descripcion,
+    pvp: parseFloat(pvp.toFixed(2)),
+    pagaIva,
+    iva
+  };
+};
+
+// Insert a single resolved article into a table via the SQL bridge. Returns a per-item result.
+const addOneItemToOrder = async (bridgeUrl, numMesa, query, cantidad, observacion) => {
+  let article;
   try {
-    const response = await fetch(`${DOBLEFILO_API_URL}/app/pedido`, {
+    article = await resolveRunfoodArticle(query);
+  } catch (e) {
+    return { query, ok: false, error: `Carta de RunFood no disponible: ${e.message}` };
+  }
+  if (!article) {
+    return { query, ok: false, error: `No encontré "${query}" en la carta de RunFood.` };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(bridgeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mesa: numeroMesa,
-        mesero,
-        items,
+        mesa: numMesa,
+        cantidad,
+        articuloId: article.id,
+        descripcion: article.descripcion,
+        pvp: article.pvp,
+        pagaIva: article.pagaIva,
+        iva: article.iva,
+        itemKeyword: query,
         observacion
-      })
+      }),
+      signal: controller.signal
     });
-    if (response.ok) {
-      const data = await response.json();
-      return { success: true, message: 'Pedido enviado correctamente al monitor de cocina de RunFood.', data };
+    clearTimeout(timer);
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success) {
+      return {
+        query, ok: true,
+        producto: article.descripcion,
+        codigo: article.codigo,
+        cantidad,
+        precio: article.pvp,
+        total: article.pvp * cantidad,
+        orderId: data.details?.orderId
+      };
     }
+    return { query, ok: false, error: data.error || `El bridge respondió HTTP ${response.status}.` };
   } catch (e) {
-    console.warn('[DOBLEFILO Engine] Despachando pedido de mesero vía motor autónomo RunFood.');
+    return {
+      query, ok: false,
+      error: e.name === 'AbortError'
+        ? 'El bridge de RunFood (puerto 4000) no respondió a tiempo.'
+        : `No se pudo conectar con el bridge de RunFood (puerto 4000): ${e.message}`
+    };
+  }
+};
+
+export const createDoblefiloOrder = async ({ numeroMesa = 19, items = [], observacion = '' }) => {
+  const numMesa = parseInt(numeroMesa) || 19;
+  const list = (Array.isArray(items) && items.length) ? items : [{ nombre: 'gaseosa', cantidad: 1 }];
+
+  const host = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'localhost';
+  const bridgeUrl = `http://${host}:4000/api/add-item`;
+
+  // Resolve + insert each cart item against RunFood's REAL catalog (sequential: shared order header).
+  const results = [];
+  for (const it of list) {
+    const query = (it.nombre || '').trim() || 'gaseosa';
+    const cantidad = Math.max(1, parseInt(it.cantidad) || 1);
+    results.push(await addOneItemToOrder(bridgeUrl, numMesa, query, cantidad, observacion));
   }
 
-  const numMesa = parseInt(numeroMesa) || 3;
-  const targetTable = liveTables.find(t => t.numero === numMesa || t.id === mesaId);
+  const okItems = results.filter(r => r.ok);
+  const failItems = results.filter(r => !r.ok);
 
-  const orderTotal = items.reduce((acc, i) => acc + ((i.precio || 5.00) * (i.cantidad || 1)), 0);
-  const itemsSummary = items.map(i => `${i.cantidad || 1}x ${i.nombre}`);
-
-  if (targetTable) {
-    targetTable.estado = 'ocupada';
-    targetTable.personas = Math.max(1, targetTable.personas || 2);
-    targetTable.total += orderTotal;
-    targetTable.items = [...(targetTable.items || []), ...itemsSummary];
+  // Honest result: only success if at least one line actually landed in RunFood.
+  if (okItems.length === 0) {
+    return {
+      success: false,
+      error: failItems.map(f => f.error).join(' · ') || 'No se pudo registrar la comanda en RunFood.'
+    };
   }
 
-  const idPedido = `PED-${Date.now().toString().slice(-5)}`;
+  const first = okItems[0];
+  const totalMonto = okItems.reduce((acc, r) => acc + (r.total || 0), 0);
+  const orderId = okItems.map(r => r.orderId).find(Boolean) || null;
 
   return {
     success: true,
-    message: `¡Comanda registrada y despachada a cocina en RunFood!`,
+    source: 'RunFood SQL Server',
+    partial: failItems.length > 0,
+    message: `Comanda registrada en RunFood (${okItems.length} ítem${okItems.length > 1 ? 's' : ''}).`,
     orderDetails: {
-      idPedido,
+      idPedido: orderId,
+      orderId,
       mesa: `Mesa ${numMesa}`,
-      mesero,
-      items: itemsSummary,
-      total: `$${orderTotal.toFixed(2)}`,
-      observacion: observacion || 'Sin notas especiales',
-      estadoCocina: 'RECIBIDO (Monitor Cocina RunFood)',
-      fechaHora: new Date().toLocaleTimeString('es-EC')
+      producto: first.producto,
+      codigo: first.codigo,
+      cantidad: first.cantidad,
+      precio: first.precio,
+      total: `$${totalMonto.toFixed(2)}`,
+      items: okItems.map(r => ({ producto: r.producto, cantidad: r.cantidad, precio: r.precio })),
+      fallidos: failItems.map(f => ({ item: f.query, error: f.error })),
+      source: 'RunFood SQL Server'
     }
   };
 };
@@ -373,4 +635,48 @@ export const getDoblefiloClosureHistory = () => {
     return [];
   }
 };
+
+// ----------------------------------------------------
+// 5. CANONICAL INVENTORY & RECONCILIATION CLIENT API
+// ----------------------------------------------------
+
+export const fetchCanonicalInventory = async () => {
+  const res = await request('/inventory/canonical');
+  if (res.ok) {
+    return res.data;
+  }
+  return {
+    success: false,
+    error: res.error || 'Error al conectar con la API de inventario canónico.',
+    items: []
+  };
+};
+
+export const fetchReorderAlerts = async () => {
+  const res = await request('/inventory/alerts');
+  if (res.ok) {
+    return res.data;
+  }
+  return {
+    success: false,
+    error: res.error || 'Error al consultar las alertas de compra.',
+    alerts_count: 0,
+    alerts: []
+  };
+};
+
+export const triggerInventoryReconciliation = async () => {
+  const res = await request('/inventory/reconcile', {
+    method: 'POST'
+  });
+  if (res.ok) {
+    return res.data;
+  }
+  return {
+    success: false,
+    error: res.error || 'Fallo al ejecutar la reconciliación en el servidor.'
+  };
+};
+
+
 

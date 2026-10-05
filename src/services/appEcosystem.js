@@ -1,6 +1,7 @@
 // UALDO Local Ecosystem & Apps Orchestrator
 import { 
   getDoblefiloTables,
+  setDoblefiloTablesCount,
   getDoblefiloMenu,
   createDoblefiloOrder,
   fetchVercelInventory,
@@ -120,6 +121,11 @@ export const executeLocalTool = async (toolName, params = {}) => {
   // Waiter Orders Handlers
   if (toolName === 'doblefilo_get_tables') {
     return await getDoblefiloTables();
+  }
+
+  if (toolName === 'doblefilo_set_tables_count') {
+    const updatedTables = setDoblefiloTablesCount(params.count || 5);
+    return { success: true, message: `Número de mesas actualizado a ${updatedTables.length} mesas en RunFood.`, tables: updatedTables };
   }
 
   if (toolName === 'doblefilo_get_menu') {

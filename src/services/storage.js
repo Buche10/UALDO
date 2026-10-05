@@ -9,8 +9,8 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://ualbusiness.test/api/v1',
-  nodeIp: '192.168.1.100',
-  nodePort: '11434',
+  nodeIp: '192.168.100.10',
+  nodePort: '1000',
   aiProvider: 'motor', // 'motor' | 'ollama' | 'lmstudio' | 'local_web'
   lmStudioPort: '1234',
   activeModel: 'llama3:latest',

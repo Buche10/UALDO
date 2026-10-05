@@ -1,11 +1,11 @@
 import React from 'react';
-import { MessageSquare, LayoutGrid, Network, Settings } from 'lucide-react';
+import { ListChecks, Store, Sparkles, Settings } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'chat', label: 'Chat IA', icon: MessageSquare },
-    { id: 'ecosystem', label: 'Apps Locales', icon: LayoutGrid },
-    { id: 'network', label: 'Nodos & Red', icon: Network },
+    { id: 'trabajo', label: 'Trabajo', icon: ListChecks },
+    { id: 'negocios', label: 'Negocios', icon: Store },
+    { id: 'asistente', label: 'Asistente', icon: Sparkles },
     { id: 'settings', label: 'Ajustes', icon: Settings }
   ];
 
