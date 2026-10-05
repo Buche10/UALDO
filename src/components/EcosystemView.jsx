@@ -223,7 +223,7 @@ export default function EcosystemView({ registeredApps, onUpdateApps, onSendChat
 
                 {isResultThisApp && (
                   <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>
-                    {executionResult.status === 'running' ? 'Conectando...' : '✓ Servicio activo'}
+                    {executionResult.status === 'running' ? 'Conectando...' : 'Servicio activo'}
                   </div>
                 )}
               </div>

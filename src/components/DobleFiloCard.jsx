@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, DollarSign, Package, CheckCircle2, Play, RefreshCw, AlertTriangle, ShieldCheck, Utensils, Users, Plus, Minus, Search, Send, ShoppingCart, Bell, ArrowRightLeft } from 'lucide-react';
-import { getDoblefiloTables, getDoblefiloMenu, fetchVercelInventory, updateVercelStock, getDoblefiloDailySummary, executeDoblefiloCashClose, fetchCanonicalInventory, fetchReorderAlerts, triggerInventoryReconciliation } from '../services/doblefiloEngine';
+import { Globe, DollarSign, Package, CheckCircle2, Play, RefreshCw, AlertTriangle, ShieldCheck, Utensils, Users, Search, ShoppingCart, Bell, ArrowRightLeft } from 'lucide-react';
+import { getDoblefiloTables, fetchVercelInventory, updateVercelStock, getDoblefiloDailySummary, executeDoblefiloCashClose, fetchCanonicalInventory, fetchReorderAlerts, triggerInventoryReconciliation } from '../services/doblefiloEngine';
 import { request } from '../services/apiClient';
 
 export default function DobleFiloCard({ onSendChatPrompt }) {
@@ -22,15 +22,8 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
   const [motorError, setMotorError] = useState(null);
 
 
-  // Waiter Orders State
+  // Waiter Orders State (Read Only)
   const [tablesData, setTablesData] = useState(null);
-  const [menuData, setMenuData] = useState(null);
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [waiterName, setWaiterName] = useState('Carlos M.');
-  const [orderCart, setOrderCart] = useState({});
-  const [orderNotes, setOrderNotes] = useState('');
-  const [orderSuccess, setOrderSuccess] = useState(null);
 
   // Vercel State
   const [vercelData, setVercelData] = useState(null);
@@ -95,64 +88,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
   const handleFetchTables = async () => {
     setLoading(true);
     const resTables = await getDoblefiloTables();
-    const resMenu = await getDoblefiloMenu();
     setTablesData(resTables);
-    setMenuData(resMenu.menu);
-    setLoading(false);
-  };
-
-  const handleAddToCart = (dish) => {
-    setOrderCart(prev => {
-      const currentQty = prev[dish.id]?.cantidad || 0;
-      return {
-        ...prev,
-        [dish.id]: {
-          id: dish.id,
-          nombre: dish.nombre,
-          precio: dish.precio,
-          cantidad: currentQty + 1
-        }
-      };
-    });
-  };
-
-  const handleRemoveFromCart = (dishId) => {
-    setOrderCart(prev => {
-      const currentQty = prev[dishId]?.cantidad || 0;
-      if (currentQty <= 1) {
-        const updated = { ...prev };
-        delete updated[dishId];
-        return updated;
-      }
-      return {
-        ...prev,
-        [dishId]: {
-          ...prev[dishId],
-          cantidad: currentQty - 1
-        }
-      };
-    });
-  };
-
-  const handleSendOrder = async (e) => {
-    e.preventDefault();
-    const cartItems = Object.values(orderCart);
-    if (cartItems.length === 0 || !selectedTable) return;
-
-    setLoading(true);
-    const res = await createDoblefiloOrder({
-      mesaId: selectedTable.id,
-      numeroMesa: selectedTable.numero,
-      mesero: waiterName,
-      items: cartItems,
-      observacion: orderNotes
-    });
-
-    setOrderSuccess(res.orderDetails);
-    setShowOrderModal(false);
-    setOrderCart({});
-    setOrderNotes('');
-    handleFetchTables();
     setLoading(false);
   };
 
@@ -285,7 +221,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
           }}
         >
           <Globe size={13} />
-          <span>☁️ Vercel</span>
+          <span>Vercel</span>
         </button>
       </div>
 
@@ -315,7 +251,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
 
           {reconcileResult && (
             <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--success)', fontSize: '11px' }}>
-              ✓ {reconcileResult.message} ({reconcileResult.synced_items_count} insumos actualizados)
+              {reconcileResult.message} ({reconcileResult.synced_items_count} insumos actualizados)
             </div>
           )}
 
@@ -395,7 +331,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {motorError ? (
             <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', color: 'var(--error)', fontSize: '12px' }}>
-              <div style={{ fontWeight: 700, marginBottom: '4px' }}>⚠️ Error al conectar con Ualdo Negocios</div>
+              <div style={{ fontWeight: 700, marginBottom: '4px' }}>Error al conectar con Ualdo Negocios</div>
               <div>{motorError}</div>
             </div>
           ) : realSummary ? (
@@ -464,7 +400,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
       {activeSource === 'waiter' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Parrilla de Mesas Mock:</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Parrilla de Mesas:</span>
             <button 
               className="glass-card-interactive" 
               onClick={handleFetchTables}
@@ -476,11 +412,9 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
             </button>
           </div>
 
-          {orderSuccess && (
-            <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--success)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
-              ✓ Pedido #{orderSuccess.idPedido} enviado a {orderSuccess.mesa} ({orderSuccess.total}). Despachado a Monitor Cocina.
-            </div>
-          )}
+          <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'rgba(45, 62, 65, 0.5)', border: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '12px' }}>
+            Las comandas se registran en el punto de venta.
+          </div>
 
           {/* Tables Grid */}
           {tablesData && (
@@ -488,8 +422,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
               {tablesData.tables.map(table => (
                 <div
                   key={table.id}
-                  className="glass-card-interactive"
-                  onClick={() => { setSelectedTable(table); setShowOrderModal(true); }}
+                  className="glass-card"
                   style={{
                     padding: '10px 8px',
                     borderRadius: '12px',
@@ -500,7 +433,6 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '4px',
-                    cursor: 'pointer',
                     textAlign: 'center'
                   }}
                 >
@@ -547,101 +479,6 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ORDER TAKING MODAL FOR WAITERS */}
-      {showOrderModal && selectedTable && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '440px', padding: '18px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>
-                  Tomar Pedido - Mesa {selectedTable.numero} ({selectedTable.grupo})
-                </h3>
-                <span style={{ fontSize: '11px', color: 'var(--secondary)', fontWeight: 600 }}>
-                  Estado: {selectedTable.estado.toUpperCase()} {selectedTable.total > 0 ? `| Actual: $${selectedTable.total.toFixed(2)}` : ''}
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSendOrder} style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', paddingRight: '4px' }}>
-              <div className="form-group">
-                <label className="form-label">Mesero a Cargo</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  value={waiterName} 
-                  onChange={e => setWaiterName(e.target.value)}
-                  placeholder="Nombre del mesero..."
-                />
-              </div>
-
-              {/* Menu Selection */}
-              <div>
-                <label className="form-label">Seleccionar Platos & Bebidas</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', marginTop: '4px' }}>
-                  {(menuData || []).map(dish => {
-                    const inCartQty = orderCart[dish.id]?.cantidad || 0;
-                    return (
-                      <div key={dish.id} style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{dish.nombre}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--secondary)', fontFamily: 'var(--font-mono)' }}>${dish.precio.toFixed(2)}</div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {inCartQty > 0 && (
-                            <button type="button" onClick={() => handleRemoveFromCart(dish.id)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'rgba(244,63,94,0.2)', color: 'var(--error)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Minus size={14} />
-                            </button>
-                          )}
-
-                          {inCartQty > 0 && <span style={{ fontWeight: 800, fontSize: '13px', width: '16px', textAlign: 'center' }}>{inCartQty}</span>}
-
-                          <button type="button" onClick={() => handleAddToCart(dish)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="form-group">
-                <label className="form-label">Notas Especiales para Cocina</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="ej. Término medio, sin salsa..." 
-                  value={orderNotes}
-                  onChange={e => setOrderNotes(e.target.value)}
-                />
-              </div>
-
-              {/* Total and Actions */}
-              <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Comanda:</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
-                    ${Object.values(orderCart).reduce((acc, i) => acc + (i.precio * i.cantidad), 0).toFixed(2)}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" className="glass-card" onClick={() => setShowOrderModal(false)} style={{ padding: '10px 14px', border: '1px solid var(--border-glass)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn-primary" disabled={Object.keys(orderCart).length === 0} style={{ padding: '10px 16px' }}>
-                    <Send size={14} />
-                    <span>Enviar a Cocina</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

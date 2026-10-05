@@ -65,7 +65,7 @@ export default function PendingActionCard({ action, onApprove, onCancel, disable
         </span>
         {status === 'pending' && timeLeft && (
           <span className="action-expiry">
-            <Clock size={12} style={{ display: 'inline', marginRight: 4 }} aria-hidden="true" />
+            <Clock size={12} className="action-icon-inline" aria-hidden="true" />
             {timeLeft}
           </span>
         )}
@@ -81,7 +81,7 @@ export default function PendingActionCard({ action, onApprove, onCancel, disable
 
       {action.error && (
         <div className="action-error-text">
-          <AlertCircle size={14} style={{ display: 'inline', marginRight: 4 }} aria-hidden="true" />
+          <AlertCircle size={14} className="action-icon-inline" aria-hidden="true" />
           {action.error}
         </div>
       )}

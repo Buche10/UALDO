@@ -214,7 +214,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
                 fontSize: '11px'
               }}>
                 <div style={{ fontWeight: 600, color: testResult.online ? 'var(--success)' : 'var(--error)' }}>
-                  {testResult.online ? `✓ Conectado (${testResult.latency} ms)` : '✕ Sin conexión'}
+                  {testResult.online ? `Conectado (${testResult.latency} ms)` : 'Sin conexion'}
                 </div>
               </div>
             )}

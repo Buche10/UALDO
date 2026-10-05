@@ -468,3 +468,19 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Helper classes replacing inline styles */
+.action-icon-inline {
+  display: inline;
+  margin-right: 4px;
+}
+
+.typing-text {
+  margin-left: 6px;
+}
+
+.assistant-error-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

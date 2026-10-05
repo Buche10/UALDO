@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, Clock, Circle, AlertTriangle, Bell, RefreshCw, LogOut, ChevronRight, Plus, X } from "lucide-react";
-import { fetchProgress, fetchTasks, fetchNotifications, markNotificationRead, teamsLogout, fetchMeta, createTask } from "../services/teamsClient";
+import { fetchProgress, fetchTasks, fetchNotifications, markNotificationRead, teamsLogout, fetchMeta, createTask, isTeamsAuthenticated, teamsLogin } from "../services/teamsClient";
 import TaskDetailView from "./TaskDetailView";
 
 export default function TrabajoView({ onLogout }) {
@@ -22,7 +22,19 @@ export default function TrabajoView({ onLogout }) {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
+  // Teams Auth State
+  const [isTeamsLoggedIn, setIsTeamsLoggedIn] = useState(isTeamsAuthenticated);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+
   const loadAll = async () => {
+    if (!isTeamsAuthenticated()) {
+      setIsTeamsLoggedIn(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -35,7 +47,7 @@ export default function TrabajoView({ onLogout }) {
 
       if (resP.status === 401 || resT.status === 401) {
         teamsLogout();
-        if (onLogout) onLogout();
+        setIsTeamsLoggedIn(false);
         return;
       }
 
@@ -70,7 +82,21 @@ export default function TrabajoView({ onLogout }) {
 
   const handleLogout = () => {
     teamsLogout();
-    if (onLogout) onLogout();
+    setIsTeamsLoggedIn(false);
+  };
+
+  const handleTeamsLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(null);
+    const res = await teamsLogin(loginEmail, loginPassword);
+    setLoginLoading(false);
+    if (res.ok) {
+      setIsTeamsLoggedIn(true);
+      loadAll();
+    } else {
+      setLoginError(res.error || "Credenciales incorrectas.");
+    }
   };
 
   const handleCreate = async (e) => {
@@ -94,6 +120,55 @@ export default function TrabajoView({ onLogout }) {
       setFormError(res.error || "No se pudo crear la tarea.");
     }
   };
+
+  if (!isTeamsLoggedIn) {
+    return (
+      <div style={S.wrap}>
+        <div style={S.topbar}>
+          <div style={S.title}>Ualdo Teams</div>
+        </div>
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={S.muted}>
+            Inicia sesión con tu cuenta de Ualdo Teams para gestionar tareas, proyectos y avances.
+          </div>
+          {loginError && <div style={S.err}>{loginError}</div>}
+          <form onSubmit={handleTeamsLoginSubmit} style={S.formCard}>
+            <div>
+              <label style={{ fontSize: "12px", color: "var(--text-muted)" }}>Correo electrónico</label>
+              <input
+                type="email"
+                required
+                style={S.input}
+                placeholder="tu@correo.com"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                disabled={loginLoading}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", color: "var(--text-muted)" }}>Contraseña</label>
+              <input
+                type="password"
+                required
+                style={S.input}
+                placeholder="Tu contraseña"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                disabled={loginLoading}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loginLoading}
+              style={{ ...S.primaryBtn, opacity: loginLoading ? 0.6 : 1 }}
+            >
+              {loginLoading ? "Entrando..." : "Entrar a Teams"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedTaskId) {
     return <TaskDetailView taskId={selectedTaskId} onBack={() => setSelectedTaskId(null)} />;

@@ -36,17 +36,11 @@ export const login = async (email, password, deviceName = 'Mobile PWA') => {
   if (result.ok && result.data?.token) {
     const token = result.data.token;
     setAuthToken(token);
-    try {
-      localStorage.setItem('teams_token', token);
-    } catch (e) {}
 
     const meUser = await fetchMe();
     const finalUser = meUser || result.data.user || null;
     if (finalUser) {
       setStoredUser(finalUser);
-      try {
-        localStorage.setItem('teams_user', JSON.stringify(finalUser));
-      } catch (e) {}
     }
 
     return {
@@ -84,9 +78,6 @@ export const fetchMe = async () => {
   if (result.ok && (result.data?.user || result.data)) {
     const user = result.data.user || result.data;
     setStoredUser(user);
-    try {
-      localStorage.setItem('teams_user', JSON.stringify(user));
-    } catch (e) {}
     return user;
   }
   if (result.status === 401) {

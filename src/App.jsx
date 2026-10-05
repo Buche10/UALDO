@@ -11,7 +11,6 @@ import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
 import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
-import { setTeamsToken } from './services/teamsClient';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('trabajo');
@@ -73,12 +72,9 @@ export default function App() {
     checkConnection();
   }, [settings.nodeIp, settings.nodePort, settings.aiProvider, authenticated]);
 
-  const handleLoginSuccess = (userData, token) => {
+  const handleLoginSuccess = (userData) => {
     setUser(userData);
     setAuthenticated(true);
-    if (token) {
-      setTeamsToken(token);
-    }
     checkConnection();
   };
 
