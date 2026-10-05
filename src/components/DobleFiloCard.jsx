@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Globe, DollarSign, Package, CheckCircle2, Play, RefreshCw, AlertTriangle, ShieldCheck, Utensils, Users, Plus, Minus, Search, Send, ShoppingCart, Bell, ArrowRightLeft } from 'lucide-react';
-import { getDoblefiloTables, getDoblefiloMenu, createDoblefiloOrder, fetchVercelInventory, updateVercelStock, getDoblefiloDailySummary, executeDoblefiloCashClose, fetchCanonicalInventory, fetchReorderAlerts, triggerInventoryReconciliation } from '../services/doblefiloEngine';
+import { getDoblefiloTables, getDoblefiloMenu, fetchVercelInventory, updateVercelStock, getDoblefiloDailySummary, executeDoblefiloCashClose, fetchCanonicalInventory, fetchReorderAlerts, triggerInventoryReconciliation } from '../services/doblefiloEngine';
 import { request } from '../services/apiClient';
 
 export default function DobleFiloCard({ onSendChatPrompt }) {
@@ -219,7 +219,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
           }}
         >
           <ShoppingCart size={13} />
-          <span>📦 Ledger Canónico</span>
+          <span>Ledger Canónico</span>
         </button>
 
         <button
@@ -241,7 +241,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
           }}
         >
           <ShieldCheck size={13} />
-          <span>🔥 Motor Real</span>
+          <span>Motor Real</span>
         </button>
 
         <button
@@ -263,7 +263,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
           }}
         >
           <Utensils size={13} />
-          <span>🍽️ Mesas</span>
+          <span>Mesas</span>
         </button>
 
         <button
@@ -542,7 +542,7 @@ export default function DobleFiloCard({ onSendChatPrompt }) {
               {vercelData.items.slice(0, 5).map(item => (
                 <div key={item.id} style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                   <span>[{item.id}] {item.nombre}</span>
-                  <strong style={{ color: 'var(--secondary)' }}>🏬 {item.bodega} | 🍳 {item.cocina}</strong>
+                  <strong style={{ color: 'var(--secondary)' }}>Bodega: {item.bodega} | Cocina: {item.cocina}</strong>
                 </div>
               ))}
             </div>

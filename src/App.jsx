@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
-import ChatView from './components/ChatView';
+import AssistantChat from './components/assistant/AssistantChat';
 import EcosystemView from './components/EcosystemView';
 import SettingsView from './components/SettingsView';
 import LoginView from './components/LoginView';
 import TrabajoView from './components/TrabajoView';
 
-import { getSettings, saveSettings, getConversations, saveConversations } from './services/storage';
+import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
 import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
@@ -16,7 +16,6 @@ import { setTeamsToken } from './services/teamsClient';
 export default function App() {
   const [activeTab, setActiveTab] = useState('trabajo');
   const [settings, setSettings] = useState(getSettings);
-  const [conversations, setConversations] = useState(getConversations);
   const [registeredApps, setRegisteredApps] = useState(getRegisteredApps);
   
   const [user, setUser] = useState(getUser);
@@ -88,26 +87,6 @@ export default function App() {
     setSettings(updated);
   };
 
-  const handleUpdateMessages = (messages) => {
-    const updatedConv = conversations.map(c => c.id === 'default' ? { ...c, messages } : c);
-    setConversations(updatedConv);
-    saveConversations(updatedConv);
-  };
-
-  const handleClearChat = () => {
-    if (confirm('¿Deseas reiniciar la conversación con UALDO?')) {
-      const initialMessage = [
-        {
-          id: `msg_${Date.now()}`,
-          role: 'assistant',
-          content: 'Chat reiniciado. ¿En qué te puedo asistir hoy con tus tareas o tu negocio?',
-          timestamp: Date.now()
-        }
-      ];
-      handleUpdateMessages(initialMessage);
-    }
-  };
-
   const handleClearAllData = () => {
     if (confirm('¿Estás seguro de que deseas restablecer todos los datos locales?')) {
       localStorage.clear();
@@ -122,8 +101,6 @@ export default function App() {
       </div>
     );
   }
-
-  const currentConversation = conversations.find(c => c.id === 'default') || conversations[0];
 
   return (
     <div id="root">
@@ -161,13 +138,7 @@ export default function App() {
         {/* Pestaña 3: Asistente (Chat Conversacional) */}
         {activeTab === 'asistente' && (
           authenticated ? (
-            <ChatView
-              conversation={currentConversation}
-              onUpdateMessages={handleUpdateMessages}
-              onClearChat={handleClearChat}
-              settings={settings}
-              nodeStatus={nodeStatus}
-            />
+            <AssistantChat user={user} />
           ) : (
             <LoginView onLoginSuccess={handleLoginSuccess} />
           )

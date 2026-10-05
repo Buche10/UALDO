@@ -1,9 +1,7 @@
 // UALDO Local Ecosystem & Apps Orchestrator
 import { 
   getDoblefiloTables,
-  setDoblefiloTablesCount,
   getDoblefiloMenu,
-  createDoblefiloOrder,
   fetchVercelInventory,
   updateVercelStock,
   getDoblefiloInventory, 
@@ -16,27 +14,22 @@ import {
 const INITIAL_APPS = [
   {
     id: 'doblefilo_waiter_orders',
-    name: 'RunFood - Toma de Pedidos para Meseros',
+    name: 'RunFood - Visualización de Mesas y Menú',
     category: 'Restaurante / Meseros',
-    description: 'Gestión de mesas, comandas y despacho automático de pedidos al monitor de cocina de RunFood.',
+    description: 'Consulta de estado de mesas y catálogo de productos.',
     status: 'online',
     icon: 'Utensils',
     endpoint: 'http://localhost:1000/app/pedido',
     tools: [
       {
         name: 'doblefilo_get_tables',
-        description: 'Obtiene el estado de las mesas (Libres / Ocupadas) y ventas acumuladas en RunFood',
+        description: 'Obtiene el estado de las mesas en RunFood',
         parameters: {}
       },
       {
         name: 'doblefilo_get_menu',
-        description: 'Obtiene el menú de platos principales, bebidas, combos y precios de RunFood',
+        description: 'Obtiene el menú de platos y precios de RunFood',
         parameters: {}
-      },
-      {
-        name: 'doblefilo_create_order',
-        description: 'Registra un pedido de mesero para una mesa y lo despacha al monitor de cocina de RunFood',
-        parameters: { numeroMesa: 'number', mesero: 'string', items: 'array', observacion: 'string' }
       }
     ]
   },
@@ -44,19 +37,19 @@ const INITIAL_APPS = [
     id: 'doblefilo_vercel_bodega',
     name: 'DobleFilo Vercel Web App (239 Productos)',
     category: 'Inventario & Bodega Web',
-    description: 'Sincronización automática de existencias desglosadas por Bodega, Cocina y Salón desde https://doblefilo.vercel.app/dashboard',
+    description: 'Sincronización de existencias desde https://doblefilo.vercel.app/dashboard',
     status: 'online',
     icon: 'Globe',
     endpoint: 'https://doblefilo.vercel.app/dashboard/inventory',
     tools: [
       {
         name: 'doblefilo_vercel_get_inventory',
-        description: 'Extrae automáticamente las existencias de 239 productos por Bodega, Cocina y Salón en DobleFilo Vercel App',
+        description: 'Consulta existencias en DobleFilo Vercel App',
         parameters: { query: 'string', location: 'bodega|cocina|salon|all' }
       },
       {
         name: 'doblefilo_vercel_update_stock',
-        description: 'Registra entradas (+), salidas (-) o transferencias de inventario automáticamente en Vercel App',
+        description: 'Actualiza existencias en Vercel App',
         parameters: { productId: 'string', productName: 'string', cantidad: 'number', ubicacion: 'bodega|cocina|salon', tipo: 'entrada|salida|transferencia' }
       }
     ]
@@ -65,19 +58,19 @@ const INITIAL_APPS = [
     id: 'doblefilo_pos',
     name: 'DOBLEFILO - Cierre de Caja & Ventas',
     category: 'Punto de Venta / POS',
-    description: 'Gestión de arqueos de caja, resumen diario de ventas, gastos y cierre de turno.',
+    description: 'Resumen diario de ventas y cierre de turno.',
     status: 'online',
     icon: 'Zap',
     endpoint: 'http://localhost:1000/app/cierreCaja',
     tools: [
       {
         name: 'doblefilo_get_daily_summary',
-        description: 'Obtiene el resumen de ventas, efectivo, tarjetas y gastos del día en DOBLEFILO',
+        description: 'Obtiene el resumen de ventas del día en DOBLEFILO',
         parameters: {}
       },
       {
         name: 'doblefilo_execute_cash_close',
-        description: 'Procesa y ejecuta el Cierre de Caja oficial del sistema DOBLEFILO',
+        description: 'Procesa el Cierre de Caja en DOBLEFILO',
         parameters: { declaradoEfectivo: 'number', observacion: 'string' }
       }
     ]
@@ -103,7 +96,7 @@ export const saveRegisteredApps = (apps) => {
   try {
     localStorage.setItem(LOCAL_STORAGE_APPS_KEY, JSON.stringify(apps));
   } catch (e) {
-    console.error('Error saving apps:', e);
+    // ignore
   }
 };
 
@@ -116,24 +109,13 @@ export const registerApp = (newApp) => {
 
 // Tool Execution Dispatcher
 export const executeLocalTool = async (toolName, params = {}) => {
-  console.log(`[UALDO Ecosystem Tool Dispatcher] Executing: ${toolName}`, params);
-
-  // Waiter Orders Handlers
+  // Waiter Orders Handlers (Read-only TODO: migrar a motor)
   if (toolName === 'doblefilo_get_tables') {
     return await getDoblefiloTables();
   }
 
-  if (toolName === 'doblefilo_set_tables_count') {
-    const updatedTables = setDoblefiloTablesCount(params.count || 5);
-    return { success: true, message: `Número de mesas actualizado a ${updatedTables.length} mesas en RunFood.`, tables: updatedTables };
-  }
-
   if (toolName === 'doblefilo_get_menu') {
     return await getDoblefiloMenu();
-  }
-
-  if (toolName === 'doblefilo_create_order') {
-    return await createDoblefiloOrder(params);
   }
 
   // Vercel Web App Handlers
@@ -173,9 +155,9 @@ export const executeLocalTool = async (toolName, params = {}) => {
         data: {
           cpu_usage: '15%',
           ram_used: '7.1 GB / 16 GB',
-          waiter_orders_status: 'Online (RunFood Pedidos & Monitor Cocina)',
-          vercel_app_status: 'Online (doblefilo.vercel.app)',
-          doblefilo_status: 'Online (Port 1000)'
+          waiter_orders_status: 'Online',
+          vercel_app_status: 'Online',
+          doblefilo_status: 'Online'
         }
       };
 

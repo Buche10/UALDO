@@ -130,6 +130,7 @@ const buildTablesResumen = (tables) => ({
   ventasAcumuladasMesas: tables.reduce((acc, t) => acc + (t.total || 0), 0)
 });
 
+// TODO(migrar-a-motor): Lectura de mesas RunFood solo lectura
 export const getDoblefiloTables = async () => {
   try {
     // Real RunFood salon layout: POST /LOCAL_NETWORK/MESA/FETCH returns zones with a table count.
@@ -622,7 +623,7 @@ export const syncCashCloseToGoogleSheets = async (closeRecord, customUrl = null)
       body: JSON.stringify(payload)
     });
 
-    return { synced: true, message: '🟢 Sincronizado correctamente con Google Sheets' };
+    return { synced: true, message: 'Sincronizado correctamente con Google Sheets' };
   } catch (e) {
     return { synced: false, message: `Error al conectar con Google Sheets: ${e.message}` };
   }

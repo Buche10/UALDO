@@ -234,15 +234,17 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
                 </select>
               </div>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">URL Base de API Ualdo</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  value={apiBaseUrl} 
-                  onChange={e => setApiBaseUrl(e.target.value)}
-                />
-              </div>
+              {import.meta.env.DEV && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">URL Base de API Ualdo (Solo desarrollo)</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={apiBaseUrl} 
+                    onChange={e => setApiBaseUrl(e.target.value)}
+                  />
+                </div>
+              )}
 
               {provider === 'ollama' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>

@@ -15,9 +15,7 @@ export const setAuthToken = (token) => {
     } else {
       localStorage.removeItem('ualdo_token');
     }
-  } catch (e) {
-    console.error('Error saving auth token:', e);
-  }
+  } catch (e) {}
 };
 
 export const getStoredUser = () => {
@@ -36,18 +34,14 @@ export const setStoredUser = (user) => {
     } else {
       localStorage.removeItem('ualdo_user');
     }
-  } catch (e) {
-    console.error('Error saving stored user:', e);
-  }
+  } catch (e) {}
 };
 
 export const clearAuthSession = () => {
   try {
     localStorage.removeItem('ualdo_token');
     localStorage.removeItem('ualdo_user');
-  } catch (e) {
-    console.error('Error clearing auth session:', e);
-  }
+  } catch (e) {}
 };
 
 export const request = async (path, options = {}) => {
@@ -58,8 +52,31 @@ export const request = async (path, options = {}) => {
     timeout = 10000
   } = options;
 
-  const settings = getSettings();
-  const baseUrl = settings.apiBaseUrl || import.meta.env.VITE_API_BASE_URL || 'http://ualbusiness.test/api/v1';
+  let baseUrl = '';
+  try {
+    const settings = getSettings();
+    baseUrl = settings.apiBaseUrl;
+  } catch (err) {
+    if (import.meta.env.PROD) {
+      return {
+        ok: false,
+        status: 0,
+        error: 'URL de API inválida en producción (debe ser HTTPS).',
+        isNetworkError: true
+      };
+    }
+    baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://ualbusiness.test/api/v1';
+  }
+
+  if (import.meta.env.PROD && !baseUrl.startsWith('https://')) {
+    return {
+      ok: false,
+      status: 0,
+      error: 'URL de API inválida en producción (debe ser HTTPS).',
+      isNetworkError: true
+    };
+  }
+
   const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${cleanBaseUrl}${cleanPath}`;

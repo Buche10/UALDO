@@ -1,68 +1,77 @@
 import { request, setAuthToken, setStoredUser, getAuthToken, getStoredUser, clearAuthSession } from './apiClient';
 
-export const login = async (email, password, deviceName = 'Mobile PWA') => {
-  // Demo / Local Offline Access
-  if (email.toLowerCase() === 'admin@doblefilo.com' && (password === 'admin123' || password === 'password')) {
-    const demoUser = {
-      id: 1,
-      name: 'Administrador DobleFilo',
-      email: 'admin@doblefilo.com',
-      role: 'Administrador',
-      business_name: 'DOBLE FILO - PRINCIPAL'
-    };
-    setAuthToken('demo-token-doblefilo');
-    try { localStorage.setItem('teams_token', 'demo-token-doblefilo'); } catch (e) {}
-    setStoredUser(demoUser);
-    return { success: true, user: demoUser, token: 'demo-token-doblefilo' };
+export const clearUserStorage = (userId) => {
+  try {
+    if (userId) {
+      localStorage.removeItem(`ualdo_chat_${userId}`);
+      localStorage.removeItem(`ualdo_privacy_ack_${userId}_v1`);
+    } else {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('ualdo_chat_') || key.startsWith('ualdo_privacy_ack_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+  } catch (e) {
+    // ignore local storage errors
   }
+};
 
+export const login = async (email, password, deviceName = 'Mobile PWA') => {
   const result = await request('/login', {
     method: 'POST',
     body: { email, password, device_name: deviceName }
   });
 
-  if (result.ok && result.data?.token) {
-    setAuthToken(result.data.token);
-    try { localStorage.setItem('teams_token', result.data.token); } catch (e) {}
-    if (result.data.user) {
-      setStoredUser(result.data.user);
-      try { localStorage.setItem('teams_user', JSON.stringify(result.data.user)); } catch (e) {}
-    }
+  if (result.isNetworkError) {
     return {
-      success: true,
-      user: result.data.user,
-      token: result.data.token
+      success: false,
+      error: 'No hay conexión con Ualdo. Revisa tu internet e intenta de nuevo.'
     };
   }
 
-  // Local Fallback if Laravel API is offline
-  if (result.isNetworkError || !result.ok) {
-    const fallbackUser = {
-      id: 1,
-      name: email.split('@')[0] || 'Administrador',
-      email: email,
-      role: 'Administrador',
-      business_name: 'DOBLE FILO - PRINCIPAL'
+  if (result.ok && result.data?.token) {
+    const token = result.data.token;
+    setAuthToken(token);
+    try {
+      localStorage.setItem('teams_token', token);
+    } catch (e) {}
+
+    const meUser = await fetchMe();
+    const finalUser = meUser || result.data.user || null;
+    if (finalUser) {
+      setStoredUser(finalUser);
+      try {
+        localStorage.setItem('teams_user', JSON.stringify(finalUser));
+      } catch (e) {}
+    }
+
+    return {
+      success: true,
+      user: finalUser,
+      token
     };
-    setAuthToken('demo-token-local');
-    try { localStorage.setItem('teams_token', 'demo-token-local'); } catch (e) {}
-    setStoredUser(fallbackUser);
-    return { success: true, user: fallbackUser, token: 'demo-token-local' };
   }
 
   return {
     success: false,
-    error: result.error || 'Credenciales inválidas o error de inicio de sesión.'
+    error: 'Correo o contraseña incorrectos.'
   };
 };
 
 export const logout = async () => {
+  const currentUser = getStoredUser();
+  const userId = currentUser?.id;
   try {
     await request('/logout', { method: 'POST' });
   } catch (e) {
-    console.warn('Logout request failed or server unreachable:', e);
+    // ignore
   } finally {
     clearAuthSession();
+    clearUserStorage(userId);
     try {
       localStorage.removeItem('teams_token');
       localStorage.removeItem('teams_user');
@@ -72,12 +81,18 @@ export const logout = async () => {
 
 export const fetchMe = async () => {
   const result = await request('/me');
-  if (result.ok && result.data?.user) {
-    setStoredUser(result.data.user);
-    return result.data.user;
+  if (result.ok && (result.data?.user || result.data)) {
+    const user = result.data.user || result.data;
+    setStoredUser(user);
+    try {
+      localStorage.setItem('teams_user', JSON.stringify(user));
+    } catch (e) {}
+    return user;
   }
   if (result.status === 401) {
+    const stored = getStoredUser();
     clearAuthSession();
+    clearUserStorage(stored?.id);
     try {
       localStorage.removeItem('teams_token');
       localStorage.removeItem('teams_user');
