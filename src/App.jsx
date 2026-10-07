@@ -25,7 +25,7 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [authChecking, setAuthChecking] = useState(true);
 
-  const { unreadCount, refresh: refreshUnreadCount } = useUnreadCount({
+  const { unreadCount, refreshUnreadCount } = useUnreadCount({
     enabled: authenticated,
   });
 

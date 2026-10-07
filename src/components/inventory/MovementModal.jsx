@@ -8,6 +8,26 @@ const KINDS = [
   { value: 'merma', label: 'Merma' },
 ];
 
+/**
+ * Genera un UUID v4 usando crypto.randomUUID o crypto.getRandomValues como respaldo seguro.
+ * Nunca utiliza Date.now().
+ */
+export function generateClientUuid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    // RFC 4122 v4
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  throw new Error('Criptografia no disponible para generar UUID');
+}
+
 export default function MovementModal({ isOpen, item, onClose, onMovementRegistered }) {
   const [kind, setKind] = useState('entrada');
   const [quantity, setQuantity] = useState('');
@@ -15,6 +35,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
   const [location, setLocation] = useState('bodega');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [validationError, setValidationError] = useState(null);
 
   // Idempotencia: el UUID se genera al abrir y SE REUTILIZA en reintentos
@@ -22,12 +43,13 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
 
   useEffect(() => {
     if (isOpen) {
-      clientUuidRef.current = crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}-${Math.random()}`;
+      clientUuidRef.current = generateClientUuid();
       setKind('entrada');
       setQuantity('');
       setReason('');
       setLocation('bodega');
       setError(null);
+      setFieldErrors({});
       setValidationError(null);
     }
   }, [isOpen, item]);
@@ -38,6 +60,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
     e.preventDefault();
     setValidationError(null);
     setError(null);
+    setFieldErrors({});
 
     const normQty = normalizeQuantity(quantity);
     if (!normQty) {
@@ -59,10 +82,9 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
     setSubmitting(false);
 
     if (res.ok) {
-      // 201 o 200 idempotent
       const isIdempotent = res.data?.status === 'idempotent';
       // Generar nuevo UUID para el próximo movimiento
-      clientUuidRef.current = crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`;
+      clientUuidRef.current = generateClientUuid();
       onMovementRegistered({
         success: true,
         message: isIdempotent ? 'Movimiento ya estaba registrado.' : 'Movimiento registrado con éxito.',
@@ -74,12 +96,15 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
       if (res.status === 409) {
         if (res.data?.message && res.data.message.includes('client_uuid ya usado en otro insumo')) {
           console.error('[Inventory] Conflicto de client_uuid entre insumos');
-          clientUuidRef.current = crypto.randomUUID ? crypto.randomUUID() : `uuid-${Date.now()}`;
+          clientUuidRef.current = generateClientUuid();
           setError('Ocurrió un conflicto de identificador. Se ha generado uno nuevo, intenta de nuevo.');
         } else {
           setError(res.error || res.data?.message || 'Stock insuficiente para este movimiento.');
         }
       } else if (res.status === 422) {
+        if (res.data?.errors) {
+          setFieldErrors(res.data.errors);
+        }
         setError(res.error || 'Datos del movimiento inválidos.');
       } else if (res.isNetworkError) {
         setError('Sin conexión. Tu movimiento no se registró; vuelve a intentarlo.');
@@ -94,7 +119,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(21, 21, 19, 0.85)',
+        background: 'var(--overlay)',
         backdropFilter: 'blur(8px)',
         zIndex: 1100,
         display: 'flex',
@@ -121,7 +146,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
         </p>
 
         {error && (
-          <div style={{ padding: '10px 12px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid var(--error)', borderRadius: '10px', color: 'var(--error)', fontSize: '12px', marginBottom: '14px' }}>
+          <div style={{ padding: '10px 12px', background: 'var(--error-soft)', border: '1px solid var(--error)', borderRadius: '10px', color: 'var(--error)', fontSize: '12px', marginBottom: '14px' }}>
             {error}
           </div>
         )}
@@ -152,6 +177,11 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
                 </button>
               ))}
             </div>
+            {fieldErrors.kind && (
+              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
+                {Array.isArray(fieldErrors.kind) ? fieldErrors.kind.join(', ') : fieldErrors.kind}
+              </span>
+            )}
           </div>
 
           <div>
@@ -173,6 +203,11 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
                 {validationError}
               </span>
             )}
+            {fieldErrors.quantity && (
+              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
+                {Array.isArray(fieldErrors.quantity) ? fieldErrors.quantity.join(', ') : fieldErrors.quantity}
+              </span>
+            )}
           </div>
 
           <div>
@@ -188,6 +223,11 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
               <option value="kitchen">Cocina</option>
               <option value="salon">Salón</option>
             </select>
+            {fieldErrors.location && (
+              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
+                {Array.isArray(fieldErrors.location) ? fieldErrors.location.join(', ') : fieldErrors.location}
+              </span>
+            )}
           </div>
 
           <div>
@@ -202,6 +242,11 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
               className="glass-input"
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
             />
+            {fieldErrors.reason && (
+              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
+                {Array.isArray(fieldErrors.reason) ? fieldErrors.reason.join(', ') : fieldErrors.reason}
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>

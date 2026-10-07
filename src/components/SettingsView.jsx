@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Settings, User, LogOut, Building, ShieldCheck, 
   ChevronDown, ChevronUp, Server, RefreshCw, Sliders, 
   Trash2, CheckCircle, Smartphone, Info, Sparkles, Bell
 } from 'lucide-react';
-import { getUser, logout } from '../services/auth';
+import { getUser, logout, isAuthenticated } from '../services/auth';
 import { checkNodeStatus } from '../services/aiEngine';
 import { getPreferences, updatePreferences } from '../services/notificationsClient';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const currentUser = getUser();
+  const authenticated = isAuthenticated();
 
   // Notification preferences state
   const [preferences, setPreferences] = useState([]);
-  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [loadingPrefs, setLoadingPrefs] = useState(false);
   const [prefsError, setPrefsError] = useState(null);
   const [savingCategory, setSavingCategory] = useState(null);
 
@@ -32,7 +33,23 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
 
+  const saveTimerRef = useRef(null);
+  const copyTimerRef = useRef(null);
+
   useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) {
+      setPreferences([]);
+      setLoadingPrefs(false);
+      return;
+    }
+
     const loadNotificationPrefs = async () => {
       setLoadingPrefs(true);
       setPrefsError(null);
@@ -44,13 +61,11 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
           prefsList = res.data.preferences;
         } else if (Array.isArray(res.data)) {
           prefsList = res.data;
-        } else if (typeof res.data === 'object') {
-          // Si devuelve un mapa { pedidos: true, inventario: true }
-          const raw = res.data.preferences || res.data;
-          prefsList = Object.entries(raw).map(([cat, val]) => ({
-            category: cat,
-            enabled: Boolean(val),
-          }));
+        } else if (res.data && typeof res.data === 'object') {
+          // Si el servidor o mock devuelve { pedidos: true, ... }
+          prefsList = Object.entries(res.data)
+            .filter(([k]) => ['pedidos', 'inventario', 'caja', 'sistema'].includes(k))
+            .map(([category, enabled]) => ({ category, enabled: Boolean(enabled) }));
         }
         setPreferences(prefsList);
       } else {
@@ -59,7 +74,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
     };
 
     loadNotificationPrefs();
-  }, []);
+  }, [authenticated]);
 
   const handleTogglePreference = async (category, currentEnabled) => {
     const newEnabled = !currentEnabled;
@@ -68,8 +83,8 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
     setSavingCategory(category);
     setPrefsError(null);
 
-    // Puede enviarse como mapa o array según contrato
-    const res = await updatePreferences({ [category]: newEnabled });
+    // El motor exige una lista: [{ category, enabled }]
+    const res = await updatePreferences([{ category, enabled: newEnabled }]);
     setSavingCategory(null);
 
     if (res.ok) {
@@ -102,7 +117,8 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       googleSheetsWebhookUrl: webhookUrl
     });
     setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSavedSuccess(false), 2500);
   };
 
   const handleTestConnection = async () => {
@@ -137,7 +153,8 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(scriptSnippet);
     setCopiedScript(true);
-    setTimeout(() => setCopiedScript(false), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedScript(false), 2000);
   };
 
   return (
@@ -207,7 +224,11 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
           </div>
         )}
 
-        {loadingPrefs ? (
+        {!authenticated ? (
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Inicia sesión para gestionar tus avisos.
+          </div>
+        ) : loadingPrefs ? (
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '10px 0' }}>
             Cargando preferencias de avisos...
           </div>
@@ -242,39 +263,39 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
                   aria-label={`${p.enabled ? 'Desactivar' : 'Activar'} avisos de ${p.label || p.category}`}
                   disabled={savingCategory === p.category}
                   onClick={() => handleTogglePreference(p.category, p.enabled)}
+                  style={{
+                    width: '44px',
+                    height: '24px',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    background: p.enabled ? 'var(--primary)' : 'rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    padding: '2px',
+                  }}
+                >
+                  <span
                     style={{
-                      width: '44px',
-                      height: '24px',
-                      borderRadius: '9999px',
-                      border: 'none',
-                      background: p.enabled ? 'var(--primary)' : 'rgba(255, 255, 255, 0.2)',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                      padding: '2px',
+                      display: 'block',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      transform: p.enabled ? 'translateX(20px)' : 'translateX(0)',
+                      transition: 'transform 0.2s ease',
                     }}
-                  >
-                    <span
-                      style={{
-                        display: 'block',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#ffffff',
-                        transform: p.enabled ? 'translateX(20px)' : 'translateX(0)',
-                        transition: 'transform 0.2s ease',
-                      }}
-                    />
-                  </button>
-                </div>
-              ))}
-
-              <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px', fontStyle: 'italic' }}>
-                Nota: Los avisos críticos de descuadre y seguridad se entregan siempre, independientemente de estos interruptores.
+                  />
+                </button>
               </div>
+            ))}
+
+            <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px', fontStyle: 'italic' }}>
+              Nota: Los avisos críticos de descuadre y seguridad se entregan siempre, independientemente de estos interruptores.
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>

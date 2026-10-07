@@ -119,6 +119,68 @@ describe('MovementModal component', () => {
     });
   });
 
+  it('handles 409 conflict when client_uuid was used by another item, displays generic message and generates fresh UUID for next submission', async () => {
+    const capturedUuids = [];
+    vi.spyOn(inventoryClient, 'registerMovement').mockImplementation((id, data, clientUuid) => {
+      capturedUuids.push(clientUuid || data.client_uuid);
+      if (capturedUuids.length === 1) {
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          data: { message: 'El client_uuid ya usado en otro insumo' },
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 201,
+        data: { message: 'Movimiento registrado con exito' },
+      });
+    });
+
+    render(<MovementModal isOpen={true} item={item} onClose={vi.fn()} onMovementRegistered={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/Cantidad/i), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ocurrió un conflicto de identificador. Se ha generado uno nuevo/i)).toBeInTheDocument();
+    });
+
+    // Submit again after conflict
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar$/i }));
+
+    await waitFor(() => {
+      expect(capturedUuids.length).toBe(2);
+    });
+
+    expect(capturedUuids[0]).not.toBe(capturedUuids[1]);
+    expect(capturedUuids[1]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  it('displays 422 field errors next to inputs', async () => {
+    vi.spyOn(inventoryClient, 'registerMovement').mockResolvedValue({
+      ok: false,
+      status: 422,
+      error: 'Datos del movimiento inválidos.',
+      data: {
+        errors: {
+          quantity: ['La cantidad debe ser mayor a 0.'],
+          reason: ['El motivo excede los 255 caracteres.'],
+        },
+      },
+    });
+
+    render(<MovementModal isOpen={true} item={item} onClose={vi.fn()} onMovementRegistered={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/Cantidad/i), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('La cantidad debe ser mayor a 0.')).toBeInTheDocument();
+      expect(screen.getByText('El motivo excede los 255 caracteres.')).toBeInTheDocument();
+    });
+  });
+
   it('accepts 200 as idempotent success when client_uuid was already processed', async () => {
     vi.spyOn(inventoryClient, 'registerMovement').mockResolvedValue({
       ok: true,

@@ -2,7 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SettingsView from '../SettingsView';
-import * as notificationsClient from '../../services/notificationsClient';
+import * as apiClient from '../../services/apiClient';
+import * as auth from '../../services/auth';
 
 describe('SettingsView component notifications preferences', () => {
   const dummySettings = {
@@ -16,8 +17,19 @@ describe('SettingsView component notifications preferences', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads and renders notification preference toggles and note', async () => {
-    vi.spyOn(notificationsClient, 'getPreferences').mockResolvedValue({
+  it('renders fallback and does not call getPreferences when unauthenticated', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(false);
+    const requestSpy = vi.spyOn(apiClient, 'request');
+
+    render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
+
+    expect(screen.getByText('Inicia sesión para gestionar tus avisos.')).toBeInTheDocument();
+    expect(requestSpy).not.toHaveBeenCalledWith('/notifications/preferences');
+  });
+
+  it('loads and renders notification preference toggles and note when authenticated', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    vi.spyOn(apiClient, 'request').mockResolvedValue({
       ok: true,
       data: {
         pedidos: true,
@@ -38,20 +50,22 @@ describe('SettingsView component notifications preferences', () => {
     expect(screen.getByRole('switch', { name: /Desactivar avisos de inventario/i })).toBeInTheDocument();
   });
 
-  it('updates notification preference via PUT call on toggle click', async () => {
-    vi.spyOn(notificationsClient, 'getPreferences').mockResolvedValue({
-      ok: true,
-      data: {
-        pedidos: true,
-        inventario: true,
-        caja: true,
-        sistema: true,
-      },
-    });
-    const updateSpy = vi.spyOn(notificationsClient, 'updatePreferences').mockResolvedValue({
-      ok: true,
-      data: { pedidos: false, inventario: true, caja: true, sistema: true },
-    });
+  it('sends PUT payload with list format [{ category, enabled }] via request', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    const requestSpy = vi.spyOn(apiClient, 'request')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          pedidos: true,
+          inventario: true,
+          caja: true,
+          sistema: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { pedidos: false, inventario: true, caja: true, sistema: true },
+      });
 
     render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
 
@@ -62,24 +76,31 @@ describe('SettingsView component notifications preferences', () => {
     fireEvent.click(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i }));
 
     await waitFor(() => {
-      expect(updateSpy).toHaveBeenCalledWith({ pedidos: false });
+      expect(requestSpy).toHaveBeenCalledWith('/notifications/preferences', {
+        method: 'PUT',
+        body: {
+          preferences: [{ category: 'pedidos', enabled: false }],
+        },
+      });
     });
   });
 
   it('rolls back toggle state when PUT call fails', async () => {
-    vi.spyOn(notificationsClient, 'getPreferences').mockResolvedValue({
-      ok: true,
-      data: {
-        pedidos: true,
-        inventario: true,
-        caja: true,
-        sistema: true,
-      },
-    });
-    vi.spyOn(notificationsClient, 'updatePreferences').mockResolvedValue({
-      ok: false,
-      error: 'Error guardando preferencias',
-    });
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    vi.spyOn(apiClient, 'request')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          pedidos: true,
+          inventario: true,
+          caja: true,
+          sistema: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        error: 'Error guardando preferencias',
+      });
 
     render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
 
@@ -91,7 +112,6 @@ describe('SettingsView component notifications preferences', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Error guardando preferencias/i)).toBeInTheDocument();
-      // Verifies it rolled back to true
       expect(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i })).toBeInTheDocument();
     });
   });

@@ -1,114 +1,68 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Package, 
-  AlertTriangle, 
-  Plus, 
-  Search, 
-  History, 
-  ArrowRightLeft,
-  Bell
-} from 'lucide-react';
-import { listInventory, fetchAlerts } from '../services/inventoryClient';
+import React, { useState, useRef, useEffect } from 'react';
+import { Package, Plus, Search } from 'lucide-react';
 import { getUser } from '../services/auth';
+import { useInventoryList } from '../hooks/useInventoryList';
+import InventoryList from './inventory/InventoryList';
 import MovementModal from './inventory/MovementModal';
 import ItemCreateModal from './inventory/ItemCreateModal';
 import MovementsHistoryModal from './inventory/MovementsHistoryModal';
 
 export default function InventoryView() {
-  const [items, setItems] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [totals, setTotals] = useState({ count: 0, low_stock_count: 0 });
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
-
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'low_stock' | 'alerts'
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const {
+    items,
+    alerts,
+    totals,
+    loading,
+    loadingMore,
+    error,
+    activeTab,
+    setActiveTab,
+    search,
+    setSearch,
+    hasMore,
+    reload,
+    loadNextPage,
+    updateItemStock,
+  } = useInventoryList();
 
   // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const toastTimerRef = useRef(null);
 
   const currentUser = getUser();
   const isOwner = Boolean(currentUser?.capabilities?.is_owner || currentUser?.role === 'owner');
 
   const showToast = (msg, type = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage({ msg, type });
-    setTimeout(() => setToastMessage(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Debounce búsqueda 300 ms
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [search]);
-
-  const loadData = useCallback(async (pageToLoad = 1, append = false) => {
-    if (pageToLoad === 1) setLoading(true);
-    else setLoadingMore(true);
-    setError(null);
-
-    try {
-      if (activeTab === 'alerts') {
-        const resAlerts = await fetchAlerts();
-        setLoading(false);
-        if (resAlerts.ok && resAlerts.data) {
-          setAlerts(resAlerts.data.alerts || []);
-        } else {
-          setError(resAlerts.error || 'Error al cargar alertas.');
-        }
-        return;
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
       }
-
-      const res = await listInventory({
-        search: debouncedSearch,
-        low_stock: activeTab === 'low_stock',
-        page: pageToLoad,
-      });
-
-      if (pageToLoad === 1) setLoading(false);
-      else setLoadingMore(false);
-
-      if (res.ok && res.data) {
-        const fetchedItems = res.data.items || res.data.data || [];
-        setItems(prev => append ? [...prev, ...fetchedItems] : fetchedItems);
-        setTotals(res.data.totals || { count: fetchedItems.length, low_stock_count: 0 });
-        const meta = res.data.meta || {};
-        setHasMore(meta.current_page < meta.last_page);
-        setPage(pageToLoad);
-      } else {
-        setError(res.error || 'Error al cargar el inventario.');
-      }
-    } catch {
-      setLoading(false);
-      setLoadingMore(false);
-      setError('Error de conexión al cargar datos.');
-    }
-  }, [activeTab, debouncedSearch]);
-
-  useEffect(() => {
-    loadData(1, false);
-  }, [loadData]);
+    };
+  }, []);
 
   const handleMovementRegistered = ({ message, item }) => {
     showToast(message, 'success');
     if (item) {
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, stock: item.stock } : i));
+      updateItemStock(item.id, item.stock);
     } else {
-      loadData(1, false);
+      reload();
     }
   };
 
-  const handleItemCreated = (newItem) => {
+  const handleItemCreated = () => {
     showToast('Insumo creado exitosamente.', 'success');
-    loadData(1, false);
+    reload();
   };
 
   return (
@@ -154,7 +108,7 @@ export default function InventoryView() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => { setActiveTab(tab.id); setPage(1); }}
+            onClick={() => setActiveTab(tab.id)}
             style={{
               flex: 1,
               padding: '8px 10px',
@@ -195,151 +149,21 @@ export default function InventoryView() {
       ) : error ? (
         <div style={{ textAlign: 'center', padding: '24px', color: 'var(--error)' }}>
           <p style={{ fontSize: '13px', marginBottom: '10px' }}>{error}</p>
-          <button type="button" onClick={() => loadData(1, false)} className="btn-primary" style={{ padding: '6px 14px', fontSize: '12px' }}>
+          <button type="button" onClick={reload} className="btn-primary" style={{ padding: '6px 14px', fontSize: '12px' }}>
             Reintentar
           </button>
         </div>
-      ) : activeTab === 'alerts' ? (
-        /* Vista de Alertas de Compra */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {alerts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '13px' }}>
-              No hay alertas de compra activas. El stock está dentro de los niveles óptimos.
-            </div>
-          ) : (
-            alerts.map(a => (
-              <div
-                key={a.id}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: 'rgba(245, 158, 11, 0.08)',
-                  border: '1px solid var(--warning)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {a.name}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--warning)', marginTop: '2px' }}>
-                    Stock actual: {Number(a.stock).toFixed(3)} {a.unit} (Mínimo: {Number(a.min_stock).toFixed(3)})
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sugerido comprar:</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent)' }}>
-                    {Number(a.suggested_qty).toFixed(3)} {a.unit}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       ) : (
-        /* Listado de Insumos */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {items.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '13px' }}>
-              No se encontraron insumos.
-            </div>
-          ) : (
-            items.map(item => (
-              <div
-                key={item.id}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: 'var(--bg-card)',
-                  border: item.is_low_stock ? '1px solid var(--warning)' : '1px solid var(--border-glass)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                      {item.name}
-                    </span>
-                    {item.is_low_stock && (
-                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--warning)', fontWeight: 700 }}>
-                        Bajo
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>
-                    {Number(item.stock).toFixed(3)} {item.unit}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItemForHistory(item)}
-                    title="Ver historial de movimientos"
-                    style={{
-                      padding: '8px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-glass)',
-                      background: 'rgba(32, 45, 47, 0.8)',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <History size={16} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItemForMovement(item)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--primary-2)',
-                      background: 'var(--primary)',
-                      color: '#ffffff',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <ArrowRightLeft size={14} />
-                    <span>Mover</span>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-
-          {hasMore && (
-            <button
-              type="button"
-              onClick={() => loadData(page + 1, true)}
-              disabled={loadingMore}
-              className="glass-card-interactive"
-              style={{
-                padding: '10px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-glass)',
-                background: 'rgba(32, 45, 47, 0.7)',
-                color: 'var(--accent)',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                marginTop: '6px',
-              }}
-            >
-              {loadingMore ? 'Cargando más...' : 'Cargar más insumos'}
-            </button>
-          )}
-        </div>
+        <InventoryList
+          activeTab={activeTab}
+          items={items}
+          alerts={alerts}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={loadNextPage}
+          onSelectForMovement={setSelectedItemForMovement}
+          onSelectForHistory={setSelectedItemForHistory}
+        />
       )}
 
       {/* Modales */}

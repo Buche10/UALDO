@@ -1,90 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { 
   Bell, 
   CheckCheck, 
   X, 
-  RefreshCw, 
-  AlertTriangle, 
-  Info, 
-  AlertCircle,
   Inbox
 } from 'lucide-react';
-import { listNotifications, markRead, markAllRead } from '../../services/notificationsClient';
+import { useNotifications } from '../../hooks/useNotifications';
 import { resolveNotificationRoute } from '../../services/notificationRoutes';
-
-/**
- * Formatea una fecha ISO a texto relativo en español ("hace 5 min").
- */
-export function formatRelativeTime(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffSec = Math.floor((now - date) / 1000);
-
-  if (diffSec < 60) return 'hace un momento';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `hace ${diffMin} min`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `hace ${diffHours} h`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `hace ${diffDays} d`;
-  return date.toLocaleDateString('es-EC', { day: '2-digit', month: 'short' });
-}
+import NotificationItem from './NotificationItem';
 
 export default function NotificationsPanel({ onClose, onNavigate }) {
-  const [notifications, setNotifications] = useState([]);
-  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
-  
-  // Filtros
-  const [unreadOnly, setUnreadOnly] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const {
+    notifications,
+    meta,
+    loading,
+    loadingMore,
+    error,
+    unreadOnly,
+    setUnreadOnly,
+    categoryFilter,
+    setCategoryFilter,
+    reload,
+    loadNextPage,
+    handleMarkRead,
+    handleMarkAllRead,
+  } = useNotifications();
 
-  const loadNotifications = useCallback(async (page = 1, append = false) => {
-    if (page === 1) setLoading(true);
-    else setLoadingMore(true);
-    setError(null);
-
-    const res = await listNotifications({
-      unread: unreadOnly ? 1 : null,
-      category: categoryFilter,
-      page,
-    });
-
-    if (page === 1) setLoading(false);
-    else setLoadingMore(false);
-
-    if (res.ok && res.data) {
-      const items = res.data.data || [];
-      setNotifications(prev => append ? [...prev, ...items] : items);
-      setMeta(res.data.meta || { current_page: 1, last_page: 1 });
-    } else {
-      setError(res.error || 'Error al cargar avisos.');
-    }
-  }, [unreadOnly, categoryFilter]);
-
-  useEffect(() => {
-    loadNotifications(1, false);
-  }, [loadNotifications]);
-
-  const handleMarkAllRead = async () => {
-    const res = await markAllRead(categoryFilter || null);
-    if (res.ok) {
-      setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
-      window.dispatchEvent(new CustomEvent('ualdo:notifications-updated'));
-    }
-  };
+  const [actionError, setActionError] = useState(null);
 
   const handleNotificationClick = async (notif) => {
+    setActionError(null);
     // 1. Marcar como leído si no lo estaba
     if (!notif.read_at) {
-      await markRead(notif.id);
-      setNotifications(prev =>
-        prev.map(n => n.id === notif.id ? { ...n, read_at: new Date().toISOString() } : n)
-      );
-      window.dispatchEvent(new CustomEvent('ualdo:notifications-updated'));
+      const res = await handleMarkRead(notif.id);
+      if (!res.ok) {
+        setActionError(res.error || 'Error al marcar como leído.');
+        return;
+      }
     }
 
     // 2. Resolver ruta de la lista blanca
@@ -96,42 +48,13 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
     }
   };
 
-  const getPriorityStyle = (priority) => {
-    if (priority === 'critical') {
-      return {
-        borderLeft: '4px solid var(--error)',
-        background: 'rgba(244, 63, 94, 0.08)',
-      };
-    }
-    if (priority === 'warning') {
-      return {
-        borderLeft: '4px solid var(--warning)',
-        background: 'rgba(245, 158, 11, 0.06)',
-      };
-    }
-    return {
-      borderLeft: '4px solid var(--primary-2)',
-      background: 'var(--bg-card)',
-    };
-  };
-
-  const getPriorityBadge = (priority) => {
-    if (priority === 'critical') {
-      return { label: 'Crítico', color: 'var(--error)' };
-    }
-    if (priority === 'warning') {
-      return { label: 'Atención', color: 'var(--warning)' };
-    }
-    return { label: 'Info', color: 'var(--accent)' };
-  };
-
   return (
     <div 
       className="notifications-panel-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(21, 21, 19, 0.85)',
+        background: 'var(--overlay)',
         backdropFilter: 'blur(8px)',
         zIndex: 1000,
         display: 'flex',
@@ -187,6 +110,12 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
             <X size={22} />
           </button>
         </div>
+
+        {actionError && (
+          <div style={{ padding: '8px 16px', background: 'var(--error-soft)', color: 'var(--error)', fontSize: '12px', borderBottom: '1px solid var(--error)' }}>
+            {actionError}
+          </div>
+        )}
 
         {/* Filtros */}
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-glass)', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -262,7 +191,7 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
               <p style={{ fontSize: '13px', marginBottom: '12px' }}>{error}</p>
               <button
                 type="button"
-                onClick={() => loadNotifications(1, false)}
+                onClick={reload}
                 className="btn-primary"
                 style={{ padding: '8px 16px', fontSize: '12px' }}
               >
@@ -281,81 +210,18 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
             </div>
           ) : (
             <>
-              {notifications.map(notif => {
-                const priorityInfo = getPriorityBadge(notif.priority);
-                const isUnread = !notif.read_at;
-
-                return (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleNotificationClick(notif); }}
-                    style={{
-                      ...getPriorityStyle(notif.priority),
-                      padding: '14px',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      position: 'relative',
-                      border: '1px solid var(--border-glass)',
-                      ...getPriorityStyle(notif.priority),
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '9999px',
-                            background: 'rgba(29, 29, 27, 0.6)',
-                            color: priorityInfo.color,
-                            border: `1px solid ${priorityInfo.color}`,
-                            textTransform: 'uppercase',
-                          }}
-                        >
-                          {priorityInfo.label}
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-subtle)', textTransform: 'capitalize' }}>
-                          {notif.category}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {formatRelativeTime(notif.created_at)}
-                        </span>
-                        {isUnread && (
-                          <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              background: 'var(--accent)',
-                            }}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <h4 style={{ fontSize: '14px', fontWeight: isUnread ? 700 : 500, color: 'var(--text-main)', marginBottom: '4px' }}>
-                      {notif.title}
-                    </h4>
-
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                      {notif.body}
-                    </p>
-                  </div>
-                );
-              })}
+              {notifications.map(notif => (
+                <NotificationItem
+                  key={notif.id}
+                  notif={notif}
+                  onClick={handleNotificationClick}
+                />
+              ))}
 
               {meta.current_page < meta.last_page && (
                 <button
                   type="button"
-                  onClick={() => loadNotifications(meta.current_page + 1, true)}
+                  onClick={loadNextPage}
                   disabled={loadingMore}
                   className="glass-card-interactive"
                   style={{

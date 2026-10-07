@@ -44,7 +44,7 @@ export default function ItemCreateModal({ isOpen, onClose, onItemCreated }) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(21, 21, 19, 0.85)',
+        background: 'var(--overlay)',
         backdropFilter: 'blur(8px)',
         zIndex: 1100,
         display: 'flex',

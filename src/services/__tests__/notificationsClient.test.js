@@ -117,14 +117,34 @@ describe('notificationsClient service', () => {
       expect(prefs.ok).toBe(true);
       expect(spy).toHaveBeenNthCalledWith(1, '/notifications/preferences');
 
-      const update = await updatePreferences({ pedidos: false, inventario: false });
+      const update = await updatePreferences([
+        { category: 'pedidos', enabled: false },
+        { category: 'inventario', enabled: false },
+      ]);
       expect(update.ok).toBe(true);
       expect(spy).toHaveBeenNthCalledWith(2, '/notifications/preferences', {
         method: 'PUT',
         body: {
-          preferences: { pedidos: false, inventario: false },
+          preferences: [
+            { category: 'pedidos', enabled: false },
+            { category: 'inventario', enabled: false },
+          ],
         },
       });
+    });
+
+    it('rejects invalid preference list or category without network call', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+
+      const resMap = await updatePreferences({ pedidos: false });
+      expect(resMap.ok).toBe(false);
+      expect(resMap.status).toBe(422);
+
+      const resBadCat = await updatePreferences([{ category: 'invalida', enabled: true }]);
+      expect(resBadCat.ok).toBe(false);
+      expect(resBadCat.status).toBe(422);
+
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 });

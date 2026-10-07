@@ -2,11 +2,8 @@
 import { 
   getDoblefiloTables,
   getDoblefiloMenu,
-  getDoblefiloInventory, 
-  updateDoblefiloStock, 
   getDoblefiloDailySummary, 
-  executeDoblefiloCashClose,
-  executeDoblefiloDetailedCashClose
+  executeDoblefiloCashClose
 } from './doblefiloEngine';
 
 const INITIAL_APPS = [
@@ -96,10 +93,6 @@ export const executeLocalTool = async (toolName, params = {}) => {
       return await getDoblefiloTables();
     case 'doblefilo_get_menu':
       return await getDoblefiloMenu();
-    case 'doblefilo_get_inventory':
-      return await getDoblefiloInventory();
-    case 'doblefilo_update_stock':
-      return await updateDoblefiloStock(params);
     case 'doblefilo_get_daily_summary':
       return await getDoblefiloDailySummary();
     case 'doblefilo_execute_cash_close':

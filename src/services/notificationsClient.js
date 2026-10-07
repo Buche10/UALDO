@@ -68,6 +68,8 @@ export const markAllRead = async (category = null) => {
   return request('/notifications/read-all', options);
 };
 
+const VALID_CATEGORIES = new Set(['pedidos', 'inventario', 'caja', 'sistema']);
+
 /**
  * Consulta las preferencias de categorías de avisos del usuario.
  */
@@ -77,9 +79,33 @@ export const getPreferences = async () => {
 
 /**
  * Actualiza las preferencias de categorías del usuario.
- * preferences: [{ category: string, enabled: boolean }]
+ * Exige una lista: [{ category: 'pedidos'|'inventario'|'caja'|'sistema', enabled: boolean }]
  */
 export const updatePreferences = async (preferences) => {
+  if (!Array.isArray(preferences) || preferences.length === 0) {
+    return {
+      ok: false,
+      status: 422,
+      error: 'La lista de preferencias es requerida.',
+      isNetworkError: false,
+    };
+  }
+
+  const isValid = preferences.every(
+    item => item && typeof item === 'object' &&
+      VALID_CATEGORIES.has(item.category) &&
+      typeof item.enabled === 'boolean'
+  );
+
+  if (!isValid) {
+    return {
+      ok: false,
+      status: 422,
+      error: 'Categoría o valor de activación inválido.',
+      isNetworkError: false,
+    };
+  }
+
   return request('/notifications/preferences', {
     method: 'PUT',
     body: { preferences },

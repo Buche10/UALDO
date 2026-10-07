@@ -181,25 +181,6 @@ export const getDoblefiloMenu = async () => {
 // 2. POS LOCAL & CIERRE DE CAJA MODULE
 // ----------------------------------------------------
 
-export const getDoblefiloInventory = async () => {
-  return {
-    success: true,
-    items: [
-      { id: 101, codigo: 'ART-001', descripcion: 'Hamburguesa DobleFilo Especial', existencias: 42, unidad: 'UND', pvp: 6.50 },
-      { id: 102, codigo: 'ART-002', descripcion: 'Papas Fritas Medianas', existencias: 85, unidad: 'PORC', pvp: 2.50 },
-      { id: 103, codigo: 'ART-003', descripcion: 'Gaseosa 500ml', existencias: 120, unidad: 'BOT', pvp: 1.50 },
-      { id: 104, codigo: 'ART-004', descripcion: 'Cerveza Artesanal 330ml', existencias: 18, unidad: 'BOT', pvp: 3.50 }
-    ]
-  };
-};
-
-export const updateDoblefiloStock = async ({ itemId, itemDescription, cantidad, tipo = 'ingreso' }) => {
-  return {
-    success: true,
-    message: `Inventario actualizado para "${itemDescription || 'Artículo #' + itemId}": Ajuste de ${tipo === 'ingreso' ? '+' : '-'}${cantidad} unidades registradas en Bodega DOBLEFILO.`
-  };
-};
-
 export const getDoblefiloDailySummary = async () => {
   return {
     success: true,
@@ -210,46 +191,21 @@ export const getDoblefiloDailySummary = async () => {
       totalTarjetas: 165.50,
       totalGastos: 35.00,
       saldoCajaEsperado: 285.00,
-      estadoTurno: 'Abierto - Turno Tarde/Noche'
+      numeroPedidos: 34,
+      estadoCaja: 'Abierta (Pendiente Cierre)'
     }
   };
 };
 
-export const executeDoblefiloCashClose = async ({ declaradoEfectivo = 0, observacion = '' } = {}) => {
-  const summary = await getDoblefiloDailySummary();
-  const esperado = summary.summary.saldoCajaEsperado;
-  const diferencia = parseFloat((declaradoEfectivo - esperado).toFixed(2));
-
-  const closeRecord = {
-    id: `CLS-${Date.now()}`,
-    fecha: new Date().toISOString().split('T')[0],
-    hora: new Date().toLocaleTimeString('es-EC'),
-    ventasTotal: summary.summary.totalVentas,
-    efectivoEsperado: esperado,
-    efectivoDeclarado: declaradoEfectivo,
-    diferencia,
-    estado: diferencia === 0 ? 'Cuadrado' : diferencia < 0 ? 'Faltante' : 'Sobrante',
+export const executeDoblefiloCashClose = async ({ declaradoEfectivo = 285.00, observacion = 'Cierre de caja realizado desde UALDO Mobile App' }) => {
+  return executeDoblefiloDetailedCashClose({
+    efectivo: declaradoEfectivo,
     observacion
-  };
-
-  try {
-    const existing = JSON.parse(localStorage.getItem('ualdo_cash_close_history') || '[]');
-    localStorage.setItem('ualdo_cash_close_history', JSON.stringify([closeRecord, ...existing]));
-  } catch (e) {
-    console.warn('No se pudo guardar en el historial local:', e);
-  }
-
-  return {
-    success: true,
-    message: `Cierre de caja procesado: Caja ${closeRecord.estado.toLowerCase()} con diferencia de $${diferencia}.`,
-    closeDetails: closeRecord
-  };
+  });
 };
 
 export const executeDoblefiloDetailedCashClose = async ({
-  idCierre = 1,
-  fecha = new Date().toISOString().split('T')[0],
-  fechaHora = new Date().toISOString(),
+  fecha = new Date().toLocaleDateString('es-EC'),
   efectivo = 0,
   pichincha = 0,
   deUna = 0,
@@ -257,38 +213,68 @@ export const executeDoblefiloDetailedCashClose = async ({
   tarjeta = 0,
   tarjetaDiners = 0,
   propinas = 0,
-  totalGastosYConsumos = 0,
-  ventasDelDia = 0,
-  diferenciaEfectivo = 0,
-  observacion = ''
-} = {}) => {
-  const totalTransferencias = parseFloat((pichincha + deUna + internacional).toFixed(2));
-  const tarjetaSinComision = parseFloat((tarjeta * 0.96).toFixed(2));
-  const tarjetaDinersSinComision = parseFloat((tarjetaDiners * 0.94).toFixed(2));
+  gastos = [],
+  consumosPersonal = [],
+  observacion = 'Cierre de caja registrado mediante UALDO Mobile Chat'
+}) => {
+  const numEfectivo = parseFloat(efectivo) || 0;
+  const numPichincha = parseFloat(pichincha) || 0;
+  const numDeUna = parseFloat(deUna) || 0;
+  const numInternacional = parseFloat(internacional) || 0;
+  const totalTransferencias = parseFloat((numPichincha + numDeUna + numInternacional).toFixed(2));
+
+  const numTarjeta = parseFloat(tarjeta) || 0;
+  const numTarjetaDiners = parseFloat(tarjetaDiners) || 0;
+  
+  // Comisión del ~6.47% (Datafast / Diners Ecuador)
+  const tarjetaSinComision = parseFloat((numTarjeta * 0.9353).toFixed(2));
+  const tarjetaDinersSinComision = parseFloat((numTarjetaDiners * 0.9353).toFixed(2));
   const totalTarjetasNeto = parseFloat((tarjetaSinComision + tarjetaDinersSinComision).toFixed(2));
 
+  const numPropinas = parseFloat(propinas) || 0;
+
+  const listGastos = Array.isArray(gastos) ? gastos : [];
+  const listConsumos = Array.isArray(consumosPersonal) ? consumosPersonal : [];
+
+  const sumGastos = listGastos.reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
+  const sumConsumos = listConsumos.reduce((acc, c) => acc + (parseFloat(c.monto) || 0), 0);
+  const totalGastosYConsumos = parseFloat((sumGastos + sumConsumos).toFixed(2));
+
+  const ventasDelDia = parseFloat((numEfectivo + totalTransferencias + numTarjeta + numTarjetaDiners + numPropinas).toFixed(2));
+  const totalNetoAcreditado = parseFloat((numEfectivo + totalTransferencias + totalTarjetasNeto + numPropinas).toFixed(2));
+
+  const efectivoEsperadoEnCaja = parseFloat(Math.max(0, numEfectivo - totalGastosYConsumos).toFixed(2));
+  const diferenciaEfectivo = parseFloat((numEfectivo - efectivoEsperadoEnCaja).toFixed(2));
+
   const closeRecord = {
-    idCierre,
+    type: 'detailed_cash_close',
+    idCierre: `CR-${Date.now().toString().slice(-6)}`,
+    fechaHora: new Date().toLocaleString('es-EC'),
     fecha,
-    fechaHora,
-    efectivo,
-    pichincha,
-    deUna,
-    internacional,
+    efectivo: numEfectivo,
+    pichincha: numPichincha,
+    deUna: numDeUna,
+    internacional: numInternacional,
     totalTransferencias,
-    tarjeta,
+    tarjeta: numTarjeta,
     tarjetaSinComision,
-    tarjetaDiners,
+    tarjetaDiners: numTarjetaDiners,
     tarjetaDinersSinComision,
     totalTarjetasNeto,
-    propinas,
+    propinas: numPropinas,
+    gastos: listGastos,
+    consumosPersonal: listConsumos,
     totalGastosYConsumos,
     ventasDelDia,
+    totalNetoAcreditado,
+    efectivoEsperadoEnCaja,
     diferenciaEfectivo,
+    estadoCuadre: diferenciaEfectivo >= 0 ? 'Cuadrado / Sobrante' : 'Faltante',
     observacion,
     googleSheetsSync: { synced: false, message: 'Pendiente de sincronización' }
   };
 
+  // Attempt Google Sheets Sync
   const sheetsResult = await syncCashCloseToGoogleSheets(closeRecord);
   closeRecord.googleSheetsSync = sheetsResult;
 
@@ -301,7 +287,7 @@ export const executeDoblefiloDetailedCashClose = async ({
 
   return {
     success: true,
-    message: `Cierre de Caja del ${fecha} procesado con éxito${sheetsResult.synced ? ' y subido a Google Sheets' : ''}!`,
+    message: `¡Cierre de Caja del ${fecha} procesado con éxito en formato DOBLEFILO${sheetsResult.synced ? ' y subido a Google Sheets' : ''}!`,
     closeDetails: closeRecord
   };
 };
