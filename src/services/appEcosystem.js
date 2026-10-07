@@ -2,8 +2,7 @@
 import { 
   getDoblefiloTables,
   getDoblefiloMenu,
-  getDoblefiloDailySummary, 
-  executeDoblefiloCashClose
+  getDoblefiloDailySummary
 } from './doblefiloEngine';
 
 const INITIAL_APPS = [
@@ -41,11 +40,6 @@ const INITIAL_APPS = [
         name: 'doblefilo_get_daily_summary',
         description: 'Obtiene el resumen de ventas del día en DOBLEFILO',
         parameters: {}
-      },
-      {
-        name: 'doblefilo_execute_cash_close',
-        description: 'Procesa el Cierre de Caja en DOBLEFILO',
-        parameters: { declaradoEfectivo: 'number', observacion: 'string' }
       }
     ]
   }
@@ -95,8 +89,6 @@ export const executeLocalTool = async (toolName, params = {}) => {
       return await getDoblefiloMenu();
     case 'doblefilo_get_daily_summary':
       return await getDoblefiloDailySummary();
-    case 'doblefilo_execute_cash_close':
-      return await executeDoblefiloCashClose(params);
     default:
       return { success: false, error: `Herramienta local no encontrada: ${toolName}` };
   }

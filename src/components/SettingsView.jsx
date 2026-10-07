@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Settings, User, LogOut, Building, ShieldCheck, 
   ChevronDown, ChevronUp, Server, RefreshCw, Sliders, 
-  Trash2, CheckCircle, Smartphone, Info, Sparkles, Bell
+  Trash2, CheckCircle, Smartphone, Info, Sparkles, Bell, Copy
 } from 'lucide-react';
 import { getUser, logout, isAuthenticated } from '../services/auth';
 import { checkNodeStatus } from '../services/aiEngine';
@@ -26,12 +26,11 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
   const [port, setPort] = useState(settings.nodePort || '11434');
   const [prompt, setPrompt] = useState(settings.systemPrompt || '');
   const [model, setModel] = useState(settings.activeModel || 'llama3:latest');
-  const [webhookUrl, setWebhookUrl] = useState(settings.googleSheetsWebhookUrl || '');
+  const [copiedSheetsUrl, setCopiedSheetsUrl] = useState(false);
   
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [copiedScript, setCopiedScript] = useState(false);
 
   const saveTimerRef = useRef(null);
   const copyTimerRef = useRef(null);
@@ -114,7 +113,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       aiProvider: provider,
       activeModel: model,
       systemPrompt: prompt,
-      googleSheetsWebhookUrl: webhookUrl
+      googleSheetsWebhookUrl: settings.googleSheetsWebhookUrl
     });
     setSavedSuccess(true);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -133,28 +132,13 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
     }
   };
 
-  const scriptSnippet = `function doPost(e) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    sheet.appendRow([
-      data.fecha, data.efectivo, data.pichincha, data.deUna, data.internacional,
-      data.totalTransferencias, data.tarjeta, data.tarjetaSinComision,
-      data.tarjetaDiners, data.tarjetaDinersSinComision, data.totalTarjetasNeto,
-      data.propinas, data.totalGastosYConsumos, data.ventasDelDia,
-      data.diferenciaEfectivo, data.observacion
-    ]);
-    return ContentService.createTextOutput(JSON.stringify({result:"success"})).setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({result:"error", error:err.message})).setMimeType(ContentService.MimeType.JSON);
-  }
-}`;
-
-  const handleCopyScript = () => {
-    navigator.clipboard.writeText(scriptSnippet);
-    setCopiedScript(true);
-    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    copyTimerRef.current = setTimeout(() => setCopiedScript(false), 2000);
+  const handleCopySheetsUrl = () => {
+    if (settings.googleSheetsWebhookUrl) {
+      navigator.clipboard.writeText(settings.googleSheetsWebhookUrl);
+      setCopiedSheetsUrl(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedSheetsUrl(false), 2000);
+    }
   };
 
   return (
@@ -328,6 +312,32 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
         </div>
       </div>
 
+      {/* TARJETA GOOGLE SHEETS MOTOR (SOLO LECTURA SI EXISTE URL GUARDADA) */}
+      {settings.googleSheetsWebhookUrl && (
+        <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.5px' }}>
+            Google Sheets ahora lo envía el motor
+          </h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+            La exportación a Google Sheets se gestiona directamente en el servidor. Copia esta URL para configurarla en el motor con sheets:configure.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-soft)', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-main)', wordBreak: 'break-all', flex: 1, fontFamily: 'var(--font-mono)' }}>
+              {settings.googleSheetsWebhookUrl}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopySheetsUrl}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', borderRadius: '9999px', fontSize: '11px', cursor: 'pointer', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+            >
+              <Copy size={12} />
+              <span>{copiedSheetsUrl ? 'Copiado' : 'Copiar'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 5. SECCIÓN AVANZADO (COLAPSADO) */}
       <div className="glass-card" style={{ padding: '16px' }}>
         <button
@@ -442,17 +452,6 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
                   className="form-input" 
                   value={model} 
                   onChange={e => setModel(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Webhook de Google Sheets (Cierre de Caja)</label>
-                <input 
-                  type="url" 
-                  className="form-input" 
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                  value={webhookUrl} 
-                  onChange={e => setWebhookUrl(e.target.value)}
                 />
               </div>
 

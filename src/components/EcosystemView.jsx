@@ -16,6 +16,7 @@ export default function EcosystemView({
   onSendChatPrompt,
   subView = 'overview',
   onSubViewChange,
+  negociosParams = null,
 }) {
   const currentSubTab = subView;
 
@@ -103,7 +104,10 @@ export default function EcosystemView({
       </div>
 
       {currentSubTab === 'cashclose' ? (
-        <CashCloseView onBack={() => handleSubTabChange('overview')} />
+        <CashCloseView
+          onBack={() => handleSubTabChange('overview')}
+          fechaInicial={negociosParams?.fecha}
+        />
       ) : currentSubTab === 'inventory' ? (
         <InventoryView />
       ) : (

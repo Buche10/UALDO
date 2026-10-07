@@ -22,7 +22,12 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
     'updateDoblefiloStock',
     'getDoblefiloInventory',
     'fetchCanonicalInventory',
-    'fetchReorderAlerts'
+    'fetchReorderAlerts',
+    'syncCashCloseToGoogleSheets',
+    'executeDoblefiloDetailedCashClose',
+    'ualdo_cash_close_history',
+    '/mobile/cash-close',
+    'DINERS_NET_FACTOR'
   ];
 
   // Unicode emoji range regex with unicode flag
@@ -72,6 +77,28 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
         match,
         `File src/${relPath} contains emoji at match: "${match ? match[0] : ''}"`
       ).toBeNull();
+    }
+  });
+
+  it('detecta un token prohibido escrito en un archivo temporal de src y luego lo elimina', () => {
+    const tempFile = path.join(srcDir, 'temp_security_probe.js');
+    const probeToken = ['syncCashClose', 'ToGoogleSheets'].join('');
+    try {
+      fs.writeFileSync(tempFile, `// Probe test\nconst x = "${probeToken}";\n`, 'utf-8');
+      const filesWithTemp = getAllSourceFiles(srcDir);
+      let found = false;
+      for (const filePath of filesWithTemp) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        if (content.includes(probeToken)) {
+          found = true;
+          break;
+        }
+      }
+      expect(found).toBe(true);
+    } finally {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
     }
   });
 });

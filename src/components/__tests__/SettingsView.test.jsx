@@ -142,4 +142,21 @@ describe('SettingsView component notifications preferences', () => {
       expect(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i })).toBeInTheDocument();
     });
   });
+
+  it('muestra la tarjeta de solo lectura de Google Sheets con boton Copiar y ningun campo editable', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    const settingsWithWebhook = {
+      ...dummySettings,
+      googleSheetsWebhookUrl: 'https://script.google.com/macros/s/test-app/exec'
+    };
+
+    render(<SettingsView settings={settingsWithWebhook} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
+
+    expect(screen.getByText('Google Sheets ahora lo envía el motor')).toBeInTheDocument();
+    expect(screen.getByText('https://script.google.com/macros/s/test-app/exec')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copiar/i })).toBeInTheDocument();
+
+    // Confirmar que no hay ningun campo editable de Google Sheets
+    expect(screen.queryByPlaceholderText(/https:\/\/script\.google\.com/i)).not.toBeInTheDocument();
+  });
 });

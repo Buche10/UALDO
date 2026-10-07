@@ -38,6 +38,21 @@ describe('auth service', () => {
       expect(localStorage.getItem('teams_token')).toBeNull();
       expect(localStorage.getItem('teams_user')).toBeNull();
     });
+
+    it('elimina el historial de caja del localStorage al iniciar sesion', async () => {
+      const historyKey = ['ualdo', 'cash', 'close', 'history'].join('_');
+      localStorage.setItem(historyKey, JSON.stringify([{ id: 1 }]));
+      expect(localStorage.getItem(historyKey)).not.toBeNull();
+
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { token: 'token-test', user: { id: 10, role: 'owner', name: 'Ana' } }
+      });
+
+      await login('ana@restaurant.com', 'password123');
+      expect(localStorage.getItem(historyKey)).toBeNull();
+    });
   });
 
   describe('login scenarios and branch coverage', () => {

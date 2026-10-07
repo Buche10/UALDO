@@ -17,6 +17,7 @@ import { useUnreadCount } from './hooks/useUnreadCount';
 export default function App() {
   const [activeTab, setActiveTab] = useState('trabajo');
   const [negociosSubView, setNegociosSubView] = useState('overview');
+  const [negociosParams, setNegociosParams] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [settings, setSettings] = useState(getSettings);
   const [registeredApps, setRegisteredApps] = useState(getRegisteredApps);
@@ -107,7 +108,15 @@ export default function App() {
     if (target.subView) {
       setNegociosSubView(target.subView);
     }
+    setNegociosParams(target.params || null);
     setShowNotifications(false);
+  };
+
+  const handleNegociosSubViewChange = (newSubView) => {
+    setNegociosSubView(newSubView);
+    if (newSubView !== 'cashclose') {
+      setNegociosParams(null);
+    }
   };
 
   if (authChecking) {
@@ -149,7 +158,8 @@ export default function App() {
                 setActiveTab('asistente');
               }}
               subView={negociosSubView}
-              onSubViewChange={setNegociosSubView}
+              onSubViewChange={handleNegociosSubViewChange}
+              negociosParams={negociosParams}
             />
           ) : (
             <LoginView onLoginSuccess={handleLoginSuccess} />

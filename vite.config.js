@@ -37,7 +37,12 @@ export default defineConfig({
         'src/components/inventory/**',
         'src/components/notifications/**',
         'src/components/InventoryView.jsx',
-        'src/components/DobleFiloCard.jsx'
+        'src/components/DobleFiloCard.jsx',
+        'src/components/CashCloseView.jsx',
+        'src/components/cashclose/**',
+        'src/services/cashCloseClient.js',
+        'src/services/cashMovementsClient.js',
+        'src/services/money.js'
       ],
       exclude: ['**/__tests__/**']
     }

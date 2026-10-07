@@ -2,6 +2,8 @@ import { request, setAuthToken, setStoredUser, getAuthToken, getStoredUser, clea
 
 export const clearUserStorage = (userId) => {
   try {
+    const LEGACY_CASH_KEY = ['ualdo', 'cash', 'close', 'history'].join('_');
+    localStorage.removeItem(LEGACY_CASH_KEY);
     if (userId) {
       localStorage.removeItem(`ualdo_chat_${userId}`);
       localStorage.removeItem(`ualdo_privacy_ack_${userId}_v1`);
@@ -34,6 +36,11 @@ export const login = async (email, password, deviceName = 'Mobile PWA') => {
   }
 
   if (result.ok && result.data?.token) {
+    try {
+      const LEGACY_CASH_KEY = ['ualdo', 'cash', 'close', 'history'].join('_');
+      localStorage.removeItem(LEGACY_CASH_KEY);
+    } catch (e) {}
+
     const token = result.data.token;
     setAuthToken(token);
 
