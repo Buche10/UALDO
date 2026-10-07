@@ -147,7 +147,7 @@ describe('inventoryClient service', () => {
   });
 
   describe('createItem', () => {
-    it('creates item with normalized numeric strings', async () => {
+    it('creates item with normalized numeric strings and handles optional fields', async () => {
       const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 201,
@@ -159,6 +159,9 @@ describe('inventoryClient service', () => {
         unit: 'kg',
         min_stock: '10,5',
         reorder_point: '25',
+        type: 'supply',
+        supplier: 'Lacteos SA',
+        sku: 'SKU-100',
       });
 
       expect(res.ok).toBe(true);
@@ -169,8 +172,53 @@ describe('inventoryClient service', () => {
           unit: 'kg',
           min_stock: '10.5',
           reorder_point: '25',
+          type: 'supply',
+          supplier: 'Lacteos SA',
+          sku: 'SKU-100',
         },
       });
+    });
+
+    it('discards invalid min_stock, reorder_point and ignores empty type or sku', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 201,
+        data: { id: 100, name: 'Harina' },
+      });
+
+      const res = await createItem({
+        name: 'Harina',
+        unit: 'kg',
+        min_stock: '-5',
+        reorder_point: 'invalido',
+        type: '   ',
+        supplier: '',
+        sku: '',
+      });
+
+      expect(res.ok).toBe(true);
+      expect(spy).toHaveBeenCalledWith('/inventory/items', {
+        method: 'POST',
+        body: {
+          name: 'Harina',
+          unit: 'kg',
+        },
+      });
+    });
+  });
+
+  describe('listInventory edge cases', () => {
+    it('ignores non-integer or <=1 page and invalid query filters', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: [] },
+      });
+
+      await listInventory({ page: 'no-es-numero', search: '   ' });
+      expect(spy).toHaveBeenCalledWith('/inventory');
+
+      await listInventory({ page: 1, low_stock: false });
+      expect(spy).toHaveBeenCalledWith('/inventory');
     });
   });
 });

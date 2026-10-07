@@ -29,8 +29,17 @@ export default defineConfig({
       include: [
         'src/services/assistantClient.js',
         'src/services/auth.js',
-        'src/components/assistant/**'
-      ]
+        'src/components/assistant/**',
+        'src/services/inventoryClient.js',
+        'src/services/notificationsClient.js',
+        'src/services/notificationRoutes.js',
+        'src/hooks/**',
+        'src/components/inventory/**',
+        'src/components/notifications/**',
+        'src/components/InventoryView.jsx',
+        'src/components/DobleFiloCard.jsx'
+      ],
+      exclude: ['**/__tests__/**']
     }
   }
 });

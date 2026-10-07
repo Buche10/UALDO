@@ -1,6 +1,5 @@
 // DOBLEFILO (RunFood POS, Bodega Local & Waiter Orders) Integration Service for UALDO Mobile
 import { getSettings } from './storage';
-import { request } from './apiClient';
 
 const getDoblefiloBaseUrl = () => {
   const settings = getSettings();
@@ -344,33 +343,4 @@ export const getDoblefiloClosureHistory = () => {
   } catch (e) {
     return [];
   }
-};
-
-// ----------------------------------------------------
-// 3. CANONICAL INVENTORY & ALERTS CLIENT API
-// ----------------------------------------------------
-
-export const fetchCanonicalInventory = async () => {
-  const res = await request('/inventory');
-  if (res.ok) {
-    return res.data;
-  }
-  return {
-    success: false,
-    error: res.error || 'Error al conectar con la API de inventario del motor.',
-    items: []
-  };
-};
-
-export const fetchReorderAlerts = async () => {
-  const res = await request('/inventory/alerts');
-  if (res.ok) {
-    return res.data;
-  }
-  return {
-    success: false,
-    error: res.error || 'Error al consultar las alertas de compra.',
-    alerts_count: 0,
-    alerts: []
-  };
 };

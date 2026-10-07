@@ -80,7 +80,7 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bell size={20} color="#ffffff" />
+              <Bell size={20} color="var(--on-primary)" />
             </div>
             <div>
               <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
@@ -127,8 +127,8 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
                 padding: '6px 12px',
                 borderRadius: '9999px',
                 border: unreadOnly ? '1px solid var(--primary-2)' : '1px solid var(--border-glass)',
-                background: unreadOnly ? 'var(--primary)' : 'rgba(32, 45, 47, 0.6)',
-                color: unreadOnly ? '#ffffff' : 'var(--text-muted)',
+                background: unreadOnly ? 'var(--primary)' : 'var(--chip-bg)',
+                color: unreadOnly ? 'var(--on-primary)' : 'var(--text-muted)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -146,8 +146,8 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
                   padding: '6px 12px',
                   borderRadius: '9999px',
                   border: categoryFilter === cat ? '1px solid var(--primary-2)' : '1px solid var(--border-glass)',
-                  background: categoryFilter === cat ? 'var(--primary)' : 'rgba(32, 45, 47, 0.6)',
-                  color: categoryFilter === cat ? '#ffffff' : 'var(--text-muted)',
+                  background: categoryFilter === cat ? 'var(--primary)' : 'var(--chip-bg)',
+                  color: categoryFilter === cat ? 'var(--on-primary)' : 'var(--text-muted)',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -228,7 +228,7 @@ export default function NotificationsPanel({ onClose, onNavigate }) {
                     padding: '10px',
                     borderRadius: '12px',
                     border: '1px solid var(--border-glass)',
-                    background: 'rgba(32, 45, 47, 0.7)',
+                    background: 'var(--bg-card)',
                     color: 'var(--accent)',
                     fontWeight: 600,
                     fontSize: '13px',

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
 import { createItem } from '../../services/inventoryClient';
 
 export default function ItemCreateModal({ isOpen, onClose, onItemCreated }) {
@@ -73,7 +72,7 @@ export default function ItemCreateModal({ isOpen, onClose, onItemCreated }) {
         </p>
 
         {error && (
-          <div style={{ padding: '10px 12px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid var(--error)', borderRadius: '10px', color: 'var(--error)', fontSize: '12px', marginBottom: '14px' }}>
+          <div style={{ padding: '10px 12px', background: 'var(--error-soft)', border: '1px solid var(--error)', borderRadius: '10px', color: 'var(--error)', fontSize: '12px', marginBottom: '14px' }}>
             {error}
           </div>
         )}

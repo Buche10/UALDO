@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Utensils, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
+import { Package, Utensils, ArrowRight, RefreshCw } from 'lucide-react';
 import { getDoblefiloTables } from '../services/doblefiloEngine';
 import { listInventory } from '../services/inventoryClient';
 import { request } from '../services/apiClient';

@@ -13,6 +13,16 @@ describe('SettingsView component notifications preferences', () => {
     apiBaseUrl: 'https://engine.test/api/v1',
   };
 
+  const realContractResponse = {
+    preferences: [
+      { category: 'pedidos', label: 'Pedidos internos', enabled: true },
+      { category: 'inventario', label: 'Inventario y stock', enabled: true },
+      { category: 'caja', label: 'Cierre de caja', enabled: true },
+      { category: 'sistema', label: 'Sistema y seguridad', enabled: true },
+    ],
+    critical_always_enabled: true,
+  };
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -27,7 +37,29 @@ describe('SettingsView component notifications preferences', () => {
     expect(requestSpy).not.toHaveBeenCalledWith('/notifications/preferences');
   });
 
-  it('loads and renders notification preference toggles and note when authenticated', async () => {
+  it('loads preferences using real engine contract and displays engine labels', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    vi.spyOn(apiClient, 'request').mockResolvedValue({
+      ok: true,
+      data: realContractResponse,
+    });
+
+    render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Avisos del Sistema')).toBeInTheDocument();
+      expect(screen.getByText('Pedidos internos')).toBeInTheDocument();
+      expect(screen.getByText('Inventario y stock')).toBeInTheDocument();
+      expect(screen.getByText('Cierre de caja')).toBeInTheDocument();
+      expect(screen.getByText('Sistema y seguridad')).toBeInTheDocument();
+      expect(screen.getByText(/Los avisos cr[ií]ticos llegan siempre/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /Desactivar avisos de Inventario y stock/i })).toBeInTheDocument();
+  });
+
+  it('maintains compatibility with legacy map format response', async () => {
     vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
     vi.spyOn(apiClient, 'request').mockResolvedValue({
       ok: true,
@@ -43,11 +75,9 @@ describe('SettingsView component notifications preferences', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Avisos del Sistema')).toBeInTheDocument();
-      expect(screen.getByText(/Los avisos cr[ií]ticos llegan siempre/i)).toBeInTheDocument();
     });
 
     expect(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: /Desactivar avisos de inventario/i })).toBeInTheDocument();
   });
 
   it('sends PUT payload with list format [{ category, enabled }] via request', async () => {
@@ -55,25 +85,27 @@ describe('SettingsView component notifications preferences', () => {
     const requestSpy = vi.spyOn(apiClient, 'request')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          pedidos: true,
-          inventario: true,
-          caja: true,
-          sistema: true,
-        },
+        data: realContractResponse,
       })
       .mockResolvedValueOnce({
         ok: true,
-        data: { pedidos: false, inventario: true, caja: true, sistema: true },
+        data: {
+          preferences: [
+            { category: 'pedidos', label: 'Pedidos internos', enabled: false },
+            { category: 'inventario', label: 'Inventario y stock', enabled: true },
+            { category: 'caja', label: 'Cierre de caja', enabled: true },
+            { category: 'sistema', label: 'Sistema y seguridad', enabled: true },
+          ],
+        },
       });
 
     render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i })).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i }));
+    fireEvent.click(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i }));
 
     await waitFor(() => {
       expect(requestSpy).toHaveBeenCalledWith('/notifications/preferences', {
@@ -90,12 +122,7 @@ describe('SettingsView component notifications preferences', () => {
     vi.spyOn(apiClient, 'request')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          pedidos: true,
-          inventario: true,
-          caja: true,
-          sistema: true,
-        },
+        data: realContractResponse,
       })
       .mockResolvedValueOnce({
         ok: false,
@@ -105,14 +132,14 @@ describe('SettingsView component notifications preferences', () => {
     render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i })).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i }));
+    fireEvent.click(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Error guardando preferencias/i)).toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: /Desactivar avisos de pedidos/i })).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: /Desactivar avisos de Pedidos internos/i })).toBeInTheDocument();
     });
   });
 });

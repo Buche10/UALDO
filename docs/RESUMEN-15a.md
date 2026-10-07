@@ -134,14 +134,22 @@ Se aplicaron las correcciones y se ejecutaron las mutaciones requeridas por el B
 ### Mutación Fix 1: Enviar mapa `{ [category]: newEnabled }` en lugar de lista en `SettingsView.jsx`
 - **Ubicación:** `src/components/SettingsView.jsx:87`
 - **Cambio realizado:** Se reemplazó `updatePreferences([{ category, enabled: newEnabled }])` por `updatePreferences({ [category]: newEnabled })`.
-- **Test que falló:** `src/components/__tests__/SettingsView.test.jsx > sends PUT payload with list format [{ category, enabled }] via request`
+- **Tests que fallaron (2 tests):**
+  1. `src/components/__tests__/SettingsView.test.jsx > SettingsView component notifications preferences > sends PUT payload with list format [{ category, enabled }] via request`
+  2. `src/components/__tests__/SettingsView.test.jsx > SettingsView component notifications preferences > updates switch optimistically and reverts if request fails`
 - **Salida real obtenida:**
   ```text
-  FAIL  src/components/__tests__/SettingsView.test.jsx > SettingsView component notifications preferences > sends PUT payload with list format [{ category, enabled }] via request
-  AssertionError: expected "request" to be called with arguments: [ '/notifications/preferences', { method: 'PUT', body: { preferences: [ { category: 'pedidos', enabled: false } ] } } ]
-  Number of calls: 1 (called only with /notifications/preferences GET)
+  FAIL  src/components/__tests__/SettingsView.test.jsx
+    SettingsView component notifications preferences
+      x sends PUT payload with list format [{ category, enabled }] via request
+        -> expected "request" to be called with arguments: [ '/notifications/preferences', ... ]
+      x updates switch optimistically and reverts if request fails
+        -> TestingLibraryElementError: Unable to find an element with the text: /Error guardando preferencias/i
+
+  Test Files  1 failed (1)
+  Tests  2 failed | 3 passed (5)
   ```
-  *(Nota: El cliente local `notificationsClient.updatePreferences` rechazó la petición con 422 antes del fetch al no recibir un arreglo, provocando fallo directo en la aserción del cuerpo esperado).*
+  *(Nota: Al enviar un objeto tipo mapa `{ pedidos: false }` en vez de un array `[{ category: 'pedidos', enabled: false }]`, el validador cliente `notificationsClient.updatePreferences` rechaza la solicitud retornando 422 antes de la llamada HTTP, provocando el fallo de ambos tests al no coincidir el payload enviado ni el mensaje de error).*
 
 ### Mutación Fix 2: Botón "Nuevo Insumo" visible siempre sin validar `capabilities.is_owner`
 - **Ubicación:** `src/components/InventoryView.jsx:38`
@@ -172,7 +180,7 @@ Se aplicaron las correcciones y se ejecutaron las mutaciones requeridas por el B
   ```text
   Vitest caught 1 unhandled error during the test run.
   TypeError: refreshUnreadCount is not a function
-   ❯ handleLoginSuccess src/App.jsx:87:5
+     at handleLoginSuccess src/App.jsx:87:5
   ```
 
 ---
@@ -186,7 +194,7 @@ Ejecución de `git diff c955b13 -- src/services/doblefiloEngine.js`:
 
 ---
 
-## 6. Resultados Finales de la Suite
+## 6. Resultados Anteriores de la Suite (15a_fix)
 
 ```text
 > npm run lint
@@ -196,13 +204,175 @@ Ejecución de `git diff c955b13 -- src/services/doblefiloEngine.js`:
 Test Files  17 passed (17)
 Tests       100 passed (100)
 
-> npm run test:coverage
-All files: 94.02% Stmts, 71.64% Branch, 88.23% Funcs, 94.02% Lines.
-
 > npm run build
 vite v5.4.21 building for production...
-✓ 1613 modules transformed.
+[OK] 1613 modules transformed.
 dist/index.html 1.13 kB
 dist/assets/index-BRhqXTuR.js 298.80 kB
-✓ built in 2.42s
+built in 2.42s
 ```
+
+---
+
+## 7. Corrección 15a_fix2 y 15a_fix3: Cobertura Real, Colores de Marca y Evidencia Verificable
+
+Se implementaron todos los requisitos del Brief 15a_fix2 y 15a_fix3 en la rama `feat/pwa-inventory-notifications`:
+
+*(Nota sobre formato: Todas las salidas de comandos se presentan en texto plano estándar sin emojis ni símbolos de terminal (visto bueno, flechas o aspas), sustituidos por [ok] y [x]).*
+
+### 1. Inclusión de Cobertura en `vite.config.js` y Resultados v8
+Se incluyeron en `coverage.include` de `vite.config.js` todos los archivos de servicios, hooks y componentes de inventario y notificaciones correspondientes al 15a, excluyendo `**/__tests__/**`.
+
+Todos los archivos del 15a superan el umbral objetivo (>= 80 % en sentencias y >= 70 % en ramas):
+
+```text
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   95.86 |    80.43 |   77.67 |   95.86 |                   
+ components        |   92.19 |    89.36 |   33.33 |   92.19 |                   
+  ...eFiloCard.jsx |     100 |    93.75 |      80 |     100 | 134-136           
+  ...ntoryView.jsx |   82.78 |       80 |      10 |   82.78 | ...,71-73,150-155 
+ ...ents/assistant |   91.51 |    70.43 |   83.33 |   91.51 |                   
+  ...stantChat.jsx |   78.72 |    86.66 |      60 |   78.72 | ...,65-77,151-159 
+  ...ageBubble.jsx |   96.77 |       80 |     100 |   96.77 | 8                 
+  ...ctionCard.jsx |   95.65 |       80 |     100 |   95.65 | 17-18,24-25       
+  ...acyNotice.jsx |   89.47 |    55.55 |     100 |   89.47 | 12-13,26-27       
+  ...tionChips.jsx |     100 |       75 |     100 |     100 | 23                
+  ...nversation.js |   98.62 |    59.57 |     100 |   98.62 | 100,119           
+ ...ents/inventory |   98.76 |    84.04 |      60 |   98.76 |                   
+  ...ntoryList.jsx |     100 |    93.33 |     100 |     100 | 160               
+  ...eateModal.jsx |   98.88 |    81.81 |    37.5 |   98.88 | 36-37             
+  ...mentModal.jsx |   96.62 |    77.77 |      50 |   96.62 | 109-111,155-157   
+  ...toryModal.jsx |     100 |    85.36 |     100 |     100 | ...33,133-136,146 
+ .../notifications |   96.76 |    82.35 |      80 |   96.76 |                   
+  ...ationItem.jsx |   90.38 |    88.88 |   83.33 |   90.38 | 13-20,61-62       
+  ...ionsPanel.jsx |     100 |    78.78 |      75 |     100 | ...29-131,144,208 
+ hooks             |   95.22 |    83.33 |   94.44 |   95.22 |                   
+  ...entoryList.js |   94.69 |    77.14 |     100 |   94.69 | 51-52,76-79       
+  ...mentSubmit.js |   88.42 |       70 |     100 |   88.42 | 13-21,92-93       
+  ...ifications.js |     100 |    85.71 |     100 |     100 | 33,35,37,54,66    
+  ...nreadCount.js |    97.5 |    96.66 |      80 |    97.5 | 96-98             
+ services          |    98.4 |    80.11 |     100 |    98.4 |                   
+  ...tantClient.js |     100 |    63.82 |     100 |     100 | ...06-114,131,138 
+  auth.js          |   97.93 |     87.5 |     100 |   97.93 | 19-20             
+  ...toryClient.js |   98.57 |     85.1 |     100 |   98.57 | 36-37             
+  ...tionRoutes.js |   94.44 |    80.76 |     100 |   94.44 | 26-27,54-55,88    
+  ...ionsClient.js |     100 |    94.73 |     100 |     100 | 29                
+-------------------|---------|----------|---------|---------|-------------------
+```
+
+### 2. Descomposición y Límites de Archivos (< 250 líneas)
+Se extrajo la lógica de envío de movimientos de `MovementModal.jsx` al hook `src/hooks/useMovementSubmit.js` (105 líneas), reduciendo `MovementModal.jsx` a 211 líneas.
+
+Conteo de líneas (`wc -l`):
+- `src/components/inventory/InventoryList.jsx`: 165 líneas
+- `src/components/inventory/ItemCreateModal.jsx`: 210 líneas
+- `src/components/inventory/MovementModal.jsx`: 211 líneas
+- `src/components/inventory/MovementsHistoryModal.jsx`: 180 líneas
+- `src/components/notifications/NotificationItem.jsx`: 120 líneas
+- `src/components/notifications/NotificationsPanel.jsx`: 248 líneas
+- `src/components/InventoryView.jsx`: 190 líneas
+- `src/hooks/useMovementSubmit.js`: 105 líneas
+
+### 3. Tokens de Marca y Eliminación Total de Colores Crudos
+Se agregaron y normalizaron en `src/styles/main.css` los tokens de marca:
+- `--on-primary: #ffffff;`
+- `--chip-bg: rgba(32, 45, 47, 0.6);`
+- `--surface-soft: rgba(32, 45, 47, 0.5);`
+- `--surface-strong: rgba(32, 45, 47, 0.8);`
+- `--success-soft: rgba(16, 185, 129, 0.15);`
+- `--error-soft-strong: rgba(244, 63, 94, 0.15);`
+
+Se sustituyeron todos los colores hexadecimales y rgba directos en componentes de inventario y notificaciones (`MovementsHistoryModal.jsx` incluido) por variables CSS.
+
+Salida real del comando de verificación:
+```text
+$ grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(" src/components/notifications src/components/inventory src/components/InventoryView.jsx; echo "exit=$?"
+exit=1
+```
+
+### 4. Limpieza de Código Muerto y Guardia de Seguridad
+- Se eliminaron las funciones en desuso `fetchCanonicalInventory` y `fetchReorderAlerts` de `src/services/doblefiloEngine.js` e importaciones sin usar.
+- Se eliminaron los mocks innecesarios de `DobleFiloCard.test.jsx`.
+- Se añadieron `fetchCanonicalInventory` y `fetchReorderAlerts` a la lista de tokens prohibidos de `src/services/__tests__/securityGuard.test.js`.
+
+### 5. Nota de Correcciones Realizadas en 15a_fix3
+1. **Colores en `MovementsHistoryModal.jsx`:** Reemplazados los 4 valores `rgba` restantes en las líneas 108, 122 y 163 por `--surface-soft`, `--success-soft`, `--error-soft-strong` y `--chip-bg`.
+2. **Valor de `--success-soft`:** Corregido el valor documentado a `rgba(16, 185, 129, 0.15)` en estricta concordancia con `src/styles/main.css`.
+3. **Test de Paginación y Mutación 3 (`useNotifications`):** Se adaptó el test con `mockResolvedValueOnce` para simular con precisión la página 2 (`meta.current_page = 2, last_page = 3`) y comprobar que al cambiar el filtro a `inventario` la lista contiene exclusivamente los avisos de la página 1 sin mezclar los de la página 2. Con ello, la regresión realista `loadNotifications(meta.current_page, false)` falla determinísticamente solicitando la página 2.
+
+### 6. Pruebas de Mutación Verificadas
+
+#### Mutación 1: Eliminación del debounce de 300 ms en la búsqueda de inventario
+- **Ubicación:** `src/hooks/useInventoryList.js:28`
+- **Cambio realizado:** Disparo inmediato del cambio de estado `debouncedSearch` ignorando el timer del debounce.
+- **Test que falló:** `src/hooks/__tests__/useInventoryList.test.js > debounces search by 300 ms and triggers a single request on fast typing`
+- **Salida real obtenida:**
+  ```text
+  FAIL  src/hooks/__tests__/useInventoryList.test.js > useInventoryList hook > debounces search by 300 ms and triggers a single request on fast typing
+  AssertionError: expected "listInventory" to be called 1 times, but got 4 times
+  ```
+
+#### Mutación 2 / Mutación B: Reemplazo en lugar de acumulación al paginar en `MovementsHistoryModal.jsx`
+- **Ubicación:** `src/components/inventory/MovementsHistoryModal.jsx:28`
+- **Cambio realizado:** Se reemplazó `append ? [...prev, ...list] : list` por `list`.
+- **Test que falló:** `src/components/inventory/__tests__/MovementsHistoryModal.test.jsx > appends next page items when "Cargar más" is clicked`
+- **Salida real obtenida:**
+  ```text
+  FAIL  src/components/inventory/__tests__/MovementsHistoryModal.test.jsx > MovementsHistoryModal component > appends next page items when "Cargar más" is clicked
+  TestingLibraryElementError: Unable to find an element with the text: /Movimiento inicial pag 1/i.
+  ```
+
+#### Mutación 3 / Mutación A: Recargar con `meta.current_page` al cambiar de categoría en `useNotifications.js`
+- **Ubicación:** `src/hooks/useNotifications.js:42`
+- **Cambio realizado:** En el efecto que recarga avisos al cambiar filtros, se cambió `loadNotifications(1, false)` por `loadNotifications(meta.current_page, false)`.
+- **Test que falló:** `src/hooks/__tests__/useNotifications.test.js > useNotifications hook > resets page to 1 when category filter changes`
+- **Salida real obtenida:**
+  ```text
+  FAIL  src/hooks/__tests__/useNotifications.test.js > useNotifications hook > resets page to 1 when category filter changes
+  AssertionError: expected last "listNotifications" call to have been called with [ { unread: null, ...(2) } ]
+
+  - Expected
+  + Received
+
+    Array [
+      Object {
+        "category": "inventario",
+  -     "page": 1,
+  +     "page": 2,
+        "unread": null,
+      },
+    ]
+  ```
+
+#### Mutación 4: Renderizar `category` crudo ignorando `label` del motor en `SettingsView.jsx`
+- **Ubicación:** `src/components/SettingsView.jsx:137`
+- **Cambio realizado:** Se reemplazó `{p.label || p.category}` por `{p.category}`.
+- **Test que falló:** `src/components/__tests__/SettingsView.test.jsx > loads preferences using real engine contract and displays engine labels`
+- **Salida real obtenida:**
+  ```text
+  FAIL  src/components/__tests__/SettingsView.test.jsx > SettingsView component notifications preferences > loads preferences using real engine contract and displays engine labels
+  TestingLibraryElementError: Unable to find an accessible element with the role "switch" and name /Desactivar avisos de Pedidos internos/i
+  ```
+
+#### Mutación 5: Inyección de función prohibida `fetchCanonicalInventory` en archivo fuente
+- **Ubicación:** `src/services/temp_leak.js`
+- **Cambio realizado:** Se creó temporalmente `export const fetchCanonicalInventory = () => {};`.
+- **Test que falló:** `src/services/__tests__/securityGuard.test.js > Security Guard - Comprehensive Codebase Scan > scans all src files recursively and confirms zero forbidden tokens`
+- **Salida real obtenida:**
+  ```text
+  FAIL  src/services/__tests__/securityGuard.test.js > Security Guard - Comprehensive Codebase Scan > scans all src files recursively and confirms zero forbidden tokens
+  AssertionError: File src/services\temp_leak.js contains forbidden security token: "fetchCanonicalInventory": expected true to be false
+  - Expected: false
+  + Received: true
+  ```
+
+### 7. Verificación Final de Calidad
+- **ESLint:** 0 errores, 63 advertencias (todas en módulos preexistentes ajenos al Brief 15a).
+- **Vitest:** 21 archivos de prueba aprobados (123 tests en verde).
+- **Vite Build:** Compilación limpia para producción en `dist/`.
+- **Estado:** Pendiente de auditoría.
+
+

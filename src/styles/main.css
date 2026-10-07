@@ -19,11 +19,17 @@
   
   --success: #10b981;
   --success-glow: rgba(16, 185, 129, 0.3);
+  --success-soft: rgba(16, 185, 129, 0.15);
   --warning: #f59e0b;
   --warning-soft: rgba(245, 158, 11, 0.06);
   --error: #f43f5e;
   --error-soft: rgba(244, 63, 94, 0.08);
+  --error-soft-strong: rgba(244, 63, 94, 0.15);
   --overlay: rgba(21, 21, 19, 0.85);
+  --on-primary: #ffffff;
+  --chip-bg: rgba(32, 45, 47, 0.6);
+  --surface-soft: rgba(32, 45, 47, 0.5);
+  --surface-strong: rgba(32, 45, 47, 0.8);
   
   --grad-primary: linear-gradient(135deg, #00737f 0%, #2d9ba1 50%, #62c9c8 100%);
   --grad-surface: linear-gradient(180deg, rgba(32, 45, 47, 0.8) 0%, rgba(23, 35, 37, 0.9) 100%);

@@ -78,7 +78,7 @@ export default function NotificationItem({ notif, onClick }) {
               fontWeight: 700,
               padding: '2px 8px',
               borderRadius: '9999px',
-              background: 'rgba(29, 29, 27, 0.6)',
+              background: 'var(--bg-glass)',
               color: priorityInfo.color,
               border: `1px solid ${priorityInfo.color}`,
               textTransform: 'uppercase',

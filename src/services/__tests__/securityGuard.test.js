@@ -20,7 +20,9 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
     'doblefilo_vercel_get_inventory',
     '/mobile/inventory',
     'updateDoblefiloStock',
-    'getDoblefiloInventory'
+    'getDoblefiloInventory',
+    'fetchCanonicalInventory',
+    'fetchReorderAlerts'
   ];
 
   // Unicode emoji range regex with unicode flag

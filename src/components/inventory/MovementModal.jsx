@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { registerMovement, normalizeQuantity } from '../../services/inventoryClient';
+import React, { useState, useEffect } from 'react';
+import { useMovementSubmit, generateClientUuid } from '../../hooks/useMovementSubmit';
+
+export { generateClientUuid };
 
 const KINDS = [
   { value: 'entrada', label: 'Entrada' },
@@ -8,110 +10,36 @@ const KINDS = [
   { value: 'merma', label: 'Merma' },
 ];
 
-/**
- * Genera un UUID v4 usando crypto.randomUUID o crypto.getRandomValues como respaldo seguro.
- * Nunca utiliza Date.now().
- */
-export function generateClientUuid() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    // RFC 4122 v4
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-  }
-  throw new Error('Criptografia no disponible para generar UUID');
-}
-
 export default function MovementModal({ isOpen, item, onClose, onMovementRegistered }) {
   const [kind, setKind] = useState('entrada');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState('bodega');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [validationError, setValidationError] = useState(null);
 
-  // Idempotencia: el UUID se genera al abrir y SE REUTILIZA en reintentos
-  const clientUuidRef = useRef('');
+  const {
+    submitting,
+    error,
+    fieldErrors,
+    validationError,
+    initUuid,
+    submitMovement,
+  } = useMovementSubmit({ item, onClose, onMovementRegistered });
 
   useEffect(() => {
     if (isOpen) {
-      clientUuidRef.current = generateClientUuid();
+      initUuid();
       setKind('entrada');
       setQuantity('');
       setReason('');
       setLocation('bodega');
-      setError(null);
-      setFieldErrors({});
-      setValidationError(null);
     }
   }, [isOpen, item]);
 
   if (!isOpen || !item) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setValidationError(null);
-    setError(null);
-    setFieldErrors({});
-
-    const normQty = normalizeQuantity(quantity);
-    if (!normQty) {
-      setValidationError('Ingresa una cantidad válida positiva (hasta 3 decimales).');
-      return;
-    }
-
-    setSubmitting(true);
-    const res = await registerMovement(
-      item.id,
-      {
-        kind,
-        quantity: normQty,
-        reason,
-        location,
-      },
-      clientUuidRef.current
-    );
-    setSubmitting(false);
-
-    if (res.ok) {
-      const isIdempotent = res.data?.status === 'idempotent';
-      // Generar nuevo UUID para el próximo movimiento
-      clientUuidRef.current = generateClientUuid();
-      onMovementRegistered({
-        success: true,
-        message: isIdempotent ? 'Movimiento ya estaba registrado.' : 'Movimiento registrado con éxito.',
-        item: res.data?.item,
-      });
-      onClose();
-    } else {
-      // Manejo de errores específicos
-      if (res.status === 409) {
-        if (res.data?.message && res.data.message.includes('client_uuid ya usado en otro insumo')) {
-          console.error('[Inventory] Conflicto de client_uuid entre insumos');
-          clientUuidRef.current = generateClientUuid();
-          setError('Ocurrió un conflicto de identificador. Se ha generado uno nuevo, intenta de nuevo.');
-        } else {
-          setError(res.error || res.data?.message || 'Stock insuficiente para este movimiento.');
-        }
-      } else if (res.status === 422) {
-        if (res.data?.errors) {
-          setFieldErrors(res.data.errors);
-        }
-        setError(res.error || 'Datos del movimiento inválidos.');
-      } else if (res.isNetworkError) {
-        setError('Sin conexión. Tu movimiento no se registró; vuelve a intentarlo.');
-      } else {
-        setError(res.error || 'Error al registrar el movimiento.');
-      }
-    }
+    submitMovement({ kind, quantity, reason, location });
   };
 
   return (
@@ -166,8 +94,8 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
                     padding: '8px 4px',
                     borderRadius: '8px',
                     border: kind === k.value ? '1px solid var(--primary-2)' : '1px solid var(--border-glass)',
-                    background: kind === k.value ? 'var(--primary)' : 'rgba(32, 45, 47, 0.6)',
-                    color: kind === k.value ? '#ffffff' : 'var(--text-muted)',
+                    background: kind === k.value ? 'var(--primary)' : 'var(--chip-bg)',
+                    color: kind === k.value ? 'var(--on-primary)' : 'var(--text-muted)',
                     fontSize: '11px',
                     fontWeight: 600,
                     cursor: 'pointer',

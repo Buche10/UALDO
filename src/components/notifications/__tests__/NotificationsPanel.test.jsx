@@ -11,7 +11,7 @@ describe('NotificationsPanel component', () => {
       category: 'pedidos',
       priority: 'warning',
       title: 'Pedido retrasado',
-      body: 'El pedido #104 esta pendiente de preparacion',
+      body: 'El pedido 104 esta pendiente de preparacion',
       read_at: null,
       action_screen: 'pedidos',
       action_params: { id: 104 },
@@ -244,5 +244,88 @@ describe('NotificationsPanel component', () => {
 
     // Navigation should NOT have happened because markRead failed
     expect(handleNavigate).not.toHaveBeenCalled();
+  });
+
+  it('renders empty state when there are no notifications', async () => {
+    vi.spyOn(notificationsClient, 'listNotifications').mockResolvedValue({
+      ok: true,
+      data: { data: [], meta: { current_page: 1, last_page: 1 } },
+    });
+
+    render(<NotificationsPanel onClose={vi.fn()} onNavigate={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No tienes avisos pendientes')).toBeInTheDocument();
+    });
+  });
+
+  it('renders error state and retries on button click', async () => {
+    const listSpy = vi.spyOn(notificationsClient, 'listNotifications')
+      .mockResolvedValueOnce({
+        ok: false,
+        error: 'Falla temporal del servidor',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { data: [], meta: { current_page: 1, last_page: 1 } },
+      });
+
+    render(<NotificationsPanel onClose={vi.fn()} onNavigate={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Falla temporal del servidor')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Reintentar/i }));
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('No tienes avisos pendientes')).toBeInTheDocument();
+    });
+  });
+
+  it('loads more notifications appending next page when Cargar mas is clicked', async () => {
+    const page1 = [
+      {
+        id: '123e4567-e89b-12d3-a456-426614174001',
+        title: 'Aviso pagina 1',
+        category: 'sistema',
+        created_at: new Date().toISOString(),
+      },
+    ];
+    const page2 = [
+      {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        title: 'Aviso pagina 2',
+        category: 'sistema',
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    vi.spyOn(notificationsClient, 'listNotifications')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { data: page1, meta: { current_page: 1, last_page: 2 } },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { data: page2, meta: { current_page: 2, last_page: 2 } },
+      });
+
+    render(<NotificationsPanel onClose={vi.fn()} onNavigate={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Aviso pagina 1')).toBeInTheDocument();
+      expect(screen.getByText('Cargar más avisos')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Cargar más avisos'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Aviso pagina 1')).toBeInTheDocument();
+      expect(screen.getByText('Aviso pagina 2')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Cargar más avisos')).not.toBeInTheDocument();
   });
 });

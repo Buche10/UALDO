@@ -68,7 +68,7 @@ export default function InventoryView() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       {toastMessage && (
-        <div style={{ padding: '10px 14px', background: toastMessage.type === 'error' ? 'var(--error)' : 'var(--primary)', color: '#fff', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
+        <div style={{ padding: '10px 14px', background: toastMessage.type === 'error' ? 'var(--error)' : 'var(--primary)', color: 'var(--on-primary)', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
           {toastMessage.msg}
         </div>
       )}
@@ -99,7 +99,7 @@ export default function InventoryView() {
       </div>
 
       {/* Pestañas: Todos / Stock bajo / Alertas */}
-      <div style={{ display: 'flex', gap: '6px', background: 'rgba(32, 45, 47, 0.6)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+      <div style={{ display: 'flex', gap: '6px', background: 'var(--chip-bg)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
         {[
           { id: 'all', label: 'Todos' },
           { id: 'low_stock', label: 'Stock Bajo' },
@@ -115,7 +115,7 @@ export default function InventoryView() {
               borderRadius: '8px',
               border: 'none',
               background: activeTab === tab.id ? 'var(--primary)' : 'transparent',
-              color: activeTab === tab.id ? '#ffffff' : 'var(--text-muted)',
+              color: activeTab === tab.id ? 'var(--on-primary)' : 'var(--text-muted)',
               fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',

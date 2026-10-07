@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { History, ArrowUpRight, ArrowDownLeft, X } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, X } from 'lucide-react';
 import { fetchMovements } from '../../services/inventoryClient';
 
 export default function MovementsHistoryModal({ isOpen, item, onClose }) {
@@ -105,7 +105,7 @@ export default function MovementsHistoryModal({ isOpen, item, onClose }) {
                     key={m.id}
                     style={{
                       padding: '10px 12px',
-                      background: 'rgba(32, 45, 47, 0.5)',
+                      background: 'var(--surface-soft)',
                       borderRadius: '10px',
                       border: '1px solid var(--border-glass)',
                       display: 'flex',
@@ -119,7 +119,7 @@ export default function MovementsHistoryModal({ isOpen, item, onClose }) {
                           width: '28px',
                           height: '28px',
                           borderRadius: '8px',
-                          background: isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                          background: isPositive ? 'var(--success-soft)' : 'var(--error-soft-strong)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -160,7 +160,7 @@ export default function MovementsHistoryModal({ isOpen, item, onClose }) {
                     padding: '8px',
                     borderRadius: '8px',
                     border: '1px solid var(--border-glass)',
-                    background: 'rgba(32, 45, 47, 0.6)',
+                    background: 'var(--chip-bg)',
                     color: 'var(--accent)',
                     fontSize: '12px',
                     fontWeight: 600,

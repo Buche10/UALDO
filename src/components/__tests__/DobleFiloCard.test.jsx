@@ -9,8 +9,6 @@ describe('DobleFiloCard component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: {} });
-    vi.spyOn(doblefiloEngine, 'fetchCanonicalInventory').mockResolvedValue({ items: [] });
-    vi.spyOn(doblefiloEngine, 'fetchReorderAlerts').mockResolvedValue({ alerts: [] });
   });
 
   it('renders tables tab in strictly read-only mode without Enviar pedido button', async () => {
