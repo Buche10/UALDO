@@ -13,7 +13,12 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
     'doblefilo_set_tables_count',
     'admin123',
     'demo-token',
-    'dangerouslySetInnerHTML'
+    'dangerouslySetInnerHTML',
+    'updateVercelStock',
+    'fetchVercelInventory',
+    'doblefilo_vercel_update_stock',
+    'doblefilo_vercel_get_inventory',
+    '/mobile/inventory'
   ];
 
   // Unicode emoji range regex with unicode flag

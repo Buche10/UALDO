@@ -2,8 +2,6 @@
 import { 
   getDoblefiloTables,
   getDoblefiloMenu,
-  fetchVercelInventory,
-  updateVercelStock,
   getDoblefiloInventory, 
   updateDoblefiloStock, 
   getDoblefiloDailySummary, 
@@ -30,27 +28,6 @@ const INITIAL_APPS = [
         name: 'doblefilo_get_menu',
         description: 'Obtiene el menú de platos y precios de RunFood',
         parameters: {}
-      }
-    ]
-  },
-  {
-    id: 'doblefilo_vercel_bodega',
-    name: 'DobleFilo Vercel Web App (239 Productos)',
-    category: 'Inventario & Bodega Web',
-    description: 'Sincronización de existencias desde https://doblefilo.vercel.app/dashboard',
-    status: 'online',
-    icon: 'Globe',
-    endpoint: 'https://doblefilo.vercel.app/dashboard/inventory',
-    tools: [
-      {
-        name: 'doblefilo_vercel_get_inventory',
-        description: 'Consulta existencias en DobleFilo Vercel App',
-        parameters: { query: 'string', location: 'bodega|cocina|salon|all' }
-      },
-      {
-        name: 'doblefilo_vercel_update_stock',
-        description: 'Actualiza existencias en Vercel App',
-        parameters: { productId: 'string', productName: 'string', cantidad: 'number', ubicacion: 'bodega|cocina|salon', tipo: 'entrada|salida|transferencia' }
       }
     ]
   },
@@ -100,71 +77,34 @@ export const saveRegisteredApps = (apps) => {
   }
 };
 
-export const registerApp = (newApp) => {
-  const apps = getRegisteredApps();
-  const updated = [...apps, { ...newApp, id: `custom_${Date.now()}`, status: 'online' }];
+export const registerApp = (app) => {
+  const current = getRegisteredApps();
+  const exists = current.find(a => a.id === app.id);
+  let updated;
+  if (exists) {
+    updated = current.map(a => a.id === app.id ? { ...a, ...app } : a);
+  } else {
+    updated = [...current, { ...app, id: app.id || `app_${Date.now()}` }];
+  }
   saveRegisteredApps(updated);
   return updated;
 };
 
-// Tool Execution Dispatcher
 export const executeLocalTool = async (toolName, params = {}) => {
-  // Waiter Orders Handlers (Read-only TODO: migrar a motor)
-  if (toolName === 'doblefilo_get_tables') {
-    return await getDoblefiloTables();
-  }
-
-  if (toolName === 'doblefilo_get_menu') {
-    return await getDoblefiloMenu();
-  }
-
-  // Vercel Web App Handlers
-  if (toolName === 'doblefilo_vercel_get_inventory') {
-    return await fetchVercelInventory(params);
-  }
-
-  if (toolName === 'doblefilo_vercel_update_stock') {
-    return await updateVercelStock(params);
-  }
-
-  // DOBLEFILO Local Handlers
-  if (toolName === 'doblefilo_get_inventory') {
-    return await getDoblefiloInventory(params.query || '');
-  }
-
-  if (toolName === 'doblefilo_update_stock') {
-    return await updateDoblefiloStock(params);
-  }
-
-  if (toolName === 'doblefilo_get_daily_summary') {
-    return await getDoblefiloDailySummary();
-  }
-
-  if (toolName === 'doblefilo_execute_cash_close') {
-    return await executeDoblefiloCashClose(params);
-  }
-
-  if (toolName === 'doblefilo_execute_detailed_cash_close') {
-    return await executeDoblefiloDetailedCashClose(params);
-  }
-
   switch (toolName) {
-    case 'get_system_status':
-      return {
-        success: true,
-        data: {
-          cpu_usage: '15%',
-          ram_used: '7.1 GB / 16 GB',
-          waiter_orders_status: 'Online',
-          vercel_app_status: 'Online',
-          doblefilo_status: 'Online'
-        }
-      };
-
+    case 'doblefilo_get_tables':
+      return await getDoblefiloTables();
+    case 'doblefilo_get_menu':
+      return await getDoblefiloMenu();
+    case 'doblefilo_get_inventory':
+      return await getDoblefiloInventory();
+    case 'doblefilo_update_stock':
+      return await updateDoblefiloStock(params);
+    case 'doblefilo_get_daily_summary':
+      return await getDoblefiloDailySummary();
+    case 'doblefilo_execute_cash_close':
+      return await executeDoblefiloCashClose(params);
     default:
-      return {
-        success: false,
-        error: `Herramienta local "${toolName}" no reconocida.`
-      };
+      return { success: false, error: `Herramienta local no encontrada: ${toolName}` };
   }
 };

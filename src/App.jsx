@@ -6,20 +6,28 @@ import EcosystemView from './components/EcosystemView';
 import SettingsView from './components/SettingsView';
 import LoginView from './components/LoginView';
 import TrabajoView from './components/TrabajoView';
+import NotificationsPanel from './components/notifications/NotificationsPanel';
 
 import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
 import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
+import { useUnreadCount } from './hooks/useUnreadCount';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('trabajo');
+  const [negociosSubView, setNegociosSubView] = useState('overview');
+  const [showNotifications, setShowNotifications] = useState(false);
   const [settings, setSettings] = useState(getSettings);
   const [registeredApps, setRegisteredApps] = useState(getRegisteredApps);
   
   const [user, setUser] = useState(getUser);
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [authChecking, setAuthChecking] = useState(true);
+
+  const { unreadCount, refresh: refreshUnreadCount } = useUnreadCount({
+    enabled: authenticated,
+  });
 
   const [nodeStatus, setNodeStatus] = useState({
     online: false,
@@ -76,6 +84,7 @@ export default function App() {
     setUser(userData);
     setAuthenticated(true);
     checkConnection();
+    refreshUnreadCount();
   };
 
   const handleSaveSettings = (newSettings) => {
@@ -88,6 +97,17 @@ export default function App() {
       localStorage.clear();
       window.location.reload();
     }
+  };
+
+  const handleNotificationNavigate = (target) => {
+    if (!target) return;
+    if (target.tab) {
+      setActiveTab(target.tab);
+    }
+    if (target.subView) {
+      setNegociosSubView(target.subView);
+    }
+    setShowNotifications(false);
   };
 
   if (authChecking) {
@@ -104,6 +124,9 @@ export default function App() {
         nodeStatus={nodeStatus} 
         onRefreshStatus={checkConnection} 
         activeTab={activeTab} 
+        unreadCount={unreadCount}
+        onOpenNotifications={() => setShowNotifications(true)}
+        isAuthenticated={authenticated}
       />
 
       <main className="view-container">
@@ -122,9 +145,11 @@ export default function App() {
             <EcosystemView
               registeredApps={registeredApps}
               onUpdateApps={setRegisteredApps}
-              onSendChatPrompt={(prompt) => {
+              onSendChatPrompt={() => {
                 setActiveTab('asistente');
               }}
+              subView={negociosSubView}
+              onSubViewChange={setNegociosSubView}
             />
           ) : (
             <LoginView onLoginSuccess={handleLoginSuccess} />
@@ -149,6 +174,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {showNotifications && (
+        <NotificationsPanel
+          onClose={() => {
+            setShowNotifications(false);
+            refreshUnreadCount();
+          }}
+          onNavigate={handleNotificationNavigate}
+        />
+      )}
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

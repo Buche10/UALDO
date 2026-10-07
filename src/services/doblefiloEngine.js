@@ -1,7 +1,6 @@
-// DOBLEFILO (RunFood POS, Bodega Local, Vercel Web App & Waiter Orders) Integration Service for UALDO Mobile
+// DOBLEFILO (RunFood POS, Bodega Local & Waiter Orders) Integration Service for UALDO Mobile
 import { getSettings } from './storage';
 import { request } from './apiClient';
-
 
 const getDoblefiloBaseUrl = () => {
   const settings = getSettings();
@@ -33,8 +32,7 @@ const runfoodFetch = async (path, { method = 'GET', body = null, timeout = RUNFO
   }
 };
 
-// Honest connectivity check against RunFood's lightweight health route. Returns online:false
-// (not a fake "autonomous" success) when the POS is truly unreachable.
+// Connectivity check against RunFood's lightweight health route.
 export const checkRunfoodConnection = async () => {
   const startTime = Date.now();
   const url = getDoblefiloBaseUrl();
@@ -54,8 +52,6 @@ export const checkRunfoodConnection = async () => {
     clearTimeout(timer);
   }
 };
-
-const VERCEL_APP_URL = 'https://doblefilo.vercel.app';
 
 // ----------------------------------------------------
 // 1. WAITER ORDERS & TABLES MODULE (RUNFOOD MESEROS)
@@ -88,7 +84,6 @@ export const saveStoredTables = (tables) => {
   }
 };
 
-
 const MENU_CATALOG = [
   { id: 'MNU-101', nombre: 'Hamburguesa DobleFilo Especial', categoria: 'Platos Principales', precio: 6.50, descripcion: 'Carne 200g, queso cheddar, tocineta, salsa especial' },
   { id: 'MNU-102', nombre: 'Combo Familiar DobleFilo', categoria: 'Combos & Promos', precio: 18.00, descripcion: '4 Hamburguesas + Papas Familiares + Gaseosa 1.5L' },
@@ -108,10 +103,8 @@ const buildTablesResumen = (tables) => ({
   ventasAcumuladasMesas: tables.reduce((acc, t) => acc + (t.total || 0), 0)
 });
 
-// TODO(migrar-a-motor): Lectura de mesas RunFood solo lectura
 export const getDoblefiloTables = async () => {
   try {
-    // Real RunFood salon layout: POST /LOCAL_NETWORK/MESA/FETCH returns zones with a table count.
     const zones = await runfoodFetch('/LOCAL_NETWORK/MESA/FETCH', {
       method: 'POST',
       body: { tablet: JSON.stringify({ bodega: 1 }) }
@@ -146,7 +139,6 @@ export const getDoblefiloTables = async () => {
     console.warn('[DOBLEFILO Engine] Mesas RunFood no disponibles:', e.message);
   }
 
-  // Explicit offline fallback (flagged so the UI can show it is NOT live RunFood data).
   const tables = getStoredTables();
   return { success: true, source: 'mock', resumen: buildTablesResumen(tables), tables };
 };
@@ -185,91 +177,11 @@ export const getDoblefiloMenu = async () => {
   return { success: true, menu: MENU_CATALOG, source: 'mock' };
 };
 
-
 // ----------------------------------------------------
-// 2. VERCEL WEB APP INVENTORY MODULE (239 PRODUCTS)
-// ----------------------------------------------------
-
-const VERCEL_CATALOG = [
-  { id: 'PRD-867347', nombre: 'Sirope de Chocolate', categoria: 'Insumos / Dulces', unidad: 'Unidad', bodega: 15, cocina: 4, salon: 2, estado: 'Disponible' },
-  { id: 'PRD-310577', nombre: 'Caldo de Gallina en Polvo', categoria: 'Especias & Condimentos', unidad: 'Kilogramo', bodega: 8, cocina: 2, salon: 0, estado: 'Disponible' },
-  { id: 'PRD-614922', nombre: 'Merma Bondiola', categoria: 'Carnes / Proteínas', unidad: 'Kilogramo', bodega: 2, cocina: 1, salon: 0, estado: 'Bajo stock' },
-  { id: 'PRD-310697', nombre: 'Funda Papel Depósito', categoria: 'Empaques', unidad: 'Paquete', bodega: 120, cocina: 30, salon: 50, estado: 'Disponible' },
-  { id: 'PRD-289853', nombre: 'Brochetas de Madera', categoria: 'Descartables', unidad: 'Unidad', bodega: 500, cocina: 100, salon: 0, estado: 'Disponible' },
-  { id: 'PRD-102938', nombre: 'Queso Cheddar Lajeado', categoria: 'Lácteos', unidad: 'Kilogramo', bodega: 25, cocina: 8, salon: 0, estado: 'Disponible' },
-  { id: 'PRD-554123', nombre: 'Pan de Hamburguesa Brioche', categoria: 'Panadería', unidad: 'Unidad', bodega: 180, cocina: 40, salon: 0, estado: 'Disponible' },
-  { id: 'PRD-992812', nombre: 'Carne Molida Premium 80/20', categoria: 'Carnes', unidad: 'Kilogramo', bodega: 45, cocina: 12, salon: 0, estado: 'Disponible' },
-  { id: 'PRD-441029', nombre: 'Salsa Especial DobleFilo', categoria: 'Salsas', unidad: 'Litros', bodega: 30, cocina: 6, salon: 4, estado: 'Disponible' }
-];
-
-let liveVercelInventory = [...VERCEL_CATALOG];
-
-export const fetchVercelInventory = async ({ location = 'all', query = '', statusFilter = 'all' } = {}) => {
-  let filtered = [...liveVercelInventory];
-  if (query) {
-    const q = query.toLowerCase();
-    filtered = filtered.filter(p => p.nombre.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
-  }
-
-  const totals = {
-    totalProductos: liveVercelInventory.length,
-    stockBodega: liveVercelInventory.reduce((acc, p) => acc + (p.bodega || 0), 0),
-    stockCocina: liveVercelInventory.reduce((acc, p) => acc + (p.cocina || 0), 0),
-    stockSalon: liveVercelInventory.reduce((acc, p) => acc + (p.salon || 0), 0),
-    bajoStockCount: liveVercelInventory.filter(p => p.estado === 'Bajo stock' || p.estado === 'Reposición' || p.estado === 'Sin stock').length
-  };
-
-  return {
-    success: true,
-    source: 'https://doblefilo.vercel.app/dashboard/inventory',
-    totals,
-    items: filtered
-  };
-};
-
-export const updateVercelStock = async ({ productId, productName, cantidad, ubicacion = 'bodega', tipo = 'entrada', nota = 'Actualización automática UALDO Mobile' }) => {
-  let targetItem = liveVercelInventory.find(p => p.id === productId || p.nombre.toLowerCase().includes((productName || '').toLowerCase()));
-  if (!targetItem) targetItem = liveVercelInventory[0];
-
-  const qty = parseInt(cantidad) || 1;
-  const targetLocation = (ubicacion || 'bodega').toLowerCase();
-
-  if (tipo === 'entrada' || tipo === 'ingreso') {
-    if (targetLocation.includes('cocina')) targetItem.cocina += qty;
-    else if (targetLocation.includes('salon')) targetItem.salon += qty;
-    else targetItem.bodega += qty;
-  } else if (tipo === 'salida' || tipo === 'retiro') {
-    if (targetLocation.includes('cocina')) targetItem.cocina = Math.max(0, targetItem.cocina - qty);
-    else if (targetLocation.includes('salon')) targetItem.salon = Math.max(0, targetItem.salon - qty);
-    else targetItem.bodega = Math.max(0, targetItem.bodega - qty);
-  }
-
-  liveVercelInventory = liveVercelInventory.map(p => p.id === targetItem.id ? targetItem : p);
-
-  return {
-    success: true,
-    message: `¡Inventario actualizado automáticamente en DobleFilo Vercel App!`,
-    details: {
-      producto: targetItem.nombre,
-      codigo: targetItem.id,
-      movimiento: `${tipo.toUpperCase()} (+${qty}) en ${ubicacion.toUpperCase()}`,
-      nuevoStockUbicacion: {
-        bodega: `${targetItem.bodega} ${targetItem.unidad}`,
-        cocina: `${targetItem.cocina} ${targetItem.unidad}`,
-        salon: `${targetItem.salon} ${targetItem.unidad}`
-      },
-      estadoActual: targetItem.estado,
-      nota,
-      url: `${VERCEL_APP_URL}/dashboard/inventory`
-    }
-  };
-};
-
-// ----------------------------------------------------
-// 3. POS LOCAL & CIERRE DE CAJA MODULE
+// 2. POS LOCAL & CIERRE DE CAJA MODULE
 // ----------------------------------------------------
 
-export const getDoblefiloInventory = async (query = '') => {
+export const getDoblefiloInventory = async () => {
   return {
     success: true,
     items: [
@@ -298,21 +210,46 @@ export const getDoblefiloDailySummary = async () => {
       totalTarjetas: 165.50,
       totalGastos: 35.00,
       saldoCajaEsperado: 285.00,
-      numeroPedidos: 34,
-      estadoCaja: 'Abierta (Pendiente Cierre)'
+      estadoTurno: 'Abierto - Turno Tarde/Noche'
     }
   };
 };
 
-export const executeDoblefiloCashClose = async ({ declaradoEfectivo = 285.00, observacion = 'Cierre de caja realizado desde UALDO Mobile App' }) => {
-  return executeDoblefiloDetailedCashClose({
-    efectivo: declaradoEfectivo,
+export const executeDoblefiloCashClose = async ({ declaradoEfectivo = 0, observacion = '' } = {}) => {
+  const summary = await getDoblefiloDailySummary();
+  const esperado = summary.summary.saldoCajaEsperado;
+  const diferencia = parseFloat((declaradoEfectivo - esperado).toFixed(2));
+
+  const closeRecord = {
+    id: `CLS-${Date.now()}`,
+    fecha: new Date().toISOString().split('T')[0],
+    hora: new Date().toLocaleTimeString('es-EC'),
+    ventasTotal: summary.summary.totalVentas,
+    efectivoEsperado: esperado,
+    efectivoDeclarado: declaradoEfectivo,
+    diferencia,
+    estado: diferencia === 0 ? 'Cuadrado' : diferencia < 0 ? 'Faltante' : 'Sobrante',
     observacion
-  });
+  };
+
+  try {
+    const existing = JSON.parse(localStorage.getItem('ualdo_cash_close_history') || '[]');
+    localStorage.setItem('ualdo_cash_close_history', JSON.stringify([closeRecord, ...existing]));
+  } catch (e) {
+    console.warn('No se pudo guardar en el historial local:', e);
+  }
+
+  return {
+    success: true,
+    message: `Cierre de caja procesado: Caja ${closeRecord.estado.toLowerCase()} con diferencia de $${diferencia}.`,
+    closeDetails: closeRecord
+  };
 };
 
 export const executeDoblefiloDetailedCashClose = async ({
-  fecha = new Date().toLocaleDateString('es-EC'),
+  idCierre = 1,
+  fecha = new Date().toISOString().split('T')[0],
+  fechaHora = new Date().toISOString(),
   efectivo = 0,
   pichincha = 0,
   deUna = 0,
@@ -320,68 +257,38 @@ export const executeDoblefiloDetailedCashClose = async ({
   tarjeta = 0,
   tarjetaDiners = 0,
   propinas = 0,
-  gastos = [],
-  consumosPersonal = [],
-  observacion = 'Cierre de caja registrado mediante UALDO Mobile Chat'
-}) => {
-  const numEfectivo = parseFloat(efectivo) || 0;
-  const numPichincha = parseFloat(pichincha) || 0;
-  const numDeUna = parseFloat(deUna) || 0;
-  const numInternacional = parseFloat(internacional) || 0;
-  const totalTransferencias = parseFloat((numPichincha + numDeUna + numInternacional).toFixed(2));
-
-  const numTarjeta = parseFloat(tarjeta) || 0;
-  const numTarjetaDiners = parseFloat(tarjetaDiners) || 0;
-  
-  // Comisión del ~6.47% (Datafast / Diners Ecuador)
-  const tarjetaSinComision = parseFloat((numTarjeta * 0.9353).toFixed(2));
-  const tarjetaDinersSinComision = parseFloat((numTarjetaDiners * 0.9353).toFixed(2));
+  totalGastosYConsumos = 0,
+  ventasDelDia = 0,
+  diferenciaEfectivo = 0,
+  observacion = ''
+} = {}) => {
+  const totalTransferencias = parseFloat((pichincha + deUna + internacional).toFixed(2));
+  const tarjetaSinComision = parseFloat((tarjeta * 0.96).toFixed(2));
+  const tarjetaDinersSinComision = parseFloat((tarjetaDiners * 0.94).toFixed(2));
   const totalTarjetasNeto = parseFloat((tarjetaSinComision + tarjetaDinersSinComision).toFixed(2));
 
-  const numPropinas = parseFloat(propinas) || 0;
-
-  const listGastos = Array.isArray(gastos) ? gastos : [];
-  const listConsumos = Array.isArray(consumosPersonal) ? consumosPersonal : [];
-
-  const sumGastos = listGastos.reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
-  const sumConsumos = listConsumos.reduce((acc, c) => acc + (parseFloat(c.monto) || 0), 0);
-  const totalGastosYConsumos = parseFloat((sumGastos + sumConsumos).toFixed(2));
-
-  const ventasDelDia = parseFloat((numEfectivo + totalTransferencias + numTarjeta + numTarjetaDiners + numPropinas).toFixed(2));
-  const totalNetoAcreditado = parseFloat((numEfectivo + totalTransferencias + totalTarjetasNeto + numPropinas).toFixed(2));
-
-  const efectivoEsperadoEnCaja = parseFloat(Math.max(0, numEfectivo - totalGastosYConsumos).toFixed(2));
-  const diferenciaEfectivo = parseFloat((numEfectivo - efectivoEsperadoEnCaja).toFixed(2));
-
   const closeRecord = {
-    type: 'detailed_cash_close',
-    idCierre: `CR-${Date.now().toString().slice(-6)}`,
-    fechaHora: new Date().toLocaleString('es-EC'),
+    idCierre,
     fecha,
-    efectivo: numEfectivo,
-    pichincha: numPichincha,
-    deUna: numDeUna,
-    internacional: numInternacional,
+    fechaHora,
+    efectivo,
+    pichincha,
+    deUna,
+    internacional,
     totalTransferencias,
-    tarjeta: numTarjeta,
+    tarjeta,
     tarjetaSinComision,
-    tarjetaDiners: numTarjetaDiners,
+    tarjetaDiners,
     tarjetaDinersSinComision,
     totalTarjetasNeto,
-    propinas: numPropinas,
-    gastos: listGastos,
-    consumosPersonal: listConsumos,
+    propinas,
     totalGastosYConsumos,
     ventasDelDia,
-    totalNetoAcreditado,
-    efectivoEsperadoEnCaja,
     diferenciaEfectivo,
-    estadoCuadre: diferenciaEfectivo >= 0 ? 'Cuadrado / Sobrante' : 'Faltante',
     observacion,
     googleSheetsSync: { synced: false, message: 'Pendiente de sincronización' }
   };
 
-  // Attempt Google Sheets Sync
   const sheetsResult = await syncCashCloseToGoogleSheets(closeRecord);
   closeRecord.googleSheetsSync = sheetsResult;
 
@@ -394,7 +301,7 @@ export const executeDoblefiloDetailedCashClose = async ({
 
   return {
     success: true,
-    message: `¡Cierre de Caja del ${fecha} procesado con éxito en formato DOBLEFILO${sheetsResult.synced ? ' y subido a Google Sheets' : ''}!`,
+    message: `Cierre de Caja del ${fecha} procesado con éxito${sheetsResult.synced ? ' y subido a Google Sheets' : ''}!`,
     closeDetails: closeRecord
   };
 };
@@ -454,17 +361,17 @@ export const getDoblefiloClosureHistory = () => {
 };
 
 // ----------------------------------------------------
-// 5. CANONICAL INVENTORY & RECONCILIATION CLIENT API
+// 3. CANONICAL INVENTORY & ALERTS CLIENT API
 // ----------------------------------------------------
 
 export const fetchCanonicalInventory = async () => {
-  const res = await request('/inventory/canonical');
+  const res = await request('/inventory');
   if (res.ok) {
     return res.data;
   }
   return {
     success: false,
-    error: res.error || 'Error al conectar con la API de inventario canónico.',
+    error: res.error || 'Error al conectar con la API de inventario del motor.',
     items: []
   };
 };
@@ -481,19 +388,3 @@ export const fetchReorderAlerts = async () => {
     alerts: []
   };
 };
-
-export const triggerInventoryReconciliation = async () => {
-  const res = await request('/inventory/reconcile', {
-    method: 'POST'
-  });
-  if (res.ok) {
-    return res.data;
-  }
-  return {
-    success: false,
-    error: res.error || 'Fallo al ejecutar la reconciliación en el servidor.'
-  };
-};
-
-
-

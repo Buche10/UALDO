@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, User, LogOut, Building, ShieldCheck, 
   ChevronDown, ChevronUp, Server, RefreshCw, Sliders, 
-  Trash2, CheckCircle, Smartphone, Info, Sparkles
+  Trash2, CheckCircle, Smartphone, Info, Sparkles, Bell
 } from 'lucide-react';
 import { getUser, logout } from '../services/auth';
 import { checkNodeStatus } from '../services/aiEngine';
+import { getPreferences, updatePreferences } from '../services/notificationsClient';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const currentUser = getUser();
+
+  // Notification preferences state
+  const [preferences, setPreferences] = useState([]);
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [prefsError, setPrefsError] = useState(null);
+  const [savingCategory, setSavingCategory] = useState(null);
 
   // Advanced settings state
   const [apiBaseUrl, setApiBaseUrl] = useState(settings.apiBaseUrl || 'http://ualbusiness.test/api/v1');
@@ -24,6 +31,57 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
   const [testResult, setTestResult] = useState(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
+
+  useEffect(() => {
+    const loadNotificationPrefs = async () => {
+      setLoadingPrefs(true);
+      setPrefsError(null);
+      const res = await getPreferences();
+      setLoadingPrefs(false);
+      if (res.ok && res.data) {
+        let prefsList = [];
+        if (Array.isArray(res.data.preferences)) {
+          prefsList = res.data.preferences;
+        } else if (Array.isArray(res.data)) {
+          prefsList = res.data;
+        } else if (typeof res.data === 'object') {
+          // Si devuelve un mapa { pedidos: true, inventario: true }
+          const raw = res.data.preferences || res.data;
+          prefsList = Object.entries(raw).map(([cat, val]) => ({
+            category: cat,
+            enabled: Boolean(val),
+          }));
+        }
+        setPreferences(prefsList);
+      } else {
+        setPrefsError(res.error || 'No se pudieron cargar las preferencias de avisos.');
+      }
+    };
+
+    loadNotificationPrefs();
+  }, []);
+
+  const handleTogglePreference = async (category, currentEnabled) => {
+    const newEnabled = !currentEnabled;
+    // Actualización optimista
+    setPreferences(prev => prev.map(p => p.category === category ? { ...p, enabled: newEnabled } : p));
+    setSavingCategory(category);
+    setPrefsError(null);
+
+    // Puede enviarse como mapa o array según contrato
+    const res = await updatePreferences({ [category]: newEnabled });
+    setSavingCategory(null);
+
+    if (res.ok) {
+      if (res.data?.preferences && Array.isArray(res.data.preferences)) {
+        setPreferences(res.data.preferences);
+      }
+    } else {
+      // Revertir ante error
+      setPreferences(prev => prev.map(p => p.category === category ? { ...p, enabled: currentEnabled } : p));
+      setPrefsError(res.error || 'Error al actualizar la preferencia.');
+    }
+  };
 
   const handleLogoutClick = async () => {
     if (confirm('¿Deseas cerrar sesión en tu cuenta Ualdo?')) {
@@ -131,7 +189,94 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
         )}
       </div>
 
-      {/* 2. SECCIÓN APARIENCIA */}
+      {/* 2. SECCIÓN AVISOS / NOTIFICACIONES */}
+      <div className="glass-card" style={{ padding: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <Bell size={18} color="var(--accent)" />
+          <h3 style={{ fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0, letterSpacing: '0.5px' }}>
+            Avisos del Sistema
+          </h3>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+          Controla qué categorías deseas recibir en la app. Los avisos críticos llegan siempre.
+        </p>
+
+        {prefsError && (
+          <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid var(--error)', color: 'var(--error)', fontSize: '12px', marginBottom: '12px' }}>
+            {prefsError}
+          </div>
+        )}
+
+        {loadingPrefs ? (
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '10px 0' }}>
+            Cargando preferencias de avisos...
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {preferences.map((p) => (
+              <div
+                key={p.category}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: 'rgba(32, 45, 47, 0.5)',
+                  border: '1px solid var(--border-glass)',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', textTransform: 'capitalize' }}>
+                    {p.label || p.category}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Avisos de {p.category}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={p.enabled}
+                  aria-label={`${p.enabled ? 'Desactivar' : 'Activar'} avisos de ${p.label || p.category}`}
+                  disabled={savingCategory === p.category}
+                  onClick={() => handleTogglePreference(p.category, p.enabled)}
+                    style={{
+                      width: '44px',
+                      height: '24px',
+                      borderRadius: '9999px',
+                      border: 'none',
+                      background: p.enabled ? 'var(--primary)' : 'rgba(255, 255, 255, 0.2)',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      padding: '2px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'block',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        transform: p.enabled ? 'translateX(20px)' : 'translateX(0)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  </button>
+                </div>
+              ))}
+
+              <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px', fontStyle: 'italic' }}>
+                Nota: Los avisos críticos de descuadre y seguridad se entregan siempre, independientemente de estos interruptores.
+              </div>
+            </div>
+          )}
+        </div>
+
+      {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>
         <h3 style={{ fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
           Apariencia
@@ -147,7 +292,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
         </div>
       </div>
 
-      {/* 3. SECCIÓN ACERCA DE */}
+      {/* 4. SECCIÓN ACERCA DE */}
       <div className="glass-card" style={{ padding: '16px' }}>
         <h3 style={{ fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
           Acerca de
@@ -162,7 +307,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
         </div>
       </div>
 
-      {/* 4. SECCIÓN AVANZADO (COLAPSADO) */}
+      {/* 5. SECCIÓN AVANZADO (COLAPSADO) */}
       <div className="glass-card" style={{ padding: '16px' }}>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -249,58 +394,63 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
               {provider === 'ollama' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">IP Ollama</label>
-                    <input type="text" className="form-input" value={ip} onChange={e => setIp(e.target.value)} />
+                    <label className="form-label">IP del Nodo LAN</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={ip} 
+                      onChange={e => setIp(e.target.value)}
+                    />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Puerto</label>
-                    <input type="text" className="form-input" value={port} onChange={e => setPort(e.target.value)} />
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={port} 
+                      onChange={e => setPort(e.target.value)}
+                    />
                   </div>
                 </div>
               )}
 
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">Modelo Activo</label>
-                <input type="text" className="form-input" value={model} onChange={e => setModel(e.target.value)} />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">URL Webhook Google Sheets</label>
-                <input type="text" className="form-input" value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">System Prompt (Instrucciones de Asistente)</label>
-                <textarea 
+                <input 
+                  type="text" 
                   className="form-input" 
-                  rows="3" 
-                  style={{ fontFamily: 'var(--font-body)', fontSize: '12px', resize: 'vertical' }}
-                  value={prompt} 
-                  onChange={e => setPrompt(e.target.value)}
+                  value={model} 
+                  onChange={e => setModel(e.target.value)}
                 />
               </div>
 
-              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '4px', padding: '10px' }}>
-                {savedSuccess ? <CheckCircle size={16} /> : <Sliders size={16} />}
-                <span>{savedSuccess ? '¡Ajustes Avanzados Guardados!' : 'Guardar Ajustes Avanzados'}</span>
-              </button>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Webhook de Google Sheets (Cierre de Caja)</label>
+                <input 
+                  type="url" 
+                  className="form-input" 
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  value={webhookUrl} 
+                  onChange={e => setWebhookUrl(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '10px' }}>
+                  {savedSuccess ? 'Guardado' : 'Guardar Ajustes'}
+                </button>
+              </div>
             </form>
 
-            {/* Restablecer Datos */}
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--error)' }}>Restablecer Ecosistema Local</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Limpia caché local y reinicia la app.</div>
-              </div>
-              <button 
+            <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '14px' }}>
+              <button
                 onClick={onClearAllData}
-                style={{ padding: '6px 10px', borderRadius: '8px', background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: 'var(--error)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                style={{ width: '100%', padding: '10px', fontSize: '12px', color: 'var(--error)', border: '1px solid rgba(244,63,94,0.3)', background: 'rgba(244,63,94,0.1)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                <Trash2 size={13} />
-                <span>Restablecer</span>
+                <Trash2 size={14} />
+                <span>Restablecer Datos Locales</span>
               </button>
             </div>
-
           </div>
         )}
       </div>
