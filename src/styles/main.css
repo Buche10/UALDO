@@ -44,6 +44,26 @@
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Variables oficiales de marca Ualdo (docs/ualdo-brand.md) */
+  --ualdo-negro: #1d1d1b;
+  --ualdo-petroleo: #00737f;
+  --ualdo-turquesa: #2d9ba1;
+  --ualdo-aqua: #62c9c8;
+  --ualdo-pizarra: #3b515b;
+  --ualdo-blanco: #ffffff;
+
+  /* Fichas y distintivos de almacenamiento y catalogo */
+  --storage-ambient-bg: rgba(98, 201, 200, 0.12);
+  --storage-ambient-color: var(--ualdo-aqua);
+  --storage-refrigerated-bg: rgba(45, 155, 161, 0.16);
+  --storage-refrigerated-color: var(--ualdo-turquesa);
+  --storage-frozen-bg: rgba(0, 115, 127, 0.28);
+  --storage-frozen-color: var(--accent);
+  --badge-prepared-bg: rgba(16, 185, 129, 0.12);
+  --badge-prepared-color: var(--success);
+  --badge-inactive-bg: rgba(59, 81, 91, 0.4);
+  --badge-inactive-color: var(--text-muted);
 }
 
 * {

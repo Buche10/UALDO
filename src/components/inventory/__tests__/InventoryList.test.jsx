@@ -134,4 +134,175 @@ describe('InventoryList component', () => {
     );
     expect(screen.queryByRole('button', { name: /Cargar más insumos/i })).not.toBeInTheDocument();
   });
+
+  it('renders code, "Familia / Categoría", storage label with icon, "Preparado" and "Inactivo"', () => {
+    const items = [
+      {
+        id: 1,
+        name: 'Carne Molida',
+        code: 'CAR-001',
+        stock: '10.000',
+        unit: 'kg',
+        category: {
+          id: 5,
+          name: 'Res',
+          family: { id: 2, name: 'Carnes' },
+        },
+        storage_type: 'refrigerated',
+        product_kind: 'prepared',
+        is_active: false,
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Carne Molida')).toBeInTheDocument();
+    expect(screen.getByText('CAR-001')).toBeInTheDocument();
+    expect(screen.getByText('Carnes / Res')).toBeInTheDocument();
+    expect(screen.getByText('Refrigerado')).toBeInTheDocument();
+    expect(screen.getByText('Preparado')).toBeInTheDocument();
+    expect(screen.getByText('Inactivo')).toBeInTheDocument();
+  });
+
+  it('renders ambient and frozen storage types', () => {
+    const items = [
+      {
+        id: 1,
+        name: 'Arroz',
+        stock: '5.000',
+        unit: 'kg',
+        storage_type: 'ambient',
+      },
+      {
+        id: 2,
+        name: 'Pescado',
+        stock: '3.000',
+        unit: 'kg',
+        storage_type: 'frozen',
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Ambiente')).toBeInTheDocument();
+    expect(screen.getByText('Congelado')).toBeInTheDocument();
+  });
+
+  it('renders category without family without separator', () => {
+    const items = [
+      {
+        id: 1,
+        name: 'Vino Tinto',
+        stock: '2.000',
+        unit: 'botella',
+        category: { id: 3, name: 'Bebidas' },
+      },
+      {
+        id: 2,
+        name: 'Sal',
+        stock: '1.000',
+        unit: 'kg',
+        category: null,
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Bebidas')).toBeInTheDocument();
+    expect(screen.queryByText(/\//)).not.toBeInTheDocument();
+  });
+
+  it('tolerates undefined catalog fields without errors', () => {
+    const items = [
+      {
+        id: 99,
+        name: 'Insumo Sin Campos Nuevos',
+        stock: '4.000',
+        unit: 'unidad',
+        // code, category, storage_type, product_kind, is_active undefined
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Insumo Sin Campos Nuevos')).toBeInTheDocument();
+    expect(screen.queryByText('Inactivo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Preparado')).not.toBeInTheDocument();
+  });
+
+  it('renders malicious category name as plain text without executing XSS', () => {
+    const xssPayload = '<img src=x onerror=alert(1)>';
+    const items = [
+      {
+        id: 1,
+        name: 'Insumo Seguro',
+        stock: '1.000',
+        unit: 'kg',
+        category: {
+          id: 1,
+          name: xssPayload,
+        },
+      },
+    ];
+
+    const { container } = render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(xssPayload)).toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
+  });
 });

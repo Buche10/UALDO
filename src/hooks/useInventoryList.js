@@ -13,6 +13,7 @@ export function useInventoryList() {
   const [error, setError] = useState(null);
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'low_stock' | 'alerts'
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -56,6 +57,7 @@ export function useInventoryList() {
       const res = await listInventory({
         search: debouncedSearch,
         low_stock: activeTab === 'low_stock',
+        includeInactive,
         page: pageToLoad,
       });
 
@@ -77,7 +79,7 @@ export function useInventoryList() {
       setLoadingMore(false);
       setError('Error de conexión al cargar datos.');
     }
-  }, [activeTab, debouncedSearch]);
+  }, [activeTab, debouncedSearch, includeInactive]);
 
   useEffect(() => {
     loadData(1, false);
@@ -103,6 +105,8 @@ export function useInventoryList() {
     error,
     activeTab,
     setActiveTab,
+    includeInactive,
+    setIncludeInactive,
     search,
     setSearch,
     hasMore,

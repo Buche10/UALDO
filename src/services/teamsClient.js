@@ -1,9 +1,18 @@
 // Cliente para el backend de Ualdo Teams (gestión de tareas).
 // Autenticación bearer Sanctum dedicada.
 
-const TEAMS_BASE = (import.meta.env.VITE_TEAMS_API_URL || import.meta.env.VITE_NEXO_API_URL || 'http://nexoteams.test/api').replace(/\/+$/, '');
+export const resolveTeamsBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_TEAMS_API_URL || import.meta.env.VITE_NEXO_API_URL || '').trim();
+  if (import.meta.env.PROD) {
+    if (!envUrl || !envUrl.startsWith('https://')) {
+      return null;
+    }
+    return envUrl.replace(/\/+$/, '');
+  }
+  return (envUrl || 'http://nexoteams.test/api').replace(/\/+$/, '');
+};
 
-export const getTeamsBaseUrl = () => TEAMS_BASE;
+export const getTeamsBaseUrl = () => resolveTeamsBaseUrl() || '';
 
 export const getTeamsToken = () => {
   try { return localStorage.getItem('teams_token') || localStorage.getItem('nexo_token'); } catch { return null; }
@@ -45,8 +54,13 @@ export const isTeamsAuthenticated = () => !!getTeamsToken();
 export const teamsLogout = () => { setTeamsToken(null); setTeamsUser(null); };
 
 export const teamsLogin = async (email, password) => {
+  const baseUrl = resolveTeamsBaseUrl();
+  if (!baseUrl) {
+    return { ok: false, error: 'La URL de Ualdo Teams no es segura' };
+  }
+
   try {
-    const res = await fetch(`${TEAMS_BASE}/login`, {
+    const res = await fetch(`${baseUrl}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -64,8 +78,18 @@ export const teamsLogin = async (email, password) => {
 };
 
 export const teamsRequest = async (path, { method = 'GET', body = null, timeout = 12000 } = {}) => {
+  const baseUrl = resolveTeamsBaseUrl();
+  if (!baseUrl) {
+    return {
+      ok: false,
+      status: 0,
+      error: 'La URL de Ualdo Teams no es segura',
+      isNetworkError: true,
+    };
+  }
+
   const token = getTeamsToken();
-  const url = `${TEAMS_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {

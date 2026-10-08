@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 .env
+.env.production
 .env.local
 .env.*.local
 .DS_Store

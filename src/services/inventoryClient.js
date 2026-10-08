@@ -24,13 +24,16 @@ export const normalizeQuantity = (rawQty) => {
  * Filtros según sección 2.1 de API-inventory.md:
  * search, low_stock, type, page
  */
-export const listInventory = async ({ search = '', low_stock = false, type = '', page = 1 } = {}) => {
+export const listInventory = async ({ search = '', low_stock = false, type = '', page = 1, includeInactive = false } = {}) => {
   const params = new URLSearchParams();
   if (search && typeof search === 'string' && search.trim()) {
     params.set('search', search.trim());
   }
   if (low_stock) {
     params.set('low_stock', '1');
+  }
+  if (includeInactive) {
+    params.set('include_inactive', '1');
   }
   if (type && typeof type === 'string' && type.trim()) {
     params.set('type', type.trim());

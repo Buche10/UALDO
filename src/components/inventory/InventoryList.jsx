@@ -1,5 +1,36 @@
 import React from 'react';
-import { History, ArrowRightLeft } from 'lucide-react';
+import { History, ArrowRightLeft, Sun, Thermometer, Snowflake } from 'lucide-react';
+
+const STORAGE_MAP = {
+  ambient: {
+    label: 'Ambiente',
+    icon: Sun,
+    bg: 'var(--storage-ambient-bg)',
+    color: 'var(--storage-ambient-color)',
+  },
+  refrigerated: {
+    label: 'Refrigerado',
+    icon: Thermometer,
+    bg: 'var(--storage-refrigerated-bg)',
+    color: 'var(--storage-refrigerated-color)',
+  },
+  frozen: {
+    label: 'Congelado',
+    icon: Snowflake,
+    bg: 'var(--storage-frozen-bg)',
+    color: 'var(--storage-frozen-color)',
+  },
+};
+
+function formatCategory(category) {
+  if (!category || typeof category !== 'object') return null;
+  const catName = category.name ? String(category.name).trim() : '';
+  const famName = category.family?.name ? String(category.family.name).trim() : '';
+  if (famName && catName) {
+    return `${famName} / ${catName}`;
+  }
+  return catName || null;
+}
 
 /**
  * Componente que renderiza el listado de insumos o el listado de alertas de compra.
@@ -69,34 +100,67 @@ export default function InventoryList({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {items.map(item => (
-        <div
-          key={item.id}
-          style={{
-            padding: '12px 14px',
-            borderRadius: '12px',
-            background: 'var(--bg-card)',
-            border: item.is_low_stock ? '1px solid var(--warning)' : '1px solid var(--border-glass)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                {item.name}
-              </span>
-              {item.is_low_stock && (
-                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: 'var(--warning-soft)', color: 'var(--warning)', fontWeight: 700 }}>
-                  Bajo
+      {items.map(item => {
+        const categoryLabel = formatCategory(item.category);
+        const storageInfo = item.storage_type ? STORAGE_MAP[item.storage_type] : null;
+        const StorageIcon = storageInfo ? storageInfo.icon : null;
+        const isDimmed = item.is_active === false;
+
+        return (
+          <div
+            key={item.id}
+            style={{
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: item.is_low_stock ? '1px solid var(--warning)' : '1px solid var(--border-glass)',
+              opacity: isDimmed ? 0.7 : 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
+                  {item.name}
                 </span>
+                {item.code ? (
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    {item.code}
+                  </span>
+                ) : null}
+                {item.is_low_stock && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: 'var(--warning-soft)', color: 'var(--warning)', fontWeight: 700 }}>
+                    Bajo
+                  </span>
+                )}
+                {item.product_kind === 'prepared' && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: 'var(--badge-prepared-bg)', color: 'var(--badge-prepared-color)', fontWeight: 700 }}>
+                    Preparado
+                  </span>
+                )}
+                {item.is_active === false && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: 'var(--badge-inactive-bg)', color: 'var(--badge-inactive-color)', fontWeight: 700 }}>
+                    Inactivo
+                  </span>
+                )}
+                {storageInfo && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '9999px', background: storageInfo.bg, color: storageInfo.color, display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                    <StorageIcon size={11} />
+                    <span>{storageInfo.label}</span>
+                  </span>
+                )}
+              </div>
+              {categoryLabel && (
+                <div style={{ fontSize: '11px', color: 'var(--text-subtle)', marginTop: '2px' }}>
+                  {categoryLabel}
+                </div>
               )}
+              <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>
+                {Number(item.stock).toFixed(3)} {item.unit}
+              </div>
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>
-              {Number(item.stock).toFixed(3)} {item.unit}
-            </div>
-          </div>
 
           <div style={{ display: 'flex', gap: '6px' }}>
             <button
@@ -137,7 +201,8 @@ export default function InventoryList({
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {hasMore && (
         <button

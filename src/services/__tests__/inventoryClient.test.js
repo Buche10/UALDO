@@ -49,6 +49,20 @@ describe('inventoryClient service', () => {
       expect(url).toContain('low_stock=1');
       expect(url).toContain('page=2');
     });
+
+    it('sends include_inactive=1 when includeInactive is true, and omits it when false', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: [] },
+      });
+
+      await listInventory({ includeInactive: true });
+      expect(spy).toHaveBeenCalledWith('/inventory?include_inactive=1');
+
+      spy.mockClear();
+      await listInventory({ includeInactive: false });
+      expect(spy).toHaveBeenCalledWith('/inventory');
+    });
   });
 
   describe('fetchAlerts', () => {

@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "build:prod": "vite build --mode production",
+    "android:sync": "npm run build:prod && npx cap sync android",
+    "android:release": "npm run android:sync && cd android && gradlew.bat assembleRelease",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src"

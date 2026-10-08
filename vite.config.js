@@ -1,8 +1,21 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { validateProdEnv } from './build/validateProdEnv.js';
+
+function prodEnvGuardPlugin() {
+  return {
+    name: 'prod-env-guard',
+    configResolved(config) {
+      if (config.command === 'build' && config.mode === 'production') {
+        const env = loadEnv(config.mode, process.cwd(), '');
+        validateProdEnv(env);
+      }
+    }
+  };
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), prodEnvGuardPlugin()],
   server: {
     host: true,
     port: 3000,
@@ -27,6 +40,8 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: [
+        'build/validateProdEnv.js',
+        'src/services/teamsClient.js',
         'src/services/assistantClient.js',
         'src/services/auth.js',
         'src/components/assistant/**',

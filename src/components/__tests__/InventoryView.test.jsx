@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import InventoryView from '../InventoryView';
 import * as inventoryClient from '../../services/inventoryClient';
 import * as auth from '../../services/auth';
@@ -64,5 +64,36 @@ describe('InventoryView component permissions and actions', () => {
     });
 
     expect(screen.queryByRole('button', { name: /Nuevo Insumo/i })).not.toBeInTheDocument();
+  });
+
+  it('renders "Mostrar inactivos" switch and toggles filter', async () => {
+    vi.spyOn(auth, 'getUser').mockReturnValue({ role: 'staff' });
+    const listSpy = vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: dummyItems,
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    render(<InventoryView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Inventario del Motor')).toBeInTheDocument();
+    });
+
+    const toggle = screen.getByRole('switch', { name: /Mostrar inactivos/i });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
+
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ includeInactive: true })
+      );
+    });
   });
 });

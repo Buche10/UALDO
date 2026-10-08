@@ -176,4 +176,83 @@ describe('useInventoryList hook', () => {
 
     expect(result.current.items.find(i => i.id === 1).stock).toBe('8.000');
   });
+
+  it('reloads list with includeInactive=true when toggled, and defaults to false', async () => {
+    const listSpy = vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: [{ id: 1, name: 'Pollo' }],
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    const { result } = renderHook(() => useInventoryList());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.includeInactive).toBe(false);
+    expect(listSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeInactive: false })
+    );
+
+    // Toggle includeInactive to true
+    await act(async () => {
+      result.current.setIncludeInactive(true);
+      await Promise.resolve();
+    });
+
+    expect(result.current.includeInactive).toBe(true);
+    expect(listSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeInactive: true })
+    );
+  });
+
+  it('handles alerts fetch error, catalog exception, and data.data fallback', async () => {
+    // 1. Alerts error branch
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValueOnce({
+      ok: true,
+      data: { items: [] },
+    });
+    vi.spyOn(inventoryClient, 'fetchAlerts').mockResolvedValueOnce({
+      ok: false,
+      error: 'Fallo al cargar alertas',
+    });
+
+    const { result } = renderHook(() => useInventoryList());
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.setActiveTab('alerts');
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBe('Fallo al cargar alertas');
+
+    // 2. Exception in listInventory
+    vi.spyOn(inventoryClient, 'listInventory').mockRejectedValueOnce(new Error('Network down'));
+    await act(async () => {
+      result.current.setActiveTab('all');
+      await Promise.resolve();
+    });
+    expect(result.current.error).toBe('Error de conexión al cargar datos.');
+
+    // 3. Fallback to res.data.data when items is undefined
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ id: 50, name: 'Arroz' }],
+      },
+    });
+    await act(async () => {
+      result.current.reload();
+      await Promise.resolve();
+    });
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.items[0].name).toBe('Arroz');
+  });
 });
