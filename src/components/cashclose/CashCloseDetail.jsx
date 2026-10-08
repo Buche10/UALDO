@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, Calendar, FileSpreadsheet, ShieldAlert } from 'lucide-react';
-import { getClose } from '../../services/cashCloseClient';
+import { ArrowLeft, RefreshCw, Calendar, FileSpreadsheet, ShieldAlert, Sliders, PlayCircle } from 'lucide-react';
+import { getClose, reevaluateClose } from '../../services/cashCloseClient';
 import { formatUsd } from '../../services/money';
 import CashCloseReviewForm from './CashCloseReviewForm';
 import CashCloseClosedActions from './CashCloseClosedActions';
@@ -10,23 +10,24 @@ import CashCloseManualForm from './CashCloseManualForm';
 const SUGGESTED_ACTIONS = {
   sin_conteo_efectivo: 'Cuenta el efectivo y cárgalo abajo.',
   diferencia_efectivo: 'Vuelve a contar o revisa si falta registrar un movimiento de caja. Si la diferencia es real, confirma forzando con un motivo.',
-  formas_sin_mapear: 'Se resuelve configurando las formas de pago en el motor.',
-  falta_comision: 'Se resuelve configurando las tasas de comisión en el motor.',
   arqueo_vs_ventas: 'Revisa si hay un anticipo o reserva en RunFood. Si es correcto, confirma forzando con un motivo.',
   sin_cierre_runfood: 'Cierra el turno en RunFood si es posible; la siguiente foto lo reevaluará.',
   sin_datos_runfood: 'Revisa que el PC del local esté encendido y con internet.',
   runfood_cambio_tras_cierre: 'Verifica el cambio en RunFood y reabre el día si corresponde.'
 };
 
-export default function CashCloseDetail({ fecha, onBack }) {
+export default function CashCloseDetail({ fecha, onBack, onOpenConfig }) {
   const [cierre, setCierre] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reevaluating, setReevaluating] = useState(false);
+  const [reevaluateError, setReevaluateError] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setReevaluateError(null);
     const res = await getClose(fecha);
     setLoading(false);
 
@@ -38,6 +39,20 @@ export default function CashCloseDetail({ fecha, onBack }) {
       setError(res.error || 'Error al cargar el detalle del cierre.');
     }
   }, [fecha]);
+
+  const handleReevaluate = async () => {
+    setReevaluating(true);
+    setReevaluateError(null);
+    const res = await reevaluateClose(fecha);
+    setReevaluating(false);
+
+    if (res.ok) {
+      const updated = res.data?.data || res.data;
+      setCierre(updated);
+    } else {
+      setReevaluateError(res.error || 'Error al reevaluar el día.');
+    }
+  };
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -92,6 +107,7 @@ export default function CashCloseDetail({ fecha, onBack }) {
       </div>
 
       {error && <div role="alert" style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--error-soft)', border: '1px solid var(--border-error)', color: 'var(--error)', fontSize: '12px' }}>{error}</div>}
+      {reevaluateError && <div role="alert" style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--error-soft)', border: '1px solid var(--border-error)', color: 'var(--error)', fontSize: '12px' }}>{reevaluateError}</div>}
 
       <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', border: isReview ? '1px solid var(--border-warning)' : '1px solid var(--border-glass)', background: isReview ? 'var(--warning-soft)' : 'var(--bg-card)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -101,7 +117,21 @@ export default function CashCloseDetail({ fecha, onBack }) {
               {isReview ? 'En revisión' : cierre.auto_cerrado ? 'Cerrado solo' : 'Cerrado'}
             </span>
           </div>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{cierre.source === 'runfood' && snapshotTime ? `RunFood, foto de las ${snapshotTime}` : 'Manual'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {cierre.status !== 'cerrado' && Boolean(cierre.snapshot) && (
+              <button
+                type="button"
+                onClick={handleReevaluate}
+                disabled={reevaluating}
+                className="btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '9999px', fontSize: '11px', fontWeight: 600, cursor: reevaluating ? 'default' : 'pointer', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--text-main)', opacity: reevaluating ? 0.6 : 1 }}
+              >
+                <PlayCircle size={13} className={reevaluating ? 'spin' : ''} />
+                <span>{reevaluating ? 'Reevaluando...' : 'Volver a evaluar'}</span>
+              </button>
+            )}
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{cierre.source === 'runfood' && snapshotTime ? `RunFood, foto de las ${snapshotTime}` : 'Manual'}</span>
+          </div>
         </div>
         {cierre.auto_cerrado && <span style={{ fontSize: '12px', color: 'var(--success)' }}>Cerrado automáticamente</span>}
         {cierre.reopened_at && <span style={{ fontSize: '12px', color: 'var(--warning)' }}>Reabierto el {cierre.reopened_at}</span>}
@@ -115,9 +145,21 @@ export default function CashCloseDetail({ fecha, onBack }) {
             <ShieldAlert size={15} /><span>Motivos de revisión ({cierre.discrepancias.length})</span>
           </h4>
           {cierre.discrepancias.map((d, i) => (
-            <div key={i} style={{ padding: '8px 10px', borderRadius: '10px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)' }}>
+            <div key={i} style={{ padding: '8px 10px', borderRadius: '10px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{d.motivo || d.detalle || d.tipo}</div>
-              {SUGGESTED_ACTIONS[d.tipo] && <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px' }}>{SUGGESTED_ACTIONS[d.tipo]}</div>}
+              {d.tipo === 'formas_sin_mapear' && onOpenConfig && (
+                <button type="button" onClick={() => onOpenConfig('mappings')} className="btn-secondary" style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--accent)' }}>
+                  <Sliders size={12} /><span>Asignar formas de pago</span>
+                </button>
+              )}
+              {d.tipo === 'falta_comision' && onOpenConfig && (
+                <button type="button" onClick={() => onOpenConfig('commissions')} className="btn-secondary" style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--accent)' }}>
+                  <Sliders size={12} /><span>Configurar comisiones</span>
+                </button>
+              )}
+              {d.tipo !== 'formas_sin_mapear' && d.tipo !== 'falta_comision' && SUGGESTED_ACTIONS[d.tipo] && (
+                <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px' }}>{SUGGESTED_ACTIONS[d.tipo]}</div>
+              )}
             </div>
           ))}
         </div>

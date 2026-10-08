@@ -208,3 +208,23 @@ export async function createManualClose(data = {}) {
     body: data
   });
 }
+
+/**
+ * Solicita reevaluar un cierre de caja abierto contra su snapshot vigente de RunFood.
+ *
+ * @param {string} fecha
+ * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
+ */
+export async function reevaluateClose(fecha) {
+  if (!isValidDate(fecha)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+    };
+  }
+
+  return request(`/restaurant/cash-close/${encodeURIComponent(fecha)}/reevaluar`, {
+    method: 'POST'
+  });
+}

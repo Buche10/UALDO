@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, RefreshCw, AlertTriangle, Plus, ChevronRight } from 'lucide-react';
+import { Calendar, RefreshCw, AlertTriangle, Plus, ChevronRight, Sliders } from 'lucide-react';
 import { formatUsd } from '../../services/money';
 
 export default function CashCloseList({
@@ -8,6 +8,7 @@ export default function CashCloseList({
   error = null,
   onSelectFecha,
   onOpenManual,
+  onOpenConfig,
   onRefresh
 }) {
   const [onlyInReview, setOnlyInReview] = useState(false);
@@ -66,7 +67,18 @@ export default function CashCloseList({
             Supervisión diaria del Libro y arqueos del motor
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {onOpenConfig && (
+            <button
+              type="button"
+              onClick={onOpenConfig}
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--text-main)' }}
+            >
+              <Sliders size={14} />
+              <span>Configurar caja</span>
+            </button>
+          )}
           {onOpenManual && (
             <button
               type="button"

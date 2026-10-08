@@ -195,4 +195,93 @@ describe('CashCloseDetail component', () => {
       expect(screen.getByText('Caja sin novedades')).toBeInTheDocument();
     });
   });
+
+  it('permite abrir la configuracion desde formas_sin_mapear y falta_comision', async () => {
+    const onOpenConfigMock = vi.fn();
+    const mockCierre = {
+      fecha: '2026-10-05',
+      status: 'revision',
+      discrepancias: [
+        { tipo: 'formas_sin_mapear', motivo: 'Hay 2 formas de pago de RunFood sin asignar' },
+        { tipo: 'falta_comision', motivo: 'No hay comision para Diners' }
+      ]
+    };
+
+    vi.spyOn(cashCloseClient, 'getClose').mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { data: [mockCierre] }
+    });
+
+    render(<CashCloseDetail fecha="2026-10-05" onBack={() => {}} onOpenConfig={onOpenConfigMock} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Asignar formas de pago')).toBeInTheDocument();
+      expect(screen.getByText('Configurar comisiones')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Asignar formas de pago'));
+    expect(onOpenConfigMock).toHaveBeenCalledWith('mappings');
+
+    fireEvent.click(screen.getByText('Configurar comisiones'));
+    expect(onOpenConfigMock).toHaveBeenCalledWith('commissions');
+  });
+
+  it('muestra boton "Volver a evaluar" solo en dias abiertos con snapshot y maneja 409 del servidor', async () => {
+    const mockCierre = {
+      fecha: '2026-10-05',
+      status: 'revision',
+      snapshot: { captured_at: '2026-10-05T23:50:00Z' },
+      discrepancias: []
+    };
+
+    vi.spyOn(cashCloseClient, 'getClose').mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { data: [mockCierre] }
+    });
+
+    const reevaluateSpy = vi.spyOn(cashCloseClient, 'reevaluateClose').mockResolvedValue({
+      ok: false,
+      status: 409,
+      error: 'El día ya no puede ser reevaluado.'
+    });
+
+    render(<CashCloseDetail fecha="2026-10-05" onBack={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Volver a evaluar')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Volver a evaluar'));
+
+    await waitFor(() => {
+      expect(reevaluateSpy).toHaveBeenCalledWith('2026-10-05');
+      expect(screen.getByText('El día ya no puede ser reevaluado.')).toBeInTheDocument();
+    });
+  });
+
+  it('no muestra boton "Volver a evaluar" cuando el dia esta cerrado o no tiene snapshot', async () => {
+    const mockCierreCerrado = {
+      fecha: '2026-10-05',
+      status: 'cerrado',
+      snapshot: { captured_at: '2026-10-05T23:50:00Z' },
+      discrepancias: []
+    };
+
+    vi.spyOn(cashCloseClient, 'getClose').mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { data: [mockCierreCerrado] }
+    });
+
+    render(<CashCloseDetail fecha="2026-10-05" onBack={() => {}} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2026-10-05')).toBeInTheDocument();
+      expect(screen.getByText('Cerrado')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Volver a evaluar')).not.toBeInTheDocument();
+  });
 });

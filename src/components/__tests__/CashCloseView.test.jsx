@@ -10,7 +10,7 @@ describe('CashCloseView component', () => {
     vi.restoreAllMocks();
   });
 
-  it('bloquea al personal sin is_owner sin realizar peticiones a la API', () => {
+  it('bloquea al personal sin is_owner sin realizar peticiones a la API', async () => {
     vi.spyOn(apiClient, 'getStoredUser').mockReturnValue({
       id: 2,
       name: 'Mesero Pedro',
@@ -22,6 +22,9 @@ describe('CashCloseView component', () => {
     render(<CashCloseView />);
 
     expect(screen.getByText('Solo el dueño puede ver la caja.')).toBeInTheDocument();
+
+    // Esperar a que se asienten los efectos asincronos antes de asegurar que nunca se llamo a la API
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(listSpy).not.toHaveBeenCalled();
   });
 

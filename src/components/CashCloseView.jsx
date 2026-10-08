@@ -5,6 +5,7 @@ import { getUser } from '../services/auth';
 import CashCloseList from './cashclose/CashCloseList';
 import CashCloseDetail from './cashclose/CashCloseDetail';
 import CashCloseManualForm from './cashclose/CashCloseManualForm';
+import CashConfigView from './cashconfig/CashConfigView';
 
 export default function CashCloseView({ onBack, fechaInicial = null }) {
   const [currentUser] = useState(() => getUser());
@@ -13,6 +14,8 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
   const initialFechaSafe = isValidDate(fechaInicial) ? fechaInicial : null;
   const [selectedFecha, setSelectedFecha] = useState(initialFechaSafe);
   const [showManual, setShowManual] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [configTab, setConfigTab] = useState('mappings');
   const [closes, setCloses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -72,6 +75,18 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
     );
   }
 
+  if (showConfig) {
+    return (
+      <CashConfigView
+        initialTab={configTab}
+        onBack={() => {
+          setShowConfig(false);
+          fetchCloses();
+        }}
+      />
+    );
+  }
+
   if (selectedFecha) {
     return (
       <CashCloseDetail
@@ -79,6 +94,10 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
         onBack={() => {
           setSelectedFecha(null);
           fetchCloses();
+        }}
+        onOpenConfig={(tab) => {
+          setConfigTab(tab || 'mappings');
+          setShowConfig(true);
         }}
       />
     );
@@ -108,6 +127,10 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
       error={error}
       onSelectFecha={(f) => setSelectedFecha(f)}
       onOpenManual={() => setShowManual(true)}
+      onOpenConfig={() => {
+        setConfigTab('mappings');
+        setShowConfig(true);
+      }}
       onRefresh={fetchCloses}
     />
   );

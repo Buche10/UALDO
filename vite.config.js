@@ -40,7 +40,9 @@ export default defineConfig({
         'src/components/DobleFiloCard.jsx',
         'src/components/CashCloseView.jsx',
         'src/components/cashclose/**',
+        'src/components/cashconfig/**',
         'src/services/cashCloseClient.js',
+        'src/services/cashConfigClient.js',
         'src/services/cashMovementsClient.js',
         'src/services/money.js'
       ],

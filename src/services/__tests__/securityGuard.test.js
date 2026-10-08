@@ -53,18 +53,35 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
 
   const allFiles = getAllSourceFiles(srcDir);
 
-  it('scans all src files recursively and confirms zero forbidden tokens', () => {
-    for (const filePath of allFiles) {
-      const relPath = path.relative(srcDir, filePath);
+  function assertSourceFilesClean(files) {
+    for (const filePath of files) {
+      const relPath = path.relative(srcDir, filePath).replace(/\\/g, '/');
       const content = fs.readFileSync(filePath, 'utf-8');
 
       for (const token of forbiddenTokens) {
+        // Excepcion explicita del Brief 15c: 'ualdo_cash_close_history' esta permitida
+        // UNICAMENTE en 'src/services/auth.js' y solo dentro de removeItem.
+        // Cualquier otro uso o presencia en otro archivo de src debe fallar.
+        if (token === 'ualdo_cash_close_history' && relPath === 'services/auth.js') {
+          const occurrences = content.split(token).length - 1;
+          const allowedOccurrences = (content.match(/localStorage\.removeItem\(['"]ualdo_cash_close_history['"]\)/g) || []).length;
+          expect(
+            occurrences === allowedOccurrences && occurrences > 0,
+            `El token ualdo_cash_close_history en ${relPath} solo se permite dentro de localStorage.removeItem(...)`
+          ).toBe(true);
+          continue;
+        }
+
         expect(
           content.includes(token),
           `File src/${relPath} contains forbidden security token: "${token}"`
         ).toBe(false);
       }
     }
+  }
+
+  it('scans all src files recursively and confirms zero forbidden tokens', () => {
+    assertSourceFilesClean(allFiles);
   });
 
   it('scans all src files recursively and confirms zero emojis exist', () => {
@@ -77,6 +94,22 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
         match,
         `File src/${relPath} contains emoji at match: "${match ? match[0] : ''}"`
       ).toBeNull();
+    }
+  });
+
+  it('hace fallar la guardia si ualdo_cash_close_history aparece fuera de removeItem en otro archivo de src', () => {
+    const tempFile = path.join(srcDir, 'temp_history_leak.js');
+    try {
+      fs.writeFileSync(tempFile, 'export const OLD_KEY = "ualdo_cash_close_history";\n', 'utf-8');
+      const filesWithTemp = getAllSourceFiles(srcDir);
+
+      expect(() => {
+        assertSourceFilesClean(filesWithTemp);
+      }).toThrow(/contains forbidden security token: "ualdo_cash_close_history"/);
+    } finally {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
     }
   });
 

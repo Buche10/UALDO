@@ -62,4 +62,14 @@ describe('CashCloseList component', () => {
     fireEvent.click(screen.getByText('2026-10-05'));
     expect(onSelect).toHaveBeenCalledWith('2026-10-05');
   });
+
+  it('muestra el boton "Configurar caja" y llama a onOpenConfig', () => {
+    const onConfig = vi.fn();
+    render(<CashCloseList closes={mockCloses} onOpenConfig={onConfig} onSelectFecha={() => {}} />);
+
+    const btn = screen.getByText('Configurar caja');
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onConfig).toHaveBeenCalledTimes(1);
+  });
 });

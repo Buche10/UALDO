@@ -7,7 +7,8 @@ import {
   reviewClose,
   setNetosReales,
   reopenClose,
-  createManualClose
+  createManualClose,
+  reevaluateClose
 } from '../cashCloseClient';
 
 describe('cashCloseClient', () => {
@@ -189,6 +190,30 @@ describe('cashCloseClient', () => {
       expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close', {
         method: 'POST',
         body: { fecha: '2026-10-05', efectivo: '200' }
+      });
+    });
+  });
+
+  describe('reevaluateClose', () => {
+    it('valida la fecha antes de realizar la peticion', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await reevaluateClose('invalid-date');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('llama a POST /restaurant/cash-close/{fecha}/reevaluar', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { data: { fecha: '2026-10-05', status: 'cerrado' } }
+      });
+
+      const res = await reevaluateClose('2026-10-05');
+      expect(res.ok).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/2026-10-05/reevaluar', {
+        method: 'POST'
       });
     });
   });
