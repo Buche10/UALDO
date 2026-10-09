@@ -6,9 +6,18 @@ Este documento describe el procedimiento estándar para compilar, firmar, verifi
 
 Antes de generar un paquete de producción para Android, el entorno de compilación debe contar con:
 
-1. **Node.js y npm**: Node.js 18+ (o Node.js 22 LTS) con dependencias instaladas (`npm install`).
-2. **Java Development Kit (JDK)**: JDK 17 o JDK 21 configurado en la variable de entorno `JAVA_HOME`.
-3. **Android SDK**: Android SDK Command-line Tools y build-tools (API 34 o compatible) configurado en `ANDROID_HOME`.
+1. **Node.js y npm**: Node.js 18+ (o Node.js 22 LTS) con dependencias instaladas (`npm install`). Incluye `typescript` como `devDependency` para la lectura y validación de `capacitor.config.ts`.
+2. **Java Development Kit (JDK)**: JDK 21 (versión recomendada) o JDK 17, configurado en la variable de entorno `JAVA_HOME`.
+   - **Incompatibilidad de JDK 25**: El JDK distribuido por defecto en instalaciones recientes de Android Studio (por ejemplo en `C:\Program Files\Android\Android Studio\jbr`) corresponde a OpenJDK 25. La versión de Gradle configurada en el proyecto es 8.14.3 (`gradle-wrapper.properties`), la cual no admite clases compiladas para Java 25 y falla con el error `Unsupported class file major version 69`. Asimismo, la versión de Java del sistema (Java 8) resulta obsoleta para Gradle 8. No debe modificarse la versión de Gradle ni del plugin de Android en este proyecto; la solución es utilizar un JDK compatible (21 o 17).
+   - **Instalación y configuración recomendada**:
+     - Instalar Eclipse Temurin JDK 21 (por ejemplo, mediante `winget install --id EclipseAdoptium.Temurin.21.JDK -e` o descargando el instalador oficial de Adoptium).
+     - Definir la variable de entorno de usuario o de sistema `JAVA_HOME` apuntando al directorio de instalación del JDK 21 (por ejemplo `C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot`).
+     - Definir la variable de entorno `ANDROID_HOME` apuntando a la ruta del Android SDK en Windows: `C:\Users\<usuario>\AppData\Local\Android\Sdk`.
+     - Alternativa en Android Studio: si se compila desde el IDE, ir a **Settings > Build, Execution, Deployment > Build Tools > Gradle** y en **Gradle JDK** seleccionar un JDK 21 o JDK 17 en lugar del JBR integrado de versión 25.
+   - **Comprobación del entorno**:
+     - Verificar la versión de Java activa: `java -version`.
+     - Verificar que el wrapper de Gradle reconozca la JVM adecuada: dentro del directorio `android`, ejecutar `.\gradlew.bat --version`. Debe indicar una versión de JVM 21 o 17.
+3. **Android SDK**: Android SDK Command-line Tools y build-tools (versiones 35 o 36 instaladas en `C:\Users\<usuario>\AppData\Local\Android\Sdk\build-tools`) con la ruta configurada en `ANDROID_HOME`.
 4. **Variables de entorno de producción**: Archivo `.env.production` en la raíz del proyecto (basado en `.env.production.example`). Ambas variables son obligatorias y deben utilizar HTTPS estricto:
    - `VITE_API_BASE_URL`: URL base del motor central UaldoBusiness (por ejemplo, `https://api.ualdo.ejemplo.com/api/v1`).
    - `VITE_TEAMS_API_URL`: URL base del backend de Ualdo Teams (por ejemplo, `https://teams.ualdo.ejemplo.com/api`).
@@ -48,10 +57,15 @@ npm run android:release
 ```
 
 En entornos Windows, el script `npm run android:release` ejecuta internamente:
-`npm run android:sync && cd android && gradlew.bat assembleRelease`
+`npm run android:clean-release && npm run android:sync && cd android && .\gradlew.bat assembleRelease`
+
+Este comando:
+1. Elimina de forma garantizada cualquier compilación previa en `android/app/build/outputs/apk/release/` mediante `android:clean-release` (script en Node.js multiplataforma), impidiendo que artefactos viejos pasen inadvertidos como nuevos.
+2. Ejecuta `android:sync`, el cual valida la configuración con `android:check-config`, compila la PWA para producción con `build:prod` y sincroniza los recursos mediante `npx cap sync android`.
+3. Se desplaza a la carpeta `android` y ejecuta `.\gradlew.bat assembleRelease`, compatible tanto con el símbolo del sistema (`cmd.exe`) como con PowerShell.
 
 En entornos Linux o macOS, puedes compilar ejecutando:
-`npm run android:sync && cd android && ./gradlew assembleRelease`
+`npm run android:clean-release && npm run android:sync && cd android && ./gradlew assembleRelease`
 
 Para generar un Android App Bundle (AAB) destinado a Google Play Console, ejecuta dentro de la carpeta `android`:
 `./gradlew bundleRelease` (o `gradlew.bat bundleRelease` en Windows).

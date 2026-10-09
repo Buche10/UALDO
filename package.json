@@ -8,8 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:prod": "vite build --mode production",
-    "android:sync": "npm run build:prod && npx cap sync android",
-    "android:release": "npm run android:sync && cd android && gradlew.bat assembleRelease",
+    "android:check-config": "npx cap config",
+    "android:sync": "npm run android:check-config && npm run build:prod && npx cap sync android",
+    "android:clean-release": "node -e \"const fs = require('fs'); fs.rmSync('android/app/build/outputs/apk/release', { recursive: true, force: true });\"",
+    "android:release": "npm run android:clean-release && npm run android:sync && cd android && .\\gradlew.bat assembleRelease",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src"
@@ -36,6 +38,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
     "jsdom": "^30.1.2",
+    "typescript": "~5.7.3",
     "vite": "^5.4.8",
     "vitest": "^2.1.9"
   }
