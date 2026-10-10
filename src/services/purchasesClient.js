@@ -31,6 +31,14 @@ export function normalizePurchaseQuantity(raw) {
   return QUANTITY_FORMAT.test(value) && Number(value) > 0 ? value : null;
 }
 
+/** AAAA-MM-DD y una fecha que existe (rechaza 2026-13-45 o 2026-02-30). */
+function isRealDate(value) {
+  if (!DATE_FORMAT.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 
 function pageParams(params, page) {
@@ -140,7 +148,7 @@ export const createPurchase = async (data, clientUuid) => {
   const location = trimmed(data?.location);
   if (location && !isValidLocation(location)) errors.location = ['Ubicación no válida.'];
   const purchasedOn = trimmed(data?.purchasedOn);
-  if (purchasedOn && !DATE_FORMAT.test(purchasedOn)) errors.purchased_on = ['La fecha no es válida.'];
+  if (purchasedOn && !isRealDate(purchasedOn)) errors.purchased_on = ['La fecha no es válida.'];
   const built = buildPurchaseLines(data?.lines);
   Object.assign(errors, built.errors);
   if (Object.keys(errors).length > 0) return invalid(422, 'Revisa los datos de la compra.', errors);

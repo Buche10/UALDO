@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 
 /** Mantiene el foco dentro del diálogo con Tab y Mayús+Tab. */
 function trapTab(e, container) {
-  const focusable = Array.from(container?.querySelectorAll('button:not([disabled]), input, textarea, select') || []);
+  const focusable = Array.from(container?.querySelectorAll('button, input, textarea, select') || []);
   if (focusable.length === 0) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
@@ -19,7 +19,8 @@ function trapTab(e, container) {
 /**
  * Confirmación propia y accesible (Brief 20p): `role="dialog"`, Escape, foco
  * inicial en "Volver", Tab dentro y, al cerrar, el foco vuelve al botón que lo
- * abrió o, si ya no existe, al respaldo.
+ * abrió o, si ya no existe, al respaldo. Mientras procesa, los botones usan
+ * `aria-disabled` (no `disabled`) para que el foco no salga del diálogo.
  */
 export default function ConfirmDialog({ isOpen, title, message, confirmLabel, busy, error, onConfirm, onClose, triggerRef, fallbackFocusRef }) {
   const dialogRef = useRef(null);
@@ -58,10 +59,10 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel, bu
         </div>
         <div aria-live="polite" style={{ fontSize: '12px', color: 'var(--error)' }}>{error || null}</div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button ref={backRef} type="button" onClick={onClose} disabled={busy} style={{ flex: 1, padding: '11px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}>
+          <button ref={backRef} type="button" onClick={() => { if (!busy) onClose(); }} aria-disabled={busy} style={{ flex: 1, padding: '11px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}>
             Volver
           </button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="btn-primary" style={{ flex: 1, padding: '11px', borderRadius: '9999px', fontWeight: 600, cursor: 'pointer' }}>
+          <button type="button" onClick={() => { if (!busy) onConfirm(); }} aria-disabled={busy} className="btn-primary" style={{ flex: 1, padding: '11px', borderRadius: '9999px', fontWeight: 600, cursor: 'pointer' }}>
             {busy ? 'Procesando...' : confirmLabel}
           </button>
         </div>

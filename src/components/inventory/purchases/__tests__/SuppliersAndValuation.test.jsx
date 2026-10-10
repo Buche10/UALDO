@@ -3,19 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PurchasesView from '../PurchasesView';
 import * as purchasesClient from '../../../../services/purchasesClient';
-import { draftPurchase, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
+import { listedPurchase, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
 
 describe('Suppliers tab', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([draftPurchase]));
+    vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([listedPurchase]));
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier, { ...supplier, id: 5, name: 'Viejo proveedor', is_active: false, tax_id: null, contact_name: null, phone: null }], 1, 2));
   });
 
   it('lists, searches and includes inactive suppliers', async () => {
     render(<PurchasesView onBack={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Proveedores' }));
-    await waitFor(() => expect(screen.getByText('Carnes del Valle')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Carnes del Valle/ })).toBeInTheDocument());
     expect(screen.getByText('1790012345001, Ana, 0991234567')).toBeInTheDocument();
     expect(screen.getByText('Viejo proveedor (inactivo)')).toBeInTheDocument();
     expect(screen.getByText('Sin datos de contacto')).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('Suppliers tab', () => {
     fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Lácteos Andinos' } });
     fireEvent.change(screen.getByLabelText('Notas (opcional)'), { target: { value: 'Entrega martes' } });
     fireEvent.click(screen.getByText('Guardar proveedor'));
-    await waitFor(() => expect(screen.getByText('Lácteos Andinos')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Lácteos Andinos/ })).toBeInTheDocument());
     expect(create.mock.calls[1][0]).toEqual(expect.objectContaining({ name: 'Lácteos Andinos', notes: 'Entrega martes', is_active: true }));
   });
 
@@ -53,14 +53,14 @@ describe('Suppliers tab', () => {
     const update = vi.spyOn(purchasesClient, 'updateSupplier').mockResolvedValue({ ok: true, data: { data: { ...supplier, is_active: false } } });
     render(<PurchasesView onBack={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Proveedores' }));
-    await waitFor(() => expect(screen.getByText('Carnes del Valle')).toBeInTheDocument());
-    fireEvent.click(screen.getByText('Carnes del Valle'));
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Carnes del Valle/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /^Carnes del Valle/ }));
 
     expect(screen.getByLabelText('Nombre')).toHaveValue('Carnes del Valle');
     fireEvent.click(screen.getByRole('switch', { name: /Activo/ }));
     fireEvent.click(screen.getByText('Guardar proveedor'));
     await waitFor(() => expect(update).toHaveBeenCalledWith(4, expect.objectContaining({ is_active: false })));
-    await waitFor(() => expect(screen.getByText('Carnes del Valle (inactivo)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Carnes del Valle \(inactivo\)/ })).toBeInTheDocument());
   });
 });
 

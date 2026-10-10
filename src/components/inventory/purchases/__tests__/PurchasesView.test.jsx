@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import PurchasesView from '../PurchasesView';
 import * as purchasesClient from '../../../../services/purchasesClient';
 import * as inventoryClient from '../../../../services/inventoryClient';
-import { draftPurchase, inventoryItems, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
+import { draftPurchase, inventoryItems, listedPurchase, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
 
 function dialogButton(name) {
   return within(screen.getByRole('dialog')).getByRole('button', { name });
@@ -13,7 +13,8 @@ function dialogButton(name) {
 describe('PurchasesView', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([draftPurchase]));
+    vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([listedPurchase]));
+    vi.spyOn(purchasesClient, 'getPurchase').mockResolvedValue({ ok: true, data: { data: draftPurchase } });
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier]));
     vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({ ok: true, data: { items: inventoryItems } });
   });
@@ -69,6 +70,7 @@ describe('PurchasesView', () => {
     render(<PurchasesView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('Carnes del Valle')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Carnes del Valle'));
+    await screen.findByText('Editar líneas');
 
     fireEvent.click(screen.getByRole('button', { name: 'Recibir' }));
     expect(screen.getByText(/entra al stock de la ubicación de destino/)).toBeInTheDocument();
@@ -88,6 +90,7 @@ describe('PurchasesView', () => {
     render(<PurchasesView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('Carnes del Valle')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Carnes del Valle'));
+    await screen.findByText('Editar líneas');
 
     const trigger = screen.getByRole('button', { name: 'Cancelar' });
     fireEvent.click(trigger);
@@ -113,6 +116,7 @@ describe('PurchasesView', () => {
     render(<PurchasesView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('Carnes del Valle')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Carnes del Valle'));
+    await screen.findByText('Editar líneas');
 
     fireEvent.click(screen.getByText('Editar líneas'));
     expect(screen.getAllByLabelText(/Cantidad/)[1]).toHaveValue('10.5');
@@ -129,11 +133,13 @@ describe('PurchasesView', () => {
 
   it('shows names and notes as plain text', async () => {
     const xss = '<img src=x onerror=alert(1)>';
-    purchasesClient.listPurchases.mockResolvedValue(pageOf([{ ...draftPurchase, supplier: { id: 4, name: xss }, notes: xss, lines: [{ ...draftPurchase.lines[0], item_name: xss }] }]));
+    const xssPurchase = { ...draftPurchase, supplier: { id: 4, name: xss }, notes: xss, lines: [{ ...draftPurchase.lines[0], item_name: xss }] };
+    purchasesClient.listPurchases.mockResolvedValue(pageOf([{ ...listedPurchase, supplier: { id: 4, name: xss } }]));
+    purchasesClient.getPurchase.mockResolvedValue({ ok: true, data: { data: xssPurchase } });
     const { container } = render(<PurchasesView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(xss)).toBeInTheDocument());
     fireEvent.click(screen.getByText(xss));
-    expect(screen.getAllByText(xss).length).toBeGreaterThan(1);
+    await waitFor(() => expect(screen.getAllByText(xss).length).toBeGreaterThan(1));
     expect(container.querySelector('img')).toBeNull();
   });
 });

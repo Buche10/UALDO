@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { usePurchaseForm } from '../../../hooks/usePurchaseForm';
 import { useSuppliers } from '../../../hooks/usePurchasesData';
@@ -22,7 +22,11 @@ function Field({ id, label, error, children }) {
  */
 export default function PurchaseForm({ onBack, onCreated }) {
   const form = usePurchaseForm({ onCreated });
-  const suppliers = useSuppliers();
+  const [supplierSearch, setSupplierSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+  const suppliers = useSuppliers({ search: supplierSearch });
+  // El proveedor elegido sigue en la lista aunque cambie la búsqueda.
+  const options = selected && !suppliers.items.some((s) => s.id === selected.id) ? [selected, ...suppliers.items] : suppliers.items;
   const { header, setField, errors, submitting } = form;
 
   return (
@@ -42,10 +46,14 @@ export default function PurchaseForm({ onBack, onCreated }) {
         )}
       </div>
 
+      <Field id="purchase-supplier-search" label="Buscar proveedor" error={suppliers.error}>
+        <input id="purchase-supplier-search" type="text" value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} placeholder="Nombre del proveedor" style={styles.input} />
+      </Field>
+
       <Field id="purchase-supplier" label="Proveedor" error={errors.supplier_id}>
-        <select id="purchase-supplier" value={header.supplierId} onChange={(e) => setField('supplierId', e.target.value)} style={styles.input}>
+        <select id="purchase-supplier" value={header.supplierId} onChange={(e) => { setField('supplierId', e.target.value); setSelected(options.find((s) => String(s.id) === e.target.value) || null); }} style={styles.input}>
           <option value="">{suppliers.loading ? 'Cargando proveedores...' : 'Elige el proveedor'}</option>
-          {suppliers.items.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+          {options.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
         </select>
       </Field>
 

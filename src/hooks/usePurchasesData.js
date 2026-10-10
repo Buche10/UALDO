@@ -58,11 +58,13 @@ export function useSupplierSave({ onSaved }) {
 export function useItemSearch(term) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [failed, setFailed] = useState(false);
   const latestRef = useRef('');
 
   useEffect(() => {
     const query = String(term || '').trim();
     latestRef.current = query;
+    setFailed(false);
     if (query.length < 2) {
       setResults([]);
       setSearching(false);
@@ -74,6 +76,7 @@ export function useItemSearch(term) {
       if (latestRef.current !== query) return;
       const list = res.ok ? (res.data?.items || res.data?.data || []) : [];
       setResults(list.filter((item) => item.type !== 'service'));
+      setFailed(!res.ok);
       setSearching(false);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -81,7 +84,7 @@ export function useItemSearch(term) {
 
   useEffect(() => () => { latestRef.current = null; }, []);
 
-  return { results, searching };
+  return { results, searching, failed };
 }
 
 /** Valor del inventario por ubicación (Brief 20p). */

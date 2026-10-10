@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import { useItemSearch } from '../../../hooks/usePurchasesData';
 import { styles } from './purchaseUi';
 
 function ItemSearch({ onPick, disabled }) {
   const [term, setTerm] = useState('');
-  const { results, searching } = useItemSearch(term);
+  const { results, searching, failed } = useItemSearch(term);
+  const query = term.trim();
+  let status = null;
+  if (searching) status = 'Buscando...';
+  else if (failed) status = 'No se pudo buscar: revisa la conexión.';
+  else if (query.length >= 2 && results.length === 0) status = `Sin resultados para "${query}".`;
 
   return (
     <div>
@@ -14,8 +19,8 @@ function ItemSearch({ onPick, disabled }) {
         <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
         <input id="purchase-item-search" type="text" placeholder="Busca por nombre o código" value={term} disabled={disabled} onChange={(e) => setTerm(e.target.value)} style={{ ...styles.input, paddingLeft: '36px' }} />
       </div>
-      <div aria-live="polite" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-        {searching ? 'Buscando...' : null}
+      <div aria-live="polite" style={{ fontSize: '11px', color: failed ? 'var(--error)' : 'var(--text-muted)', marginTop: '4px' }}>
+        {status}
       </div>
       {results.length > 0 && (
         <ul style={{ listStyle: 'none', margin: '4px 0 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -67,9 +72,23 @@ function LineRow({ line, errors, onChange, onRemove, disabled }) {
  * pagado y nota. No suma montos: el total lo calcula el motor al guardar.
  */
 export default function PurchaseLinesEditor({ lines, lineErrors, onAddItem, onChange, onRemove, disabled }) {
+  const [focusItemId, setFocusItemId] = useState(null);
+
+  // Al agregar un insumo, el foco pasa a su cantidad (el botón elegido desaparece).
+  useEffect(() => {
+    if (focusItemId === null) return;
+    document.getElementById(`purchase-${focusItemId}-qty`)?.focus();
+    setFocusItemId(null);
+  }, [focusItemId, lines]);
+
+  const pick = (item) => {
+    onAddItem(item);
+    setFocusItemId(item.id);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ItemSearch onPick={onAddItem} disabled={disabled} />
+      <ItemSearch onPick={pick} disabled={disabled} />
       {lines.length === 0 && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Todavía no hay líneas.</p>}
       {lines.map((line) => (
         <LineRow key={line.key} line={line} errors={lineErrors[line.key]} onChange={onChange} onRemove={onRemove} disabled={disabled} />

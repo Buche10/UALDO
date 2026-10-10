@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * Lista paginada del motor (Brief 20p).
  *
  * - Carga la primera página al montar y cada vez que cambian los filtros
- *   (`fetchPage` cambia); esa carga reemplaza a cualquier otra en curso y las
- *   respuestas viejas se descartan.
+ *   (`fetchPage` cambia). Al cambiar los filtros la lista se vacía, para no
+ *   mostrar elementos del filtro anterior; esa carga reemplaza a cualquier
+ *   otra en curso y las respuestas viejas se descartan.
  * - "Cargar más" no se superpone con otra carga y no duplica elementos.
- * - `upsert` refleja un elemento creado o cambiado aquí.
+ * - `upsert` y `remove` reflejan un elemento creado, cambiado o que ya no
+ *   cumple el filtro.
  *
  * @param {(page: number) => Promise<object>} fetchPage  Estable (useCallback).
  */
@@ -42,6 +44,8 @@ export function usePagedList(fetchPage, { errorMessage }) {
   }, [fetchPage, errorMessage]);
 
   useEffect(() => {
+    setItems([]);
+    setHasMore(false);
     load(1, false);
   }, [load]);
 
@@ -52,6 +56,10 @@ export function usePagedList(fetchPage, { errorMessage }) {
     setItems((prev) => (prev.some((known) => known.id === item.id) ? prev.map((known) => (known.id === item.id ? item : known)) : [item, ...prev]));
   }, []);
 
+  const remove = useCallback((id) => {
+    setItems((prev) => prev.filter((known) => known.id !== id));
+  }, []);
+
   return {
     items,
     loading,
@@ -60,5 +68,6 @@ export function usePagedList(fetchPage, { errorMessage }) {
     reload: () => load(1, false),
     loadMore: () => load(page + 1, true),
     upsert,
+    remove,
   };
 }

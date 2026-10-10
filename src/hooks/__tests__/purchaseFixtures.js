@@ -22,6 +22,12 @@ export const draftPurchase = {
   ],
 };
 
+/** Como lo manda GET /purchases: el índice del motor no carga las líneas. */
+export const listedPurchase = (() => {
+  const { lines: _lines, ...rest } = draftPurchase;
+  return rest;
+})();
+
 export const inventoryItems = [
   { id: 31, name: 'Lomo fino', code: 'LOM-1', unit: 'kg', type: 'supply' },
   { id: 50, name: 'Lavado de manteles', unit: 'unit', type: 'service' },

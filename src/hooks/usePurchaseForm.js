@@ -32,6 +32,9 @@ export function useLinesState(initialLines = []) {
   return { lines, lineErrors, setLineErrors, onAddItem, onRemove, onChange };
 }
 
+/** Clave del error del motor para cada campo de la cabecera. */
+const HEADER_ERROR_KEYS = { supplierId: 'supplier_id', purchasedOn: 'purchased_on', invoiceNumber: 'invoice_number' };
+
 /**
  * Alta de una compra en borrador (Brief 20p). El client_uuid se genera al
  * abrir, se reutiliza tras un error de red y se renueva tras un 201 o un 200.
@@ -46,11 +49,20 @@ export function usePurchaseForm({ onCreated }) {
 
   const setField = useCallback((field, value) => {
     setHeader((prev) => ({ ...prev, [field]: value }));
+    const errorKey = HEADER_ERROR_KEYS[field] || field;
+    setErrors((prev) => {
+      if (!prev[errorKey]) return prev;
+      const next = { ...prev };
+      delete next[errorKey];
+      return next;
+    });
   }, []);
 
   const submit = async () => {
     if (submitting) return;
     setError(null);
+    setErrors({});
+    linesState.setLineErrors({});
     setSubmitting(true);
     const res = await createPurchase({ ...header, lines: toPayloadLines(linesState.lines) }, uuidRef.current);
     setSubmitting(false);

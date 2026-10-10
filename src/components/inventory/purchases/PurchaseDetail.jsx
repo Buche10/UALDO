@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft, PackageCheck, XCircle, Pencil } from 'lucide-react';
-import { usePurchaseActions } from '../../../hooks/usePurchaseActions';
+import { usePurchaseActions, usePurchaseDetail } from '../../../hooks/usePurchaseActions';
 import { useLinesState } from '../../../hooks/usePurchaseForm';
 import { linesFromPurchase } from '../../../hooks/purchaseLines';
 import { formatQuantity } from '../../../services/quantityFormat';
@@ -23,13 +23,18 @@ const DIALOGS = {
 
 function LinesEditMode({ purchase, actions, onDone }) {
   const state = useLinesState(linesFromPurchase(purchase));
+  const [general, setGeneral] = useState(null);
   const save = async () => {
     const result = await actions.saveLines(state.lines);
     if (result.ok) onDone();
-    else state.setLineErrors(result.lineErrors);
+    else {
+      state.setLineErrors(result.lineErrors);
+      setGeneral(result.general);
+    }
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div aria-live="polite">{general && <div style={styles.errorBox}>{general}</div>}</div>
       <PurchaseLinesEditor lines={state.lines} lineErrors={state.lineErrors} onAddItem={state.onAddItem} onChange={state.onChange} onRemove={state.onRemove} disabled={actions.busy === 'lines'} />
       <div style={{ display: 'flex', gap: '10px' }}>
         <button type="button" onClick={onDone} style={{ ...styles.secondary, flex: 1 }}>Descartar cambios</button>
@@ -55,10 +60,10 @@ function LinesView({ purchase }) {
 }
 
 /**
- * Detalle de una compra con las cifras del motor (Brief 20p). En borrador:
+ * Cuerpo del detalle con las cifras del motor (Brief 20p). En borrador:
  * editar líneas, recibir y cancelar, cada una con confirmación propia.
  */
-export default function PurchaseDetail({ purchase, onBack, onUpdated }) {
+function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
   const [editing, setEditing] = useState(false);
   const receiveRef = useRef(null);
@@ -66,6 +71,7 @@ export default function PurchaseDetail({ purchase, onBack, onUpdated }) {
   const headingRef = useRef(null);
   const actions = usePurchaseActions({
     purchaseId: purchase.id,
+    onStale,
     onUpdated: (updated, action) => {
       setDialog(null);
       if (onUpdated) onUpdated(updated, action);
@@ -117,4 +123,38 @@ export default function PurchaseDetail({ purchase, onBack, onUpdated }) {
       />
     </div>
   );
+}
+
+/**
+ * Detalle de una compra (Brief 20p). La lista del motor no trae las líneas,
+ * así que el detalle se pide siempre al motor: sin eso, "Editar líneas"
+ * empezaría vacío y al guardar borraría las líneas anteriores.
+ */
+export default function PurchaseDetail({ purchaseId, onBack, onSynced }) {
+  const { purchase, setPurchase, loading, error, reload } = usePurchaseDetail(purchaseId);
+
+  const handleUpdated = (updated, action) => {
+    if (updated) setPurchase(updated);
+    if (onSynced) onSynced(updated, action);
+  };
+
+  // Tras un 409 el motor tiene otro estado: se recarga y se avisa a la lista.
+  const handleStale = async () => {
+    const fresh = await reload();
+    if (fresh && onSynced) onSynced(fresh, null);
+  };
+
+  if (loading && !purchase) return <div style={styles.muted}>Cargando la compra...</div>;
+  if (!purchase) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} /><span>Volver a compras</span></button>
+        <div aria-live="polite" style={{ ...styles.errorBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+          <span>{error}</span>
+          <button type="button" onClick={reload} className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '9999px' }}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
+  return <PurchaseDetailBody purchase={purchase} onBack={onBack} onUpdated={handleUpdated} onStale={handleStale} />;
 }

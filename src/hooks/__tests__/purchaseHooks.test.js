@@ -4,7 +4,7 @@ import { addItem, linesFromPurchase, mapLineErrors, removeLine, toPayloadLines, 
 import { usePagedList } from '../usePagedList';
 import { usePurchaseForm, todayIso } from '../usePurchaseForm';
 import { usePurchaseActions } from '../usePurchaseActions';
-import { useDebouncedValue, useItemSearch, useSupplierSave, useValuation } from '../usePurchasesData';
+import { useDebouncedValue, useItemSearch, useSupplierSave, useSuppliers, useValuation } from '../usePurchasesData';
 import * as purchasesClient from '../../services/purchasesClient';
 import * as inventoryClient from '../../services/inventoryClient';
 import { draftPurchase, inventoryItems, pageOf } from './purchaseFixtures';
@@ -162,9 +162,9 @@ describe('usePurchaseActions', () => {
 
     let outcome;
     await act(async () => { outcome = await result.current.saveLines(lines); });
-    expect(outcome).toEqual({ ok: false, lineErrors: { 'line:31': { line_total: 'Monto inválido.' } } });
+    expect(outcome).toEqual({ ok: false, lineErrors: { 'line:31': { line_total: 'Monto inválido.' } }, general: null });
     await act(async () => { outcome = await result.current.saveLines(lines); });
-    expect(outcome).toEqual({ ok: true, lineErrors: {} });
+    expect(outcome).toEqual({ ok: true, lineErrors: {}, general: null });
   });
 
   it('ignores a second action while one is running', async () => {
@@ -215,6 +215,22 @@ describe('usePurchasesData', () => {
     expect(result.current.results).toEqual([]);
     await act(async () => { vi.advanceTimersByTime(300); });
     expect(result.current.results).toEqual([]);
+  });
+
+  it('asks for suppliers once after the typing stops', async () => {
+    const spy = vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([]));
+    const { rerender } = renderHook(({ search }) => useSuppliers({ search }), { initialProps: { search: '' } });
+    await act(async () => { await Promise.resolve(); });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    rerender({ search: 'c' });
+    rerender({ search: 'ca' });
+    rerender({ search: 'car' });
+    await act(async () => { vi.advanceTimersByTime(299); });
+    expect(spy).toHaveBeenCalledTimes(1);
+    await act(async () => { vi.advanceTimersByTime(1); });
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenLastCalledWith({ search: 'car', includeInactive: false, page: 1 });
   });
 
   it('debounces a value', async () => {

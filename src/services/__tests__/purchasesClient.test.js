@@ -113,6 +113,16 @@ describe('purchasesClient', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
+    it('rejects dates that do not exist', async () => {
+      for (const purchasedOn of ['2026-13-45', '2026-02-30', '2026-00-10']) {
+        const res = await createPurchase({ ...base, purchasedOn }, 'uuid');
+        expect(res.data.errors.purchased_on).toBeDefined();
+      }
+      expect(spy).not.toHaveBeenCalled();
+      await createPurchase({ ...base, purchasedOn: '2024-02-29' }, 'uuid');
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
     it('requires between 1 and 200 lines', () => {
       expect(buildPurchaseLines([]).errors.lines).toBeDefined();
       expect(buildPurchaseLines(null).errors.lines).toBeDefined();
