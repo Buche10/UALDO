@@ -4,6 +4,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import InventoryView from '../InventoryView';
 import * as inventoryClient from '../../services/inventoryClient';
 import * as auth from '../../services/auth';
+import * as productionClient from '../../services/productionClient';
 
 describe('InventoryView component permissions and actions', () => {
   const dummyItems = [
@@ -64,6 +65,23 @@ describe('InventoryView component permissions and actions', () => {
     });
 
     expect(screen.queryByRole('button', { name: /Nuevo Insumo/i })).not.toBeInTheDocument();
+  });
+
+  it('staff sees "Producción" and opens the production view, without owner actions', async () => {
+    vi.spyOn(auth, 'getUser').mockReturnValue({ role: 'staff', capabilities: { is_owner: false } });
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: { items: dummyItems, totals: { count: 1, low_stock_count: 0 }, meta: { current_page: 1, last_page: 1 } },
+    });
+    const listRuns = vi.spyOn(productionClient, 'listRuns').mockResolvedValue({ ok: true, data: { data: [], meta: { current_page: 1, last_page: 1 } } });
+
+    render(<InventoryView />);
+    await waitFor(() => expect(screen.getByText('Inventario del Motor')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Conteos/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Producción/i }));
+    await waitFor(() => expect(screen.getByText('Producción y porcionado')).toBeInTheDocument());
+    expect(listRuns).toHaveBeenCalled();
   });
 
   it('renders "Mostrar inactivos" switch and toggles filter', async () => {

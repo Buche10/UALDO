@@ -48,6 +48,7 @@ export default defineConfig({
         'src/services/inventoryClient.js',
         'src/services/inventoryLocations.js',
         'src/services/inventoryCountsClient.js',
+        'src/services/productionClient.js',
         'src/services/notificationsClient.js',
         'src/services/notificationRoutes.js',
         'src/hooks/**',

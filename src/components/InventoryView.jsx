@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Package, Plus, ClipboardList } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { getUser } from '../services/auth';
 import { useInventoryList } from '../hooks/useInventoryList';
 import InventoryList from './inventory/InventoryList';
@@ -9,6 +9,8 @@ import ItemCreateModal from './inventory/ItemCreateModal';
 import MovementsHistoryModal from './inventory/MovementsHistoryModal';
 import TransferModal from './inventory/TransferModal';
 import CountsView from './inventory/counts/CountsView';
+import ProductionView from './inventory/production/ProductionView';
+import InventoryHeaderActions from './inventory/InventoryHeaderActions';
 
 export default function InventoryView() {
   const {
@@ -33,6 +35,7 @@ export default function InventoryView() {
   // Modales y vistas
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCountsView, setShowCountsView] = useState(false);
+  const [showProductionView, setShowProductionView] = useState(false);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
   const [selectedItemForTransfer, setSelectedItemForTransfer] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
@@ -76,6 +79,10 @@ export default function InventoryView() {
     }
   };
 
+  if (showProductionView) {
+    return <ProductionView isOwner={isOwner} onBack={() => { setShowProductionView(false); reload(); }} />;
+  }
+
   if (showCountsView && isOwner) {
     return <CountsView isOwner={isOwner} onBack={() => { setShowCountsView(false); reload(); }} />;
   }
@@ -100,41 +107,12 @@ export default function InventoryView() {
           </p>
         </div>
 
-        {isOwner && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="glass-card-interactive"
-              onClick={() => setShowCountsView(true)}
-              style={{
-                padding: '8px 12px',
-                fontSize: '12px',
-                borderRadius: '9999px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                border: '1px solid var(--border-glass)',
-                background: 'var(--surface-strong)',
-                color: 'var(--accent)',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              <ClipboardList size={16} />
-              <span>Conteos</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => setShowCreateModal(true)}
-              style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Plus size={16} />
-              <span>Nuevo Insumo</span>
-            </button>
-          </div>
-        )}
+        <InventoryHeaderActions
+          isOwner={isOwner}
+          onProduction={() => setShowProductionView(true)}
+          onCounts={() => setShowCountsView(true)}
+          onCreate={() => setShowCreateModal(true)}
+        />
       </div>
 
       {/* Pestañas: Todos / Stock bajo / Alertas */}
