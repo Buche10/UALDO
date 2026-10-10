@@ -1,4 +1,5 @@
 import { request } from './apiClient';
+import { isValidLocation } from './inventoryLocations';
 
 /**
  * Normaliza y valida una cantidad numérica para movimientos de inventario.
@@ -97,6 +98,86 @@ export const registerMovement = async (itemId, movementData, clientUuid) => {
 
   const normalizedQty = normalizeQuantity(movementData.quantity);
   if (!normalizedQty) {
+    return { ok: false, status: 422, error: 'La cantidad debe ser un número positivo con hasta 3 decimales.', isNetworkError: false };
+  }
+
+  const loc = movementData.location ? String(movementData.location).trim() : '';
+  if (loc && !isValidLocation(loc)) {
+    return { ok: false, status: 422, error: 'Ubicación de inventario no válida.', isNetworkError: false };
+  }
+
+  const payload = {
+    kind: movementData.kind,
+    quantity: normalizedQty,
+    reason: movementData.reason || '',
+    client_uuid: clientUuid,
+  };
+  if (loc) {
+    payload.location = loc;
+  }
+
+  return request(`/inventory/${parsedId}/movements`, {
+    method: 'POST',
+    body: payload,
+  });
+};
+
+/**
+ * Consulta el stock por ubicación de un insumo específico.
+ * GET /api/v1/inventory/{item}/stock
+ */
+export const fetchItemStock = async (itemId) => {
+  const parsedId = parseInt(itemId, 10);
+  if (isNaN(parsedId) || parsedId <= 0 || !Number.isInteger(Number(itemId))) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Identificador de insumo inválido.',
+      isNetworkError: false,
+    };
+  }
+  return request(`/inventory/${parsedId}/stock`);
+};
+
+/**
+ * Transfiere stock entre ubicaciones con idempotencia (client_uuid).
+ * POST /api/v1/inventory/transfers
+ * transferData: { itemId, from, to, quantity, reason }
+ */
+export const transferStock = async (transferData, clientUuid) => {
+  const parsedId = parseInt(transferData?.itemId, 10);
+  if (isNaN(parsedId) || parsedId <= 0 || !Number.isInteger(Number(transferData?.itemId))) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Identificador de insumo inválido.',
+      isNetworkError: false,
+    };
+  }
+
+  const from = transferData?.from ? String(transferData.from).trim() : '';
+  const to = transferData?.to ? String(transferData.to).trim() : '';
+
+  if (!isValidLocation(from) || !isValidLocation(to)) {
+    return {
+      ok: false,
+      status: 422,
+      error: 'Ubicación de origen o destino no válida.',
+      isNetworkError: false,
+    };
+  }
+
+  if (from === to) {
+    return {
+      ok: false,
+      status: 422,
+      error: 'El origen y el destino de la transferencia no pueden ser iguales.',
+      isNetworkError: false,
+    };
+  }
+
+  const normalizedQty = normalizeQuantity(transferData?.quantity);
+  if (!normalizedQty) {
     return {
       ok: false,
       status: 422,
@@ -106,17 +187,21 @@ export const registerMovement = async (itemId, movementData, clientUuid) => {
   }
 
   const payload = {
-    kind: movementData.kind,
+    item_id: parsedId,
+    from_location: from,
+    to_location: to,
     quantity: normalizedQty,
-    reason: movementData.reason || '',
-    client_uuid: clientUuid,
   };
 
-  if (movementData.location && movementData.location.trim()) {
-    payload.location = movementData.location.trim();
+  if (transferData?.reason && String(transferData.reason).trim()) {
+    payload.reason = String(transferData.reason).trim();
   }
 
-  return request(`/inventory/${parsedId}/movements`, {
+  if (clientUuid) {
+    payload.client_uuid = clientUuid;
+  }
+
+  return request('/inventory/transfers', {
     method: 'POST',
     body: payload,
   });

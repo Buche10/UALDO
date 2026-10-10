@@ -158,4 +158,107 @@ describe('MovementsHistoryModal component', () => {
     fireEvent.click(screen.getByLabelText('Cerrar historial'));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders location badge, transfer types, transfer group and location balance after', async () => {
+    const mockList = [
+      {
+        id: 301,
+        type: 'transfer_out',
+        quantity: '-4.000',
+        reason: '',
+        balance_after: '10.000',
+        location: 'warehouse',
+        location_balance_after: '6.000',
+        transfer_group: 'trf-8899',
+        created_at: '2026-10-08T12:00:00Z',
+      },
+      {
+        id: 302,
+        type: 'count',
+        quantity: '15.000',
+        reason: '',
+        balance_after: '15.000',
+        location: 'kitchen',
+        location_balance_after: '15.000',
+        created_at: '2026-10-08T13:00:00Z',
+      },
+    ];
+
+    vi.spyOn(inventoryClient, 'fetchMovements').mockResolvedValue({
+      ok: true,
+      data: {
+        data: mockList,
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    render(<MovementsHistoryModal isOpen={true} item={item} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Transferencia (salida)')).toBeInTheDocument();
+      expect(screen.getByText('Conteo')).toBeInTheDocument();
+      expect(screen.getByText('Bodega')).toBeInTheDocument();
+      expect(screen.getByText('Cocina')).toBeInTheDocument();
+      expect(screen.getByText('-4.000')).toBeInTheDocument();
+      expect(screen.getByText('+15.000')).toBeInTheDocument();
+    });
+  });
+
+  it('always displays the movement type and the reason beneath it, and pairs transfer lines with origin to destination label', async () => {
+    const mockList = [
+      {
+        id: 401,
+        type: 'transfer_out',
+        quantity: '-2.000',
+        reason: 'Envío para preparación',
+        balance_after: '8.000',
+        location: 'warehouse',
+        transfer_group: 'trf-group-99',
+        created_at: '2026-10-08T14:00:00Z',
+      },
+      {
+        id: 402,
+        type: 'transfer_in',
+        quantity: '2.000',
+        reason: 'Recepción para preparación',
+        balance_after: '8.000',
+        location: 'kitchen',
+        transfer_group: 'trf-group-99',
+        created_at: '2026-10-08T14:00:00Z',
+      },
+      {
+        id: 403,
+        type: 'count',
+        quantity: '5.000',
+        reason: 'Ajuste de reapertura',
+        balance_after: '13.000',
+        location: 'lounge',
+        created_at: '2026-10-08T15:00:00Z',
+      },
+    ];
+
+    vi.spyOn(inventoryClient, 'fetchMovements').mockResolvedValue({
+      ok: true,
+      data: {
+        data: mockList,
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    render(<MovementsHistoryModal isOpen={true} item={item} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      // Both type and reason must be displayed!
+      expect(screen.getByText('Conteo')).toBeInTheDocument();
+      expect(screen.getByText('Ajuste de reapertura')).toBeInTheDocument();
+
+      // Pair header with origin to destination
+      expect(screen.getByText('Bodega a Cocina')).toBeInTheDocument();
+      expect(screen.getByText('Transferencia (salida)')).toBeInTheDocument();
+      expect(screen.getByText('Envío para preparación')).toBeInTheDocument();
+      expect(screen.getByText('Transferencia (entrada)')).toBeInTheDocument();
+      expect(screen.getByText('Recepción para preparación')).toBeInTheDocument();
+    });
+  });
 });
+

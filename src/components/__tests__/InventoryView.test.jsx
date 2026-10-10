@@ -96,4 +96,78 @@ describe('InventoryView component permissions and actions', () => {
       );
     });
   });
+
+  it('renders "Conteos" button for owner and switches to CountsView, while non-owner does not see it', async () => {
+    // Non-owner test
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'staff',
+      capabilities: { is_owner: false },
+    });
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: dummyItems,
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    const { unmount } = render(<InventoryView />);
+    await waitFor(() => {
+      expect(screen.getByText('Inventario del Motor')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Conteos/i })).not.toBeInTheDocument();
+    unmount();
+
+    // Owner test
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'owner',
+      capabilities: { is_owner: true },
+    });
+
+    render(<InventoryView />);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Conteos/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Conteos/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Conteos Físicos por Ubicación')).toBeInTheDocument();
+    });
+  });
+
+  it('does NOT call listCounts or request /inventory/counts when user does not have owner capability', async () => {
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'staff',
+      capabilities: { is_owner: false },
+    });
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: dummyItems,
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    const countsClient = await import('../../services/inventoryCountsClient');
+    const countsSpy = vi.spyOn(countsClient, 'listCounts');
+    const apiClient = await import('../../services/apiClient');
+    const reqSpy = vi.spyOn(apiClient, 'request');
+
+    render(<InventoryView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Inventario del Motor')).toBeInTheDocument();
+    });
+
+    // Vaciar efectos
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(countsSpy).not.toHaveBeenCalled();
+    const countRequests = reqSpy.mock.calls.filter(([url]) => typeof url === 'string' && url.includes('/inventory/counts'));
+    expect(countRequests.length).toBe(0);
+  });
 });
+

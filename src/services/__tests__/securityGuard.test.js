@@ -53,6 +53,13 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
 
   const allFiles = getAllSourceFiles(srcDir);
 
+  const forbiddenLocationPatterns = [
+    'value="bodega"',
+    'value="salon"',
+    "location: 'bodega'",
+    "location: 'salon'",
+  ];
+
   function assertSourceFilesClean(files) {
     for (const filePath of files) {
       const relPath = path.relative(srcDir, filePath).replace(/\\/g, '/');
@@ -75,6 +82,13 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
         expect(
           content.includes(token),
           `File src/${relPath} contains forbidden security token: "${token}"`
+        ).toBe(false);
+      }
+
+      for (const pattern of forbiddenLocationPatterns) {
+        expect(
+          content.includes(pattern),
+          `File src/${relPath} contains forbidden legacy location pattern: "${pattern}"`
         ).toBe(false);
       }
     }
@@ -128,6 +142,21 @@ describe('Security Guard - Comprehensive Codebase Scan', () => {
         }
       }
       expect(found).toBe(true);
+    } finally {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    }
+  });
+
+  it('detecta patrones prohibidos de ubicación legacy como location: bodega en un archivo temporal y falla', () => {
+    const tempFile = path.join(srcDir, 'temp_location_legacy_probe.js');
+    try {
+      fs.writeFileSync(tempFile, `export const config = { location: 'bodega' };\n`, 'utf-8');
+      const filesWithTemp = getAllSourceFiles(srcDir);
+      expect(() => {
+        assertSourceFilesClean(filesWithTemp);
+      }).toThrow(/contains forbidden legacy location pattern: "location: 'bodega'"/);
     } finally {
       if (fs.existsSync(tempFile)) {
         fs.unlinkSync(tempFile);

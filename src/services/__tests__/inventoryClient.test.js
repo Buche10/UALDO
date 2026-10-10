@@ -7,6 +7,8 @@ import {
   fetchMovements,
   registerMovement,
   createItem,
+  fetchItemStock,
+  transferStock,
 } from '../inventoryClient';
 
 describe('inventoryClient service', () => {
@@ -140,7 +142,7 @@ describe('inventoryClient service', () => {
         kind: 'salida',
         quantity: '2,5',
         reason: 'merma',
-        location: 'bodega',
+        location: 'warehouse',
       }, clientUuid);
 
       expect(result.ok).toBe(true);
@@ -152,7 +154,7 @@ describe('inventoryClient service', () => {
         kind: 'salida',
         quantity: '2.5',
         reason: 'merma',
-        location: 'bodega',
+        location: 'warehouse',
         client_uuid: clientUuid,
       });
       // Verifies quantity is strictly a string
@@ -233,6 +235,133 @@ describe('inventoryClient service', () => {
 
       await listInventory({ page: 1, low_stock: false });
       expect(spy).toHaveBeenCalledWith('/inventory');
+    });
+  });
+
+  describe('registerMovement location validation', () => {
+    it('returns 422 if location is invalid', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await registerMovement(12, {
+        kind: 'salida',
+        quantity: '5',
+        location: 'invalida',
+      });
+
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(422);
+      expect(res.error).toContain('no válida');
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchItemStock', () => {
+    it('rejects invalid item id', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await fetchItemStock('abc');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('fetches item stock breakdown successfully', async () => {
+      const mockData = {
+        item_id: 15,
+        total: 10,
+        locations: [
+          { location: 'warehouse', label: 'Bodega', quantity: 6 },
+          { location: 'kitchen', label: 'Cocina', quantity: 4 },
+          { location: 'lounge', label: 'Salón', quantity: 0 },
+        ],
+      };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: mockData,
+      });
+
+      const res = await fetchItemStock(15);
+      expect(res.ok).toBe(true);
+      expect(spy).toHaveBeenCalledWith('/inventory/15/stock');
+      expect(res.data).toEqual(mockData);
+    });
+  });
+
+  describe('transferStock', () => {
+    it('rejects invalid itemId', async () => {
+      const res = await transferStock({
+        itemId: 0,
+        from: 'warehouse',
+        to: 'kitchen',
+        quantity: '1',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toContain('Identificador de insumo');
+    });
+
+    it('rejects identical origin and destination', async () => {
+      const res = await transferStock({
+        itemId: 5,
+        from: 'kitchen',
+        to: 'kitchen',
+        quantity: '1',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(422);
+      expect(res.error).toContain('no pueden ser iguales');
+    });
+
+    it('rejects invalid origin or destination locations', async () => {
+      const res = await transferStock({
+        itemId: 5,
+        from: 'patio',
+        to: 'kitchen',
+        quantity: '1',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(422);
+      expect(res.error).toContain('no válida');
+    });
+
+    it('rejects invalid or non-positive quantity', async () => {
+      const res = await transferStock({
+        itemId: 5,
+        from: 'warehouse',
+        to: 'kitchen',
+        quantity: '0',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(422);
+      expect(res.error).toContain('positivo');
+    });
+
+    it('submits valid transfer payload with normalized quantity and client_uuid', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 201,
+        data: { status: 'created', transfer_group: 'grp-123' },
+      });
+
+      const uuid = 'uuid-test-123';
+      const res = await transferStock({
+        itemId: 5,
+        from: 'warehouse',
+        to: 'kitchen',
+        quantity: '3,250',
+        reason: 'Reposición de cocina',
+      }, uuid);
+
+      expect(res.ok).toBe(true);
+      expect(spy).toHaveBeenCalledWith('/inventory/transfers', {
+        method: 'POST',
+        body: {
+          item_id: 5,
+          from_location: 'warehouse',
+          to_location: 'kitchen',
+          quantity: '3.250',
+          reason: 'Reposición de cocina',
+          client_uuid: uuid,
+        },
+      });
     });
   });
 });

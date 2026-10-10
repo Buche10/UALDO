@@ -79,7 +79,7 @@ export function useMovementSubmit({ item, onClose, onMovementRegistered }) {
           clientUuidRef.current = generateClientUuid();
           setError('Ocurrió un conflicto de identificador. Se ha generado uno nuevo, intenta de nuevo.');
         } else {
-          setError(res.error || res.data?.message || 'Stock insuficiente para este movimiento.');
+          setError(res.data?.message || res.error || 'Stock insuficiente para este movimiento.');
         }
       } else if (res.status === 422) {
         if (res.data?.errors) {

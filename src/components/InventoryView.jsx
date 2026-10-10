@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Package, Plus, Search } from 'lucide-react';
+import { Package, Plus, ClipboardList } from 'lucide-react';
 import { getUser } from '../services/auth';
 import { useInventoryList } from '../hooks/useInventoryList';
 import InventoryList from './inventory/InventoryList';
+import InventorySearchToolbar from './inventory/InventorySearchToolbar';
 import MovementModal from './inventory/MovementModal';
 import ItemCreateModal from './inventory/ItemCreateModal';
 import MovementsHistoryModal from './inventory/MovementsHistoryModal';
+import TransferModal from './inventory/TransferModal';
+import CountsView from './inventory/counts/CountsView';
 
 export default function InventoryView() {
   const {
@@ -27,9 +30,11 @@ export default function InventoryView() {
     updateItemStock,
   } = useInventoryList();
 
-  // Modales
+  // Modales y vistas
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCountsView, setShowCountsView] = useState(false);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
+  const [selectedItemForTransfer, setSelectedItemForTransfer] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const toastTimerRef = useRef(null);
@@ -62,10 +67,18 @@ export default function InventoryView() {
     }
   };
 
-  const handleItemCreated = () => {
-    showToast('Insumo creado exitosamente.', 'success');
-    reload();
+  const handleTransferSuccess = ({ message, item }) => {
+    showToast(message, 'success');
+    if (item) {
+      updateItemStock(item.id, item.stock, item);
+    } else {
+      reload();
+    }
   };
+
+  if (showCountsView && isOwner) {
+    return <CountsView isOwner={isOwner} onBack={() => { setShowCountsView(false); reload(); }} />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -88,15 +101,39 @@ export default function InventoryView() {
         </div>
 
         {isOwner && (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setShowCreateModal(true)}
-            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Plus size={16} />
-            <span>Nuevo Insumo</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="glass-card-interactive"
+              onClick={() => setShowCountsView(true)}
+              style={{
+                padding: '8px 12px',
+                fontSize: '12px',
+                borderRadius: '9999px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: '1px solid var(--border-glass)',
+                background: 'var(--surface-strong)',
+                color: 'var(--accent)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              <ClipboardList size={16} />
+              <span>Conteos</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setShowCreateModal(true)}
+              style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Plus size={16} />
+              <span>Nuevo Insumo</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -130,47 +167,12 @@ export default function InventoryView() {
 
       {/* Barra de búsqueda y filtro de inactivos (solo en pestañas con catálogo) */}
       {activeTab !== 'alerts' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o SKU..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="glass-input"
-              style={{ width: '100%', padding: '10px 10px 10px 36px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)', fontSize: '13px' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-                userSelect: 'none',
-              }}
-            >
-              <input
-                type="checkbox"
-                role="switch"
-                checked={includeInactive}
-                onChange={(e) => setIncludeInactive(e.target.checked)}
-                style={{
-                  cursor: 'pointer',
-                  accentColor: 'var(--primary)',
-                  width: '14px',
-                  height: '14px',
-                }}
-              />
-              <span>Mostrar inactivos</span>
-            </label>
-          </div>
-        </div>
+        <InventorySearchToolbar
+          search={search}
+          setSearch={setSearch}
+          includeInactive={includeInactive}
+          setIncludeInactive={setIncludeInactive}
+        />
       )}
 
       {/* Contenido principal */}
@@ -195,6 +197,7 @@ export default function InventoryView() {
           onLoadMore={loadNextPage}
           onSelectForMovement={setSelectedItemForMovement}
           onSelectForHistory={setSelectedItemForHistory}
+          onSelectForTransfer={setSelectedItemForTransfer}
         />
       )}
 
@@ -206,10 +209,17 @@ export default function InventoryView() {
         onMovementRegistered={handleMovementRegistered}
       />
 
+      <TransferModal
+        isOpen={Boolean(selectedItemForTransfer)}
+        item={selectedItemForTransfer}
+        onClose={() => setSelectedItemForTransfer(null)}
+        onTransferSuccess={handleTransferSuccess}
+      />
+
       <ItemCreateModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onItemCreated={handleItemCreated}
+        onItemCreated={() => { showToast('Insumo creado exitosamente.', 'success'); reload(); }}
       />
 
       <MovementsHistoryModal

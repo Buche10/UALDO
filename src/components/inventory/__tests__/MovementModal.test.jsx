@@ -198,4 +198,35 @@ describe('MovementModal component', () => {
       expect(handleSuccess).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('sends kind, quantity and location "kitchen" by default, without offering bodega or salon', async () => {
+    const registerSpy = vi.spyOn(inventoryClient, 'registerMovement').mockResolvedValue({
+      ok: true,
+      status: 201,
+      data: { message: 'Movimiento registrado' },
+    });
+
+    render(<MovementModal isOpen={true} item={item} onClose={vi.fn()} onMovementRegistered={vi.fn()} />);
+
+    const locationSelect = screen.getByLabelText(/Ubicación/i);
+    expect(locationSelect.value).toBe('kitchen');
+
+    // Comprobar que las opciones son exclusivamente warehouse, kitchen y lounge
+    const optionValues = Array.from(locationSelect.options).map(o => o.value);
+    expect(optionValues).toEqual(['warehouse', 'kitchen', 'lounge']);
+    expect(optionValues).not.toContain('bodega');
+    expect(optionValues).not.toContain('salon');
+
+    fireEvent.change(screen.getByLabelText(/Cantidad/i), { target: { value: '2.5' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Registrar$/i }));
+
+    await waitFor(() => {
+      expect(registerSpy).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = registerSpy.mock.calls[0][1];
+    expect(payload.kind).toBe('entrada');
+    expect(payload.quantity).toBe('2.5');
+    expect(payload.location).toBe('kitchen');
+  });
 });

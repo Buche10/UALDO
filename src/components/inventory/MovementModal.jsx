@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMovementSubmit, generateClientUuid } from '../../hooks/useMovementSubmit';
+import { INVENTORY_LOCATIONS, DEFAULT_LOCATION } from '../../services/inventoryLocations';
 
 export { generateClientUuid };
 
@@ -14,7 +15,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
   const [kind, setKind] = useState('entrada');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
-  const [location, setLocation] = useState('bodega');
+  const [location, setLocation] = useState(DEFAULT_LOCATION);
 
   const {
     submitting,
@@ -31,7 +32,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
       setKind('entrada');
       setQuantity('');
       setReason('');
-      setLocation('bodega');
+      setLocation(DEFAULT_LOCATION);
     }
   }, [isOpen, item]);
 
@@ -139,18 +140,24 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+            <label htmlFor="movement-location-select" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
               Ubicación
             </label>
             <select
+              id="movement-location-select"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
             >
-              <option value="bodega">Bodega Principal</option>
-              <option value="kitchen">Cocina</option>
-              <option value="salon">Salón</option>
+              {INVENTORY_LOCATIONS.map((loc) => (
+                <option key={loc.value} value={loc.value}>
+                  {loc.label}
+                </option>
+              ))}
             </select>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+              La salida y el conteo se aplican solo a esta ubicación
+            </span>
             {fieldErrors.location && (
               <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
                 {Array.isArray(fieldErrors.location) ? fieldErrors.location.join(', ') : fieldErrors.location}

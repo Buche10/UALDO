@@ -305,4 +305,123 @@ describe('InventoryList component', () => {
     expect(screen.getByText(xssPayload)).toBeInTheDocument();
     expect(container.querySelector('img')).toBeNull();
   });
+
+  it('renders stock_by_location breakdown formatted without trailing zeros and with es-EC decimal comma, or hides it when missing', () => {
+    const items = [
+      {
+        id: 1,
+        name: 'Carne de Res',
+        stock: '10.000',
+        unit: 'kg',
+        stock_by_location: {
+          warehouse: 5.75,
+          kitchen: 4.25,
+          lounge: 0,
+        },
+      },
+      {
+        id: 2,
+        name: 'Pimienta',
+        stock: '3.000',
+        unit: 'kg',
+        // sin stock_by_location
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    // Debe mostrar "Bodega 5,75 · Cocina 4,25 · Salón 0" para el insumo 1
+    expect(screen.getByText(/Bodega 5,75/)).toBeInTheDocument();
+    expect(screen.getByText(/Cocina 4,25/)).toBeInTheDocument();
+    expect(screen.getByText(/Salón 0/)).toBeInTheDocument();
+
+    // El insumo 2 no tiene stock_by_location, no debe renderizar desglose para él
+    const pimientaCard = screen.getByText('Pimienta').closest('div');
+    expect(pimientaCard.textContent).not.toContain('Bodega');
+  });
+
+  it('renders Transferir button for standard items and hides it for service items', () => {
+    const items = [
+      {
+        id: 1,
+        name: 'Cerveza',
+        type: 'supply',
+        stock: '10.000',
+        unit: 'unidad',
+      },
+      {
+        id: 2,
+        name: 'Servicio de Descorche',
+        type: 'service',
+        stock: '0.000',
+        unit: 'servicio',
+      },
+    ];
+
+    const handleTransfer = vi.fn();
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+        onSelectForTransfer={handleTransfer}
+      />
+    );
+
+    const transferButtons = screen.getAllByRole('button', { name: /^Transferir$/i });
+    expect(transferButtons.length).toBe(1);
+
+    fireEvent.click(transferButtons[0]);
+    expect(handleTransfer).toHaveBeenCalledWith(expect.objectContaining({ id: 1, name: 'Cerveza' }));
+  });
+
+  it('renders "Sin dato" when location stock is null', () => {
+    const items = [
+      {
+        id: 3,
+        name: 'Azúcar Morena',
+        stock: '10.000',
+        unit: 'kg',
+        stock_by_location: {
+          warehouse: null,
+          kitchen: 2,
+          lounge: null,
+        },
+      },
+    ];
+
+    render(
+      <InventoryList
+        activeTab="all"
+        items={items}
+        alerts={[]}
+        hasMore={false}
+        loadingMore={false}
+        onLoadMore={vi.fn()}
+        onSelectForMovement={vi.fn()}
+        onSelectForHistory={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Bodega Sin dato/)).toBeInTheDocument();
+    expect(screen.getByText(/Cocina 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Salón Sin dato/)).toBeInTheDocument();
+  });
 });

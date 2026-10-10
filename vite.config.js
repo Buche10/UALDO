@@ -46,6 +46,8 @@ export default defineConfig({
         'src/services/auth.js',
         'src/components/assistant/**',
         'src/services/inventoryClient.js',
+        'src/services/inventoryLocations.js',
+        'src/services/inventoryCountsClient.js',
         'src/services/notificationsClient.js',
         'src/services/notificationRoutes.js',
         'src/hooks/**',

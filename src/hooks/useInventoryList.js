@@ -85,8 +85,14 @@ export function useInventoryList() {
     loadData(1, false);
   }, [loadData]);
 
-  const updateItemStock = (itemId, newStock) => {
-    setItems(prev => prev.map(i => (i.id === itemId ? { ...i, stock: newStock } : i)));
+  const updateItemStock = (itemId, newStock, updatedItem = null) => {
+    setItems(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      if (updatedItem && typeof updatedItem === 'object') {
+        return { ...i, ...updatedItem, stock: updatedItem.stock !== undefined ? updatedItem.stock : newStock };
+      }
+      return { ...i, stock: newStock };
+    }));
   };
 
   const reload = () => loadData(1, false);
