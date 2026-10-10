@@ -10,6 +10,7 @@ import MovementsHistoryModal from './inventory/MovementsHistoryModal';
 import TransferModal from './inventory/TransferModal';
 import CountsView from './inventory/counts/CountsView';
 import ProductionView from './inventory/production/ProductionView';
+import PurchasesView from './inventory/purchases/PurchasesView';
 import InventoryHeaderActions from './inventory/InventoryHeaderActions';
 
 export default function InventoryView() {
@@ -36,6 +37,7 @@ export default function InventoryView() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCountsView, setShowCountsView] = useState(false);
   const [showProductionView, setShowProductionView] = useState(false);
+  const [showPurchasesView, setShowPurchasesView] = useState(false);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
   const [selectedItemForTransfer, setSelectedItemForTransfer] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
@@ -83,6 +85,10 @@ export default function InventoryView() {
     return <ProductionView isOwner={isOwner} onBack={() => { setShowProductionView(false); reload(); }} />;
   }
 
+  if (showPurchasesView && isOwner) {
+    return <PurchasesView onBack={() => { setShowPurchasesView(false); reload(); }} />;
+  }
+
   if (showCountsView && isOwner) {
     return <CountsView isOwner={isOwner} onBack={() => { setShowCountsView(false); reload(); }} />;
   }
@@ -110,6 +116,7 @@ export default function InventoryView() {
         <InventoryHeaderActions
           isOwner={isOwner}
           onProduction={() => setShowProductionView(true)}
+          onPurchases={() => setShowPurchasesView(true)}
           onCounts={() => setShowCountsView(true)}
           onCreate={() => setShowCreateModal(true)}
         />

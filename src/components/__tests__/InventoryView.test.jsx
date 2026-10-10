@@ -5,6 +5,7 @@ import InventoryView from '../InventoryView';
 import * as inventoryClient from '../../services/inventoryClient';
 import * as auth from '../../services/auth';
 import * as productionClient from '../../services/productionClient';
+import * as purchasesClient from '../../services/purchasesClient';
 
 describe('InventoryView component permissions and actions', () => {
   const dummyItems = [
@@ -82,6 +83,26 @@ describe('InventoryView component permissions and actions', () => {
     fireEvent.click(screen.getByRole('button', { name: /Producción/i }));
     await waitFor(() => expect(screen.getByText('Producción y porcionado')).toBeInTheDocument());
     expect(listRuns).toHaveBeenCalled();
+  });
+
+  it('only the owner sees "Compras"; staff makes no purchase requests', async () => {
+    const inventory = { ok: true, data: { items: dummyItems, totals: { count: 1, low_stock_count: 0 }, meta: { current_page: 1, last_page: 1 } } };
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue(inventory);
+    const listPurchases = vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue({ ok: true, data: { data: [], meta: { current_page: 1, last_page: 1 } } });
+    const getUser = vi.spyOn(auth, 'getUser').mockReturnValue({ role: 'staff', capabilities: { is_owner: false } });
+
+    const { unmount } = render(<InventoryView />);
+    await waitFor(() => expect(screen.getByText('Inventario del Motor')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Compras/i })).not.toBeInTheDocument();
+    expect(listPurchases).not.toHaveBeenCalled();
+    unmount();
+
+    getUser.mockReturnValue({ role: 'owner', capabilities: { is_owner: true } });
+    render(<InventoryView />);
+    await waitFor(() => expect(screen.getByText('Inventario del Motor')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /Compras/i }));
+    await waitFor(() => expect(screen.getByText('Compras y proveedores')).toBeInTheDocument());
+    expect(listPurchases).toHaveBeenCalled();
   });
 
   it('renders "Mostrar inactivos" switch and toggles filter', async () => {

@@ -30,12 +30,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.js'],
+    // Un proceso por grupo de archivos (sin singleFork): con todos los archivos
+    // en un solo proceso, la corrida con cobertura se volvía tan lenta al final
+    // que los tests con avisos de 4 s y límites de 5 s fallaban (Brief 20p).
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true
-      }
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -49,6 +47,7 @@ export default defineConfig({
         'src/services/inventoryLocations.js',
         'src/services/inventoryCountsClient.js',
         'src/services/productionClient.js',
+        'src/services/purchasesClient.js',
         'src/services/notificationsClient.js',
         'src/services/notificationRoutes.js',
         'src/hooks/**',

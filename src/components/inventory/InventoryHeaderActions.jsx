@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ClipboardList, Scissors } from 'lucide-react';
+import { Plus, ClipboardList, Scissors, ShoppingCart } from 'lucide-react';
 
 const secondaryButton = {
   padding: '8px 12px',
@@ -17,9 +17,10 @@ const secondaryButton = {
 
 /**
  * Acciones de la cabecera de Inventario. "Producción" es para cualquier
- * miembro (Brief 21p); "Conteos" y "Nuevo Insumo", solo para el dueño.
+ * miembro (Brief 21p); "Compras" (Brief 20p), "Conteos" y "Nuevo Insumo",
+ * solo para el dueño.
  */
-export default function InventoryHeaderActions({ isOwner, onProduction, onCounts, onCreate }) {
+export default function InventoryHeaderActions({ isOwner, onProduction, onPurchases, onCounts, onCreate }) {
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <button type="button" className="glass-card-interactive" onClick={onProduction} style={secondaryButton}>
@@ -29,6 +30,11 @@ export default function InventoryHeaderActions({ isOwner, onProduction, onCounts
 
       {isOwner && (
         <>
+          <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
+            <ShoppingCart size={16} />
+            <span>Compras</span>
+          </button>
+
           <button type="button" className="glass-card-interactive" onClick={onCounts} style={secondaryButton}>
             <ClipboardList size={16} />
             <span>Conteos</span>
