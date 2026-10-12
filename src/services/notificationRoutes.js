@@ -2,7 +2,8 @@
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
  * - 'inventario': pestaña Negocios, subvista Inventario.
- * - 'pedido' o 'pedidos': pestaña Asistente (los pedidos se consultan vía chat).
+ * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
+ *   abre el detalle de ese pedido (Brief 22p).
  * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
  * - 'chat': pestaña Asistente.
  */
@@ -76,7 +77,7 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
 
     case 'pedido':
     case 'pedidos':
-      return { tab: 'asistente', params: cleanParams };
+      return { tab: 'negocios', subView: 'pedidos', params: cleanParams };
 
     case 'cierre_caja':
       return { tab: 'negocios', subView: 'cashclose', params: cleanParams };

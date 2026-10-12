@@ -4,7 +4,7 @@ import { usePurchaseActions, usePurchaseDetail } from '../../../hooks/usePurchas
 import { useLinesState } from '../../../hooks/usePurchaseForm';
 import { linesFromPurchase } from '../../../hooks/purchaseLines';
 import { formatQuantity } from '../../../services/quantityFormat';
-import ConfirmDialog from './ConfirmDialog';
+import ConfirmDialog from '../../common/ConfirmDialog';
 import PurchaseLinesEditor from './PurchaseLinesEditor';
 import { money, purchaseLocation, statusLabel, styles, unitCost } from './purchaseUi';
 

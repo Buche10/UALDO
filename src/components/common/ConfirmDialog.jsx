@@ -3,7 +3,8 @@ import { AlertTriangle } from 'lucide-react';
 
 /** Mantiene el foco dentro del diálogo con Tab y Mayús+Tab. */
 function trapTab(e, container) {
-  const focusable = Array.from(container?.querySelectorAll('button, input, textarea, select') || []);
+  // Los botones con aria-disabled siguen siendo enfocables; los disabled no.
+  const focusable = Array.from(container?.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])') || []);
   if (focusable.length === 0) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
@@ -17,12 +18,14 @@ function trapTab(e, container) {
 }
 
 /**
- * Confirmación propia y accesible (Brief 20p): `role="dialog"`, Escape, foco
+ * Confirmación propia y accesible (Briefs 20p y 22p): `role="dialog"`, Escape, foco
  * inicial en "Volver", Tab dentro y, al cerrar, el foco vuelve al botón que lo
  * abrió o, si ya no existe, al respaldo. Mientras procesa, los botones usan
  * `aria-disabled` (no `disabled`) para que el foco no salga del diálogo.
+ * `children` agrega campos (por ejemplo, el motivo de un rechazo) e
+ * `initialFocusRef`, el campo que recibe el foco al abrir.
  */
-export default function ConfirmDialog({ isOpen, title, message, confirmLabel, busy, error, onConfirm, onClose, triggerRef, fallbackFocusRef }) {
+export default function ConfirmDialog({ isOpen, title, message, confirmLabel, busy, error, onConfirm, onClose, triggerRef, fallbackFocusRef, initialFocusRef, children }) {
   const dialogRef = useRef(null);
   const backRef = useRef(null);
 
@@ -30,12 +33,12 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel, bu
     if (!isOpen) return undefined;
     const triggerEl = triggerRef?.current;
     const fallbackEl = fallbackFocusRef?.current;
-    backRef.current?.focus();
+    (initialFocusRef?.current || backRef.current)?.focus();
     return () => {
       if (triggerEl && triggerEl.isConnected) triggerEl.focus();
       else fallbackEl?.focus();
     };
-  }, [isOpen, triggerRef, fallbackFocusRef]);
+  }, [isOpen, triggerRef, fallbackFocusRef, initialFocusRef]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -51,12 +54,13 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel, bu
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', backdropFilter: 'blur(8px)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '22px', borderRadius: '16px', border: '1px solid var(--border-glow)', background: 'var(--bg-glass)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '22px', borderRadius: '16px', border: '1px solid var(--border-glow)', background: 'var(--bg-glass)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <h3 id="confirm-dialog-title" style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>{title}</h3>
         <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--warning-soft)', border: '1px solid var(--warning)', display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: 'var(--warning)', lineHeight: 1.4 }}>
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-          <span>{message}</span>
+          <span id="confirm-dialog-message">{message}</span>
         </div>
+        {children}
         <div aria-live="polite" style={{ fontSize: '12px', color: 'var(--error)' }}>{error || null}</div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button ref={backRef} type="button" onClick={() => { if (!busy) onClose(); }} aria-disabled={busy} style={{ flex: 1, padding: '11px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}>

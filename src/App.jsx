@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import AssistantChat from './components/assistant/AssistantChat';
@@ -18,6 +18,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('trabajo');
   const [negociosSubView, setNegociosSubView] = useState('overview');
   const [negociosParams, setNegociosParams] = useState(null);
+  // Cada navegación desde un aviso lleva un número propio: el mismo aviso
+  // tocado dos veces vuelve a abrir (y recargar) su pantalla (Brief 22p).
+  const navSequenceRef = useRef(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [settings, setSettings] = useState(getSettings);
   const [registeredApps, setRegisteredApps] = useState(getRegisteredApps);
@@ -108,7 +111,8 @@ export default function App() {
     if (target.subView) {
       setNegociosSubView(target.subView);
     }
-    setNegociosParams(target.params || null);
+    navSequenceRef.current += 1;
+    setNegociosParams({ ...(target.params || {}), nav: navSequenceRef.current });
     setShowNotifications(false);
   };
 
@@ -160,6 +164,7 @@ export default function App() {
               subView={negociosSubView}
               onSubViewChange={handleNegociosSubViewChange}
               negociosParams={negociosParams}
+              onParamsConsumed={() => setNegociosParams(null)}
             />
           ) : (
             <LoginView onLoginSuccess={handleLoginSuccess} />

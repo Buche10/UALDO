@@ -70,13 +70,15 @@ describe('notificationRoutes security and routing', () => {
       });
     });
 
-    it('resolves pedidos and pedido to asistente tab', () => {
+    it('resolves pedidos and pedido to the Pedidos subview of Negocios (Brief 22p)', () => {
       expect(resolveNotificationRoute('pedidos')).toEqual({
-        tab: 'asistente',
+        tab: 'negocios',
+        subView: 'pedidos',
         params: {},
       });
       expect(resolveNotificationRoute('pedido', { id: 101 })).toEqual({
-        tab: 'asistente',
+        tab: 'negocios',
+        subView: 'pedidos',
         params: { id: 101 },
       });
     });
