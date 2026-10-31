@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import RunfoodRecipesView from '../RunfoodRecipesView';
 import * as client from '../../../services/runfoodCatalogClient';
+import * as consumptionClient from '../../../services/runfoodConsumptionClient';
 
 describe('RunfoodRecipesView', () => {
   beforeEach(() => {
@@ -42,6 +43,21 @@ describe('RunfoodRecipesView', () => {
         meta: { total: 1 }
       }
     });
+    vi.spyOn(consumptionClient, 'getConsumptionSettings').mockResolvedValue({
+      ok: true,
+      data: { enabled: true, start_date: '2026-10-01', location: 'kitchen' }
+    });
+    vi.spyOn(consumptionClient, 'getConsumption').mockResolvedValue({
+      ok: true,
+      data: {
+        fecha: '2026-10-29',
+        estado: 'aplicado',
+        lineas: [],
+        sin_receta: [{ articulo_runfood_id: 105, descripcion: 'Postre Tres Leches', cantidad: '3.000' }],
+        incompletos: [],
+        con_opciones: []
+      }
+    });
   });
 
   it('al montar se hace una sola llamada a cobertura y ninguna a recetas', async () => {
@@ -67,6 +83,7 @@ describe('RunfoodRecipesView', () => {
 
     const ingrBtn = screen.getByRole('tab', { name: /ingredientes/i });
     const recBtn = screen.getByRole('tab', { name: /recetas/i });
+    const consBtn = screen.getByRole('tab', { name: /consumo/i });
 
     fireEvent.click(ingrBtn);
     await waitFor(() => {
@@ -76,6 +93,11 @@ describe('RunfoodRecipesView', () => {
     fireEvent.click(recBtn);
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: 'Completas' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(consBtn);
+    await waitFor(() => {
+      expect(screen.getByText('Consumo por ventas')).toBeInTheDocument();
     });
   });
 
@@ -100,9 +122,34 @@ describe('RunfoodRecipesView', () => {
     // Debe cambiar a la sección de ingredientes
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /pendientes/i })).toBeInTheDocument();
-      // El buscador debe tener rellenada la búsqueda
       const searchInput = screen.getByPlaceholderText(/buscar ingrediente de runfood o insumo/i);
       expect(searchInput).toHaveValue('Cebolla morada');
+    });
+  });
+
+  it('desde consumo no descontado permite navegar a recetas con el buscador rellenado', async () => {
+    render(<RunfoodRecipesView />);
+
+    // Ir a Consumo
+    const consBtn = screen.getByRole('tab', { name: /consumo/i });
+    fireEvent.click(consBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No se descontó/i)).toBeInTheDocument();
+    });
+
+    // Desplegar bloque No se desconto
+    fireEvent.click(screen.getByRole('button', { name: /No se descontó/i }));
+
+    // Clic en Crear receta
+    const createBtn = screen.getByRole('button', { name: 'Crear receta' });
+    fireEvent.click(createBtn);
+
+    // Debe cambiar a la sección de recetas
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Completas' })).toBeInTheDocument();
+      const searchInput = screen.getByPlaceholderText(/buscar receta por nombre o código/i);
+      expect(searchInput).toHaveValue('Postre Tres Leches');
     });
   });
 });

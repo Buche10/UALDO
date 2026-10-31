@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChefHat, ShieldCheck, Utensils, BookOpen } from 'lucide-react';
+import { ArrowLeft, ChefHat, ShieldCheck, Utensils, BookOpen, Flame } from 'lucide-react';
 import { useRunfoodCoverage } from '../../hooks/useRunfoodCoverage';
 import RunfoodCoverageCard from './RunfoodCoverageCard';
 import RunfoodMappingsPanel from './RunfoodMappingsPanel';
 import RunfoodRecipesList from './RunfoodRecipesList';
+import RunfoodConsumptionView from './RunfoodConsumptionView';
 
 const SECTIONS = [
   { id: 'coverage', label: 'Cobertura', icon: ShieldCheck },
   { id: 'mappings', label: 'Ingredientes', icon: Utensils },
-  { id: 'recipes', label: 'Recetas', icon: BookOpen }
+  { id: 'recipes', label: 'Recetas', icon: BookOpen },
+  { id: 'consumption', label: 'Consumo', icon: Flame }
 ];
 
 /**
- * Pantalla principal de recetas y mapeo de RunFood para el dueño (Brief 24p-fix).
+ * Pantalla principal de recetas, mapeo y consumo de RunFood para el dueño (Brief 24p/25p).
  */
 export default function RunfoodRecipesView({ onBack }) {
   const [activeSection, setActiveSection] = useState('coverage');
   const [mappingsSearch, setMappingsSearch] = useState('');
+  const [recipesSearch, setRecipesSearch] = useState('');
 
   const {
     days,
@@ -27,9 +30,14 @@ export default function RunfoodRecipesView({ onBack }) {
     reload: reloadCoverage
   } = useRunfoodCoverage();
 
-  const handleResolveMapping = (ingredientDescription) => {
+  const handleNavigateToMappings = (ingredientDescription) => {
     setMappingsSearch(ingredientDescription || '');
     setActiveSection('mappings');
+  };
+
+  const handleNavigateToRecipes = (dishDescription) => {
+    setRecipesSearch(dishDescription || '');
+    setActiveSection('recipes');
   };
 
   return (
@@ -63,7 +71,7 @@ export default function RunfoodRecipesView({ onBack }) {
             <span>Recetas de RunFood</span>
           </h2>
           <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-            Mapeo de insumos, verificación de recetas y cobertura de ventas.
+            Mapeo de insumos, verificación de recetas, cobertura y consumo diario.
           </p>
         </div>
       </div>
@@ -78,7 +86,8 @@ export default function RunfoodRecipesView({ onBack }) {
           background: 'var(--chip-bg)',
           padding: 4,
           borderRadius: 14,
-          border: '1px solid var(--border-glass)'
+          border: '1px solid var(--border-glass)',
+          overflowX: 'auto'
         }}
       >
         {SECTIONS.map((sec) => {
@@ -93,6 +102,7 @@ export default function RunfoodRecipesView({ onBack }) {
               onClick={() => setActiveSection(sec.id)}
               style={{
                 flex: 1,
+                minWidth: 80,
                 padding: '8px 10px',
                 borderRadius: 10,
                 border: 'none',
@@ -105,7 +115,8 @@ export default function RunfoodRecipesView({ onBack }) {
                 justifyContent: 'center',
                 gap: 6,
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}
             >
               <Icon size={14} />
@@ -133,7 +144,15 @@ export default function RunfoodRecipesView({ onBack }) {
 
       {activeSection === 'recipes' && (
         <RunfoodRecipesList
-          onResolveMapping={handleResolveMapping}
+          initialSearch={recipesSearch}
+          onResolveMapping={handleNavigateToMappings}
+        />
+      )}
+
+      {activeSection === 'consumption' && (
+        <RunfoodConsumptionView
+          onNavigateToRecipes={handleNavigateToRecipes}
+          onNavigateToMappings={handleNavigateToMappings}
         />
       )}
     </div>

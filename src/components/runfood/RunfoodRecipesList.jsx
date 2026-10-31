@@ -8,14 +8,14 @@ import RunfoodLoadMoreButton from './RunfoodLoadMoreButton';
 /**
  * Listado de recetas de RunFood con acordeón y filtros por estado (Brief 24p-fix).
  */
-export default function RunfoodRecipesList({ onResolveMapping }) {
+export default function RunfoodRecipesList({ onResolveMapping, initialSearch = '' }) {
   const {
     estado,
     setEstado,
     search,
     setSearch,
     recipes
-  } = useRunfoodRecipes();
+  } = useRunfoodRecipes({ initialSearch });
 
   const [expandedId, setExpandedId] = useState(null);
 
