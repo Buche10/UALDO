@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAmount, formatUsd, percentToBp, bpToPercent } from '../money';
+import { normalizeAmount, formatUsd, percentToBp, bpToPercent, calculateAverageTicket } from '../money';
 
 describe('money service', () => {
   describe('normalizeAmount', () => {
@@ -77,6 +77,30 @@ describe('money service', () => {
       expect(bpToPercent(undefined)).toBe('Sin tasa');
       expect(bpToPercent(-10)).toBe('Sin tasa');
       expect(bpToPercent('448')).toBe('Sin tasa');
+    });
+  });
+
+  describe('calculateAverageTicket', () => {
+    it('calcula ticket promedio dividiendo total entre pedidos en centavos exactos', () => {
+      expect(calculateAverageTicket('100.00', 3)).toBe('33.33');
+      expect(calculateAverageTicket('100.00', 2)).toBe('50.00');
+      expect(calculateAverageTicket(100, 4)).toBe('25.00');
+      expect(calculateAverageTicket('10.50', 1)).toBe('10.50');
+      expect(calculateAverageTicket('12.35', 5)).toBe('2.47');
+    });
+
+    it('devuelve 0.00 cuando pedidos es 0, negativo o no numerico', () => {
+      expect(calculateAverageTicket('100.00', 0)).toBe('0.00');
+      expect(calculateAverageTicket('100.00', -1)).toBe('0.00');
+      expect(calculateAverageTicket('100.00', null)).toBe('0.00');
+      expect(calculateAverageTicket('100.00', 'abc')).toBe('0.00');
+    });
+
+    it('devuelve 0.00 cuando total es invalido, nulo o 0', () => {
+      expect(calculateAverageTicket(null, 5)).toBe('0.00');
+      expect(calculateAverageTicket(undefined, 5)).toBe('0.00');
+      expect(calculateAverageTicket('0', 5)).toBe('0.00');
+      expect(calculateAverageTicket('invalid', 5)).toBe('0.00');
     });
   });
 });

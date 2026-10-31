@@ -120,3 +120,31 @@ export function bpToPercent(bp) {
 
   return `${intPart},${decPart} %`;
 }
+
+/**
+ * Calcula el ticket promedio (total / pedidos) usando aritmética exacta de enteros en centavos.
+ * Sin operaciones de punto flotante para montos.
+ *
+ * @param {string|number|null|undefined} total  Monto total en dólares (texto o número)
+ * @param {number|string|null|undefined} pedidos  Cantidad entera de pedidos
+ * @returns {string} Monto promedio con 2 decimales ("33.33" o "0.00")
+ */
+export function calculateAverageTicket(total, pedidos) {
+  const p = typeof pedidos === 'number' ? pedidos : parseInt(String(pedidos || '0'), 10);
+  if (!Number.isFinite(p) || p <= 0) {
+    return '0.00';
+  }
+
+  const norm = normalizeAmount(total);
+  if (!norm) {
+    return '0.00';
+  }
+
+  const [intPart, decPart = ''] = norm.split('.');
+  const totalCents = parseInt(intPart, 10) * 100 + parseInt(decPart.padEnd(2, '0').slice(0, 2), 10);
+  const avgCents = Math.round(totalCents / p);
+  const avgInt = Math.floor(avgCents / 100);
+  const avgDec = String(avgCents % 100).padStart(2, '0');
+
+  return `${avgInt}.${avgDec}`;
+}

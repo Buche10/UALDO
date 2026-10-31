@@ -216,6 +216,28 @@ Get-ScheduledTask -TaskName UaldoRunFoodCashSnapshot | Get-ScheduledTaskInfo
 
 La tarea corre como SYSTEM, así que funciona aunque nadie haya iniciado sesión. La PC debe quedar encendida de noche; si está apagada a esas horas, la tarea corre al encender (`StartWhenAvailable`).
 
+### Paso 7b. Ventas durante el día (opcional, 2 min)
+
+Para que el dueño pueda ver en la app cómo va la venta durante el servicio (foto parcial cada 20 minutos sin bloquear a RunFood), instalar la tarea de intradía.
+
+En PowerShell **como administrador**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\UaldoAgent\cash\instalar_tarea_intradia.ps1
+```
+
+- Registra la tarea `UaldoRunFoodIntraday` que corre como SYSTEM cada 20 minutos.
+- El agente aplica su propia ventana horaria (`intradayWindow: "10:00-23:59"` en `agent.config.json`); fuera de ese horario termina de inmediato sin hacer nada.
+- Usa consultas con `READ UNCOMMITTED` y un tiempo máximo de 20 segundos para no tomar bloqueos compartidos sobre RunFood durante la atención en vivo.
+- Solo envía a UaldoBusiness si hubo cambios en los datos desde la última captura enviada.
+
+Probarla una vez y revisar el resultado:
+
+```powershell
+Start-ScheduledTask -TaskName UaldoRunFoodIntraday
+Get-ScheduledTask -TaskName UaldoRunFoodIntraday | Get-ScheduledTaskInfo
+```
+
 ### Paso 8. Verificar al día siguiente
 
 - Revisar `C:\UaldoAgent\data\logs\cash-AAAA-MM.log`: debe tener las ejecuciones de la madrugada sin errores.
@@ -228,6 +250,7 @@ La tarea corre como SYSTEM, así que funciona aunque nadie haya iniciado sesión
 | Qué | Cómo |
 |---|---|
 | Quitar la tarea programada | `powershell -ExecutionPolicy Bypass -File C:\UaldoAgent\cash\desinstalar_tarea.ps1` |
+| Quitar la tarea de intradía | `powershell -ExecutionPolicy Bypass -File C:\UaldoAgent\cash\desinstalar_tarea_intradia.ps1` |
 | Revocar el token del agente | En el servidor: `php artisan ualdo:agent-token 2 --rotate` y descartar el token nuevo |
 | Borrar el usuario de lectura | En SQL Server Management Studio, eliminar el usuario `ualdo_lector` de RUNFOODN y luego el login `ualdo_lector` |
 | Borrar los archivos | Eliminar `C:\UaldoAgent\` y `C:\UaldoRecon\` |

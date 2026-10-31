@@ -47,4 +47,32 @@ describe('EcosystemView (Brief 22p)', () => {
     expect(client.getRequest).toHaveBeenCalledWith(101);
     expect(screen.getByRole('button', { name: 'Aprobar' })).toBeInTheDocument();
   });
+
+  describe('Ventas tab permissions (Brief 23p)', () => {
+    it('owner sees the Ventas tab and can switch to it', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({ id: 1, role: 'owner', capabilities: { is_owner: true } });
+      const onSubViewChange = vi.fn();
+      render(<EcosystemView subView="overview" onSubViewChange={onSubViewChange} />);
+
+      const ventasTab = screen.getByRole('button', { name: 'Ventas' });
+      expect(ventasTab).toBeInTheDocument();
+      fireEvent.click(ventasTab);
+      expect(onSubViewChange).toHaveBeenCalledWith('ventas');
+    });
+
+    it('staff does NOT see the Ventas tab', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({ id: 2, role: 'staff', capabilities: { is_owner: false } });
+      render(<EcosystemView subView="overview" onSubViewChange={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: 'Ventas' })).not.toBeInTheDocument();
+    });
+
+    it('shows restricted message if non-owner lands on subView="ventas"', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({ id: 2, role: 'staff', capabilities: { is_owner: false } });
+      render(<EcosystemView subView="ventas" onSubViewChange={vi.fn()} />);
+
+      expect(screen.getByText('Acceso restringido')).toBeInTheDocument();
+      expect(screen.getByText(/La información de ventas está disponible exclusivamente para el dueño/i)).toBeInTheDocument();
+    });
+  });
 });
