@@ -11,15 +11,15 @@ import { usePagedList } from './usePagedList';
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * Hook para la gestión de mapeos entre ingredientes de RunFood e insumos de Ualdo (Brief 24p).
+ * Hook para la gestión de mapeos entre ingredientes de RunFood e insumos de Ualdo (Brief 24p-fix).
  * Maneja pestañas por estado, búsqueda con espera de 300 ms, paginación y acciones unitarias.
  */
-export function useRunfoodMappings({ initialStatus = 'pending' } = {}) {
+export function useRunfoodMappings({ initialStatus = 'pending', initialSearch = '' } = {}) {
   const [status, setStatus] = useState(initialStatus);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
-  // Mensajes globales de éxito y error de acción
+  // Mensajes de error de acción y errores por campo 422
   const [actionError, setActionError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [successBanner, setSuccessBanner] = useState(null);
@@ -28,6 +28,15 @@ export function useRunfoodMappings({ initialStatus = 'pending' } = {}) {
 
   // Contadores de las pestañas
   const [counts, setCounts] = useState({ pending: 0, confirmed: 0, ignored: 0 });
+
+  // Si cambia initialSearch externamente (ej: pulsar Asociar en receta)
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+      setDebouncedSearch(initialSearch.trim());
+      setStatus('pending');
+    }
+  }, [initialSearch]);
 
   // Debounce de búsqueda de 300 ms
   useEffect(() => {
@@ -83,125 +92,71 @@ export function useRunfoodMappings({ initialStatus = 'pending' } = {}) {
     };
   }, []);
 
-  // Acción: Aceptar sugerencia
-  const handleAcceptSuggestion = async (mappingId) => {
+  const clearErrors = useCallback(() => {
     setActionError(null);
     setFieldErrors({});
+  }, []);
+
+  // Ayudante unificado para acciones de mapeo (<50 líneas)
+  const runAction = useCallback(async (mappingId, call, successMessage, mapError) => {
+    clearErrors();
     setSubmitting(true);
     setSubmittingId(mappingId);
 
-    const res = await acceptRunfoodMappingSuggestion(mappingId);
+    const res = await call();
     setSubmitting(false);
     setSubmittingId(null);
 
     if (res.ok) {
       const updated = res.data?.data || res.data;
-      if (status === 'pending') {
+      const newStatus = updated?.status;
+      if (newStatus && newStatus !== status) {
         paged.remove(mappingId);
       } else if (updated?.id) {
         paged.upsert(updated);
       }
       refreshCounts();
-      showSuccess('Sugerencia aceptada exitosamente.');
-      return { ok: true, data: updated };
-    }
-
-    let errMsg = res.error || 'Error al aceptar sugerencia.';
-    if (res.status === 409) {
-      errMsg = 'Este ingrediente ya no tiene sugerencia; elige un insumo';
-    } else if (res.status === 422) {
-      errMsg = res.data?.message || 'El insumo sugerido ya no es válido.';
-    }
-    setActionError(errMsg);
-    return { ok: false, error: errMsg };
-  };
-
-  // Acción: Confirmar con insumo y factor
-  const handleUpdateMapping = async (mappingId, { inventory_item_id, factor }) => {
-    setActionError(null);
-    setFieldErrors({});
-    setSubmitting(true);
-    setSubmittingId(mappingId);
-
-    const res = await updateRunfoodMapping(mappingId, { inventory_item_id, factor });
-    setSubmitting(false);
-    setSubmittingId(null);
-
-    if (res.ok) {
-      const updated = res.data?.data || res.data;
-      if (status === 'pending') {
-        paged.remove(mappingId);
-      } else if (updated?.id) {
-        paged.upsert(updated);
-      }
-      refreshCounts();
-      showSuccess('Mapeo de ingrediente guardado exitosamente.');
+      if (successMessage) showSuccess(successMessage);
       return { ok: true, data: updated };
     }
 
     if (res.status === 422 && res.data?.errors) {
       setFieldErrors(res.data.errors);
     }
-    const errMsg = res.error || 'Error al guardar mapeo.';
+    const mapped = mapError ? mapError(res) : null;
+    const errMsg = mapped || res.data?.message || res.error || 'Ocurrió un error al procesar la acción.';
     setActionError(errMsg);
     return { ok: false, error: errMsg, errors: res.data?.errors };
-  };
+  }, [clearErrors, status, paged, refreshCounts]);
 
-  // Acción: Ignorar ingrediente
-  const handleIgnoreMapping = async (mappingId) => {
-    setActionError(null);
-    setFieldErrors({});
-    setSubmitting(true);
-    setSubmittingId(mappingId);
+  const handleAcceptSuggestion = (mappingId) =>
+    runAction(
+      mappingId,
+      () => acceptRunfoodMappingSuggestion(mappingId),
+      'Sugerencia aceptada exitosamente.',
+      (res) => (res.status === 409 ? 'Este ingrediente ya no tiene sugerencia; elige un insumo' : null)
+    );
 
-    const res = await ignoreRunfoodMapping(mappingId);
-    setSubmitting(false);
-    setSubmittingId(null);
+  const handleUpdateMapping = (mappingId, { inventory_item_id, factor }) =>
+    runAction(
+      mappingId,
+      () => updateRunfoodMapping(mappingId, { inventory_item_id, factor }),
+      'Mapeo de ingrediente guardado exitosamente.'
+    );
 
-    if (res.ok) {
-      const updated = res.data?.data || res.data;
-      if (status === 'pending' || status === 'confirmed') {
-        paged.remove(mappingId);
-      } else if (updated?.id) {
-        paged.upsert(updated);
-      }
-      refreshCounts();
-      showSuccess('Ingrediente ignorado. No se descontará del inventario.');
-      return { ok: true };
-    }
+  const handleIgnoreMapping = (mappingId) =>
+    runAction(
+      mappingId,
+      () => ignoreRunfoodMapping(mappingId),
+      'Ingrediente ignorado. No se descontará del inventario.'
+    );
 
-    const errMsg = res.error || 'Error al ignorar ingrediente.';
-    setActionError(errMsg);
-    return { ok: false, error: errMsg };
-  };
-
-  // Acción: Reabrir ingrediente a pendiente
-  const handleReopenMapping = async (mappingId) => {
-    setActionError(null);
-    setFieldErrors({});
-    setSubmitting(true);
-    setSubmittingId(mappingId);
-
-    const res = await reopenRunfoodMapping(mappingId);
-    setSubmitting(false);
-    setSubmittingId(null);
-
-    if (res.ok) {
-      const updated = res.data?.data || res.data;
-      if (status === 'confirmed' || status === 'ignored') {
-        paged.remove(mappingId);
-      } else if (updated?.id) {
-        paged.upsert(updated);
-      }
-      refreshCounts();
-      showSuccess('Ingrediente reabierto a pendiente.');
-      return { ok: true };
-    }
-
-    const errMsg = res.error || 'Error al reabrir ingrediente.';
-    setActionError(errMsg);
-    return { ok: false, error: errMsg };
-  };
+  const handleReopenMapping = (mappingId) =>
+    runAction(
+      mappingId,
+      () => reopenRunfoodMapping(mappingId),
+      'Ingrediente reabierto a pendiente.'
+    );
 
   return {
     status,
@@ -221,6 +176,7 @@ export function useRunfoodMappings({ initialStatus = 'pending' } = {}) {
     actionError,
     setActionError,
     fieldErrors,
+    clearErrors,
     successBanner,
     submitting,
     submittingId,

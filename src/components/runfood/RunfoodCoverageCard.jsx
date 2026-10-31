@@ -1,22 +1,30 @@
 import React from 'react';
-import { ShieldCheck, RefreshCw, AlertTriangle } from 'lucide-react';
-import { formatUsd } from '../../services/money';
+import { ShieldCheck, RefreshCw } from 'lucide-react';
+import CoverageBar from './CoverageBar';
+import CoverageMissingList from './CoverageMissingList';
 
 /**
- * Tarjeta de cobertura de ventas por recetas (Brief 24p).
- * Muestra el porcentaje de lo vendido con receta completa, venta directa o sin cubrir,
+ * Tarjeta de cobertura de ventas por recetas (Brief 24p-fix).
+ * Muestra el porcentaje de ventas cubiertas por receta completa, venta directa o sin cubrir,
  * y los 10 platos sin receta o incompletos con mayores ventas.
  */
-export default function RunfoodCoverageCard({ data, loading, error, onRetry, days = 7, onDaysChange }) {
+export default function RunfoodCoverageCard({
+  data,
+  loading,
+  error,
+  onRetry,
+  days = 7,
+  onDaysChange
+}) {
   if (loading) {
     return (
       <div
         className="glass-card"
         style={{
-          padding: '18px',
+          padding: 18,
           textAlign: 'center',
           color: 'var(--text-muted)',
-          fontSize: '13px'
+          fontSize: 13
         }}
       >
         Cargando cobertura de ventas...
@@ -29,15 +37,15 @@ export default function RunfoodCoverageCard({ data, loading, error, onRetry, day
       <div
         className="glass-card"
         style={{
-          padding: '18px',
+          padding: 18,
           border: '1px solid var(--border-error)',
           background: 'var(--error-soft)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px'
+          gap: 10
         }}
       >
-        <p style={{ margin: 0, fontSize: '13px', color: 'var(--error)' }}>{error}</p>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--error)' }}>{error}</p>
         {onRetry && (
           <button
             type="button"
@@ -45,14 +53,14 @@ export default function RunfoodCoverageCard({ data, loading, error, onRetry, day
             style={{
               alignSelf: 'flex-start',
               padding: '6px 12px',
-              borderRadius: '9999px',
+              borderRadius: 9999,
               border: '1px solid var(--error)',
               background: 'transparent',
               color: 'var(--error)',
-              fontSize: '12px',
+              fontSize: 12,
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: 6,
               cursor: 'pointer'
             }}
           >
@@ -66,33 +74,31 @@ export default function RunfoodCoverageCard({ data, loading, error, onRetry, day
 
   if (!data) return null;
 
-  const completaPct = Number(data.receta_completa?.porcentaje || 0);
-  const stockeablePct = Number(data.stockeable_mapeado?.porcentaje || 0);
-  const sinCubrirPct = Number(data.sin_receta_o_incompleto?.porcentaje || 0);
+  const totalCents = Number(data.total_cents || 0);
   const topFaltantes = data.top_faltantes || [];
 
   return (
     <div
       className="glass-card"
       style={{
-        padding: '18px',
+        padding: 18,
         border: '1px solid var(--border-glass)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px'
+        gap: 16
       }}
     >
       {/* Cabecera y selector de días */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ShieldCheck size={18} color="var(--accent)" />
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ShieldCheck size={18} stroke="var(--accent)" />
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>
             Cobertura de ventas
           </h3>
         </div>
 
         {onDaysChange && (
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
             {[7, 14, 30].map((d) => (
               <button
                 key={d}
@@ -101,11 +107,11 @@ export default function RunfoodCoverageCard({ data, loading, error, onRetry, day
                 aria-pressed={days === d}
                 style={{
                   padding: '4px 8px',
-                  borderRadius: '9999px',
+                  borderRadius: 9999,
                   border: 'none',
                   background: days === d ? 'var(--primary)' : 'var(--chip-bg)',
                   color: days === d ? 'var(--on-primary)' : 'var(--text-muted)',
-                  fontSize: '11px',
+                  fontSize: 11,
                   fontWeight: 600,
                   cursor: 'pointer'
                 }}
@@ -118,104 +124,43 @@ export default function RunfoodCoverageCard({ data, loading, error, onRetry, day
       </div>
 
       {/* Tres barras de desglose porcentual */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Receta completa */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
-              Receta completa
-            </span>
-            <span style={{ color: 'var(--success)', fontWeight: 700 }}>
-              {data.receta_completa?.porcentaje}% ({formatUsd(data.receta_completa?.total_formateado)})
-            </span>
-          </div>
-          <div style={{ height: '8px', width: '100%', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.06)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, completaPct)}%`, borderRadius: '9999px', background: 'var(--success)' }} />
-          </div>
-        </div>
-
-        {/* Vendido directo mapeado */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
-              Vendido directo mapeado
-            </span>
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
-              {data.stockeable_mapeado?.porcentaje}% ({formatUsd(data.stockeable_mapeado?.total_formateado)})
-            </span>
-          </div>
-          <div style={{ height: '8px', width: '100%', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.06)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, stockeablePct)}%`, borderRadius: '9999px', background: 'var(--primary)' }} />
-          </div>
-        </div>
-
-        {/* Sin cubrir */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
-              Sin cubrir
-            </span>
-            <span style={{ color: 'var(--warning)', fontWeight: 700 }}>
-              {data.sin_receta_o_incompleto?.porcentaje}% ({formatUsd(data.sin_receta_o_incompleto?.total_formateado)})
-            </span>
-          </div>
-          <div style={{ height: '8px', width: '100%', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.06)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, sinCubrirPct)}%`, borderRadius: '9999px', background: 'var(--warning)' }} />
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <CoverageBar
+          label="Receta completa"
+          pctRaw={data.receta_completa?.porcentaje}
+          amountFormatted={data.receta_completa?.total_formateado}
+          colorVar="var(--success)"
+        />
+        <CoverageBar
+          label="Vendido directo mapeado"
+          pctRaw={data.stockeable_mapeado?.porcentaje}
+          amountFormatted={data.stockeable_mapeado?.total_formateado}
+          colorVar="var(--primary)"
+        />
+        <CoverageBar
+          label="Sin cubrir"
+          pctRaw={data.sin_receta_o_incompleto?.porcentaje}
+          amountFormatted={data.sin_receta_o_incompleto?.total_formateado}
+          colorVar="var(--warning)"
+        />
       </div>
 
       {/* Top 10 platos faltantes */}
-      {topFaltantes.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <AlertTriangle size={14} color="var(--warning)" />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
-              Platos que más venden sin cobertura
-            </span>
-          </div>
+      <CoverageMissingList items={topFaltantes} />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {topFaltantes.map((plato, idx) => (
-              <div
-                key={plato.runfood_article_id ?? idx}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  fontSize: '12px',
-                  gap: '8px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <span style={{ color: 'var(--text-subtle)', fontWeight: 700, width: '18px' }}>
-                    #{idx + 1}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <span style={{ color: 'var(--text-main)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {plato.descripcion}
-                    </span>
-                    <span style={{ fontSize: '10px', color: 'var(--warning)' }}>
-                      {plato.motivo === 'sin_receta' ? 'Sin receta' : 'Receta incompleta'}
-                    </span>
-                  </div>
-                </div>
-
-                <span style={{ fontWeight: 600, color: 'var(--text-main)', flexShrink: 0 }}>
-                  {formatUsd(plato.total_formateado)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* Mensaje de estado cuando no hay platos faltantes */}
       {topFaltantes.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: 'var(--success)' }}>
-          Tus ventas están 100% cubiertas por recetas.
+        <div
+          style={{
+            textAlign: 'center',
+            padding: 8,
+            fontSize: 12,
+            color: totalCents === 0 ? 'var(--text-muted)' : 'var(--success)'
+          }}
+        >
+          {totalCents === 0
+            ? 'No hay ventas en este periodo.'
+            : 'Tus ventas están 100% cubiertas por recetas.'}
         </div>
       )}
     </div>

@@ -33,6 +33,12 @@
   --border-warning: rgba(245, 158, 11, 0.3);
   --border-error: rgba(244, 63, 94, 0.3);
   --border-success: rgba(16, 185, 129, 0.3);
+  --track-bg: rgba(255, 255, 255, 0.06);
+  --accent-soft: rgba(98, 201, 200, 0.12);
+  --badge-active-bg: rgba(255, 255, 255, 0.2);
+  --badge-inactive-bg: rgba(255, 255, 255, 0.06);
+  --card-subtle-bg: rgba(255, 255, 255, 0.03);
+  --card-subtle-border: rgba(255, 255, 255, 0.05);
   
   --grad-primary: linear-gradient(135deg, #00737f 0%, #2d9ba1 50%, #62c9c8 100%);
   --grad-surface: linear-gradient(180deg, rgba(32, 45, 47, 0.8) 0%, rgba(23, 35, 37, 0.9) 100%);

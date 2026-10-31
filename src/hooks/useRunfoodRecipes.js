@@ -1,25 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
-import {
-  listRunfoodRecipes,
-  getRunfoodCoverage
-} from '../services/runfoodCatalogClient';
+import { listRunfoodRecipes } from '../services/runfoodCatalogClient';
 import { usePagedList } from './usePagedList';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * Hook para la consulta de recetas de RunFood y cobertura de ventas (Brief 24p).
+ * Hook para la consulta paginada y filtrada de recetas de RunFood (Brief 24p-fix).
+ *
+ * @param {{ initialEstado?: string, initialSearch?: string }} [options]
  */
-export function useRunfoodRecipes({ initialDays = 7 } = {}) {
-  const [estado, setEstado] = useState('');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [days, setDays] = useState(initialDays);
-
-  // Estados de cobertura de ventas
-  const [coverageData, setCoverageData] = useState(null);
-  const [coverageLoading, setCoverageLoading] = useState(true);
-  const [coverageError, setCoverageError] = useState(null);
+export function useRunfoodRecipes({ initialEstado = '', initialSearch = '' } = {}) {
+  const [estado, setEstado] = useState(initialEstado);
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
   // Debounce de búsqueda de 300 ms
   useEffect(() => {
@@ -28,24 +21,6 @@ export function useRunfoodRecipes({ initialDays = 7 } = {}) {
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [search]);
-
-  // Carga de cobertura de ventas
-  const loadCoverage = useCallback(async (targetDays = days) => {
-    setCoverageLoading(true);
-    setCoverageError(null);
-    const res = await getRunfoodCoverage({ days: targetDays });
-    setCoverageLoading(false);
-
-    if (res.ok) {
-      setCoverageData(res.data);
-    } else {
-      setCoverageError(res.error || 'No se pudo cargar la cobertura de ventas.');
-    }
-  }, [days]);
-
-  useEffect(() => {
-    loadCoverage(days);
-  }, [days, loadCoverage]);
 
   // Consulta paginada de recetas
   const fetchPage = useCallback(
@@ -66,8 +41,6 @@ export function useRunfoodRecipes({ initialDays = 7 } = {}) {
     setEstado,
     search,
     setSearch,
-    days,
-    setDays,
     recipes: {
       items: paged.items,
       loading: paged.loading,
@@ -75,12 +48,6 @@ export function useRunfoodRecipes({ initialDays = 7 } = {}) {
       hasMore: paged.hasMore,
       loadMore: paged.loadMore,
       reload: paged.reload
-    },
-    coverage: {
-      data: coverageData,
-      loading: coverageLoading,
-      error: coverageError,
-      reload: () => loadCoverage(days)
     }
   };
 }

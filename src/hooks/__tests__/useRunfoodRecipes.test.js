@@ -8,33 +8,27 @@ describe('useRunfoodRecipes hook', () => {
     vi.restoreAllMocks();
   });
 
-  it('inicializa y carga recetas y cobertura en paralelo', async () => {
-    const mockCoverage = {
-      dias_analizados: 7,
-      receta_completa: { porcentaje: '80.00' }
-    };
+  it('inicializa y carga recetas sin consultar cobertura', async () => {
     const mockRecipes = {
       data: [{ id: 1, codigo: 'R01', descripcion: 'Lomo plancha', estado: 'completa' }],
       meta: { current_page: 1, last_page: 1, total: 1 }
     };
 
-    vi.spyOn(client, 'getRunfoodCoverage').mockResolvedValueOnce({ ok: true, data: mockCoverage });
+    const coverageSpy = vi.spyOn(client, 'getRunfoodCoverage');
     vi.spyOn(client, 'listRunfoodRecipes').mockResolvedValueOnce({ ok: true, data: mockRecipes });
 
     const { result } = renderHook(() => useRunfoodRecipes());
 
     await waitFor(() => {
-      expect(result.current.coverage.loading).toBe(false);
       expect(result.current.recipes.loading).toBe(false);
     });
 
-    expect(result.current.coverage.data).toEqual(mockCoverage);
     expect(result.current.recipes.items).toHaveLength(1);
     expect(result.current.recipes.items[0].codigo).toBe('R01');
+    expect(coverageSpy).not.toHaveBeenCalled();
   });
 
-  it('permite cambiar estado y busqueda de recetas con debounce', async () => {
-    vi.spyOn(client, 'getRunfoodCoverage').mockResolvedValue({ ok: true, data: {} });
+  it('permite cambiar estado y búsqueda de recetas con debounce', async () => {
     vi.spyOn(client, 'listRunfoodRecipes').mockResolvedValue({
       ok: true,
       data: { data: [], meta: { current_page: 1, last_page: 1 } }
@@ -57,20 +51,5 @@ describe('useRunfoodRecipes hook', () => {
     await waitFor(() => {
       expect(client.listRunfoodRecipes).toHaveBeenCalledWith(expect.objectContaining({ search: 'plancha' }));
     }, { timeout: 1000 });
-  });
-
-  it('permite cambiar days y recargar cobertura', async () => {
-    vi.spyOn(client, 'listRunfoodRecipes').mockResolvedValue({ ok: true, data: { data: [], meta: {} } });
-    const coverageSpy = vi.spyOn(client, 'getRunfoodCoverage').mockResolvedValue({ ok: true, data: { dias_analizados: 14 } });
-
-    const { result } = renderHook(() => useRunfoodRecipes());
-
-    act(() => {
-      result.current.setDays(14);
-    });
-
-    await waitFor(() => {
-      expect(coverageSpy).toHaveBeenCalledWith({ days: 14 });
-    });
   });
 });

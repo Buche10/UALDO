@@ -19,7 +19,7 @@ describe('runfoodCatalogClient service', () => {
   });
 
   describe('parseId', () => {
-    it('valida enteros positivos y descarta valores no numericos o negativos', () => {
+    it('valida enteros positivos y descarta valores no numéricos o negativos', () => {
       expect(parseId(12)).toBe(12);
       expect(parseId('45')).toBe(45);
       expect(parseId('  99  ')).toBe(99);
@@ -42,7 +42,7 @@ describe('runfoodCatalogClient service', () => {
       expect(normalizeFactor(2.5)).toBe('2.5');
     });
 
-    it('rechaza 0, negativos, mayores a 100000 o mas de 6 decimales', () => {
+    it('rechaza 0, negativos, mayores a 100000 o más de 6 decimales', () => {
       expect(normalizeFactor('0')).toBeNull();
       expect(normalizeFactor('-1')).toBeNull();
       expect(normalizeFactor('100001')).toBeNull();
@@ -54,7 +54,7 @@ describe('runfoodCatalogClient service', () => {
   });
 
   describe('isValidSearch', () => {
-    it('valida longitud maxima de 60 caracteres', () => {
+    it('valida longitud máxima de 60 caracteres', () => {
       expect(isValidSearch('Lomo fino')).toBe(true);
       expect(isValidSearch('a'.repeat(60))).toBe(true);
       expect(isValidSearch('a'.repeat(61))).toBe(false);
@@ -73,7 +73,7 @@ describe('runfoodCatalogClient service', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('rechaza busqueda mayor a 60 caracteres', async () => {
+    it('rechaza búsqueda mayor a 60 caracteres', async () => {
       const spy = vi.spyOn(apiClient, 'request');
       const res = await listRunfoodMappings({ search: 'x'.repeat(61) });
       expect(res.ok).toBe(false);
@@ -81,13 +81,13 @@ describe('runfoodCatalogClient service', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('rechaza pagina invalida menor a 1', async () => {
+    it('rechaza página inválida menor a 1', async () => {
       const res = await listRunfoodMappings({ page: 0 });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
     });
 
-    it('construye la URL con parametros correctos', async () => {
+    it('construye la URL con parámetros correctos', async () => {
       vi.spyOn(apiClient, 'request').mockResolvedValueOnce({ ok: true, data: { data: [] } });
       const res = await listRunfoodMappings({ status: 'pending', search: 'lomo', page: 2, per_page: 50 });
       expect(res.ok).toBe(true);
@@ -186,7 +186,21 @@ describe('runfoodCatalogClient service', () => {
       expect(res.status).toBe(400);
     });
 
-    it('envia peticion valida con query params', async () => {
+    it('rechaza per_page 0 y 101 sin llamar a la red', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res0 = await listRunfoodRecipes({ per_page: 0 });
+      expect(res0.ok).toBe(false);
+      expect(res0.status).toBe(400);
+      expect(res0.error).toBe('Los registros por página deben estar entre 1 y 100.');
+
+      const res101 = await listRunfoodRecipes({ per_page: 101 });
+      expect(res101.ok).toBe(false);
+      expect(res101.status).toBe(400);
+      expect(res101.error).toBe('Los registros por página deben estar entre 1 y 100.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('envía petición válida con query params', async () => {
       vi.spyOn(apiClient, 'request').mockResolvedValueOnce({ ok: true, data: { data: [] } });
       const res = await listRunfoodRecipes({ estado: 'completa', search: 'bife', page: 1 });
       expect(res.ok).toBe(true);

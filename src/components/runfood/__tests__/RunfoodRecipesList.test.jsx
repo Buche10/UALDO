@@ -10,7 +10,7 @@ describe('RunfoodRecipesList', () => {
     vi.spyOn(client, 'getRunfoodCoverage').mockResolvedValue({ ok: true, data: {} });
   });
 
-  it('renderiza recetas, permite desplegar lineas y avisa opciones', async () => {
+  it('renderiza recetas, permite desplegar líneas y avisa opciones', async () => {
     const mockRecipes = {
       data: [
         {
@@ -54,7 +54,7 @@ describe('RunfoodRecipesList', () => {
       expect(screen.getAllByText('Con opciones').length).toBeGreaterThanOrEqual(2);
     });
 
-    // Desplegar acordeon
+    // Desplegar acordeón
     const headerBtn = screen.getByRole('button', { name: /lomo a la plancha/i });
     fireEvent.click(headerBtn);
 
@@ -72,7 +72,7 @@ describe('RunfoodRecipesList', () => {
 
     const asociarBtn = screen.getByRole('button', { name: 'Asociar' });
     fireEvent.click(asociarBtn);
-    expect(onResolveMapping).toHaveBeenCalledTimes(1);
+    expect(onResolveMapping).toHaveBeenCalledWith('Papas fritas porcion');
   });
 
   it('permite filtrar por estado con pastillas', async () => {
@@ -83,7 +83,7 @@ describe('RunfoodRecipesList', () => {
 
     render(<RunfoodRecipesList />);
 
-    const completasBtn = screen.getByRole('button', { name: 'Completas' });
+    const completasBtn = await screen.findByRole('tab', { name: 'Completas' });
     fireEvent.click(completasBtn);
 
     await waitFor(() => {

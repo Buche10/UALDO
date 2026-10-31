@@ -33,7 +33,7 @@ describe('useRunfoodMappings hook', () => {
     expect(result.current.items[0].id).toBe(1);
   });
 
-  it('espera 300 ms de debounce en la busqueda antes de consultar', async () => {
+  it('espera 300 ms de debounce en la búsqueda antes de consultar', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
       data: { data: [], meta: { current_page: 1, last_page: 1 } }
@@ -45,7 +45,7 @@ describe('useRunfoodMappings hook', () => {
       result.current.setSearch('lom');
     });
 
-    // Inmediatamente despues no ha cambiado el debounced search
+    // Inmediatamente después no ha cambiado el debounced search
     expect(client.listRunfoodMappings).not.toHaveBeenCalledWith(expect.objectContaining({ search: 'lom' }));
 
     await waitFor(() => {
@@ -53,7 +53,7 @@ describe('useRunfoodMappings hook', () => {
     }, { timeout: 1000 });
   });
 
-  it('handleAcceptSuggestion maneja exito y actualiza la lista', async () => {
+  it('handleAcceptSuggestion maneja éxito y actualiza la lista', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
       data: {
@@ -80,11 +80,11 @@ describe('useRunfoodMappings hook', () => {
 
     expect(res.ok).toBe(true);
     expect(result.current.successBanner).toBe('Sugerencia aceptada exitosamente.');
-    // Se removio de pendientes
+    // Se removió de pendientes
     expect(result.current.items).toHaveLength(0);
   });
 
-  it('handleAcceptSuggestion maneja error 409 con mensaje especifico', async () => {
+  it('handleAcceptSuggestion maneja error 409 con mensaje específico', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
       data: { data: [{ id: 12 }], meta: {} }
@@ -105,25 +105,113 @@ describe('useRunfoodMappings hook', () => {
     expect(result.current.actionError).toBe('Este ingrediente ya no tiene sugerencia; elige un insumo');
   });
 
-  it('handleUpdateMapping envia insumo y factor y actualiza', async () => {
+  it('handleAcceptSuggestion maneja error 422 mostrando el mensaje del motor', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
-      data: { data: [{ id: 15, status: 'pending' }], meta: {} }
+      data: { data: [{ id: 13 }], meta: {} }
     });
 
-    vi.spyOn(client, 'updateRunfoodMapping').mockResolvedValueOnce({
-      ok: true,
-      data: { id: 15, status: 'confirmed', factor: '2.000000' }
+    vi.spyOn(client, 'acceptRunfoodMappingSuggestion').mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      data: { message: 'El insumo sugerido ya no existe en el catálogo.' }
     });
 
     const { result } = renderHook(() => useRunfoodMappings());
 
     await act(async () => {
-      const res = await result.current.handleUpdateMapping(15, { inventory_item_id: 30, factor: '2' });
+      const res = await result.current.handleAcceptSuggestion(13);
+      expect(res.ok).toBe(false);
+    });
+
+    expect(result.current.actionError).toBe('El insumo sugerido ya no existe en el catálogo.');
+  });
+
+  it('handleUpdateMapping desde Ignorados quita la fila de Ignorados', async () => {
+    vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
+      ok: true,
+      data: { data: [{ id: 50, status: 'ignored' }], meta: {} }
+    });
+
+    vi.spyOn(client, 'updateRunfoodMapping').mockResolvedValueOnce({
+      ok: true,
+      data: { id: 50, status: 'confirmed', factor: '1.000000' }
+    });
+
+    const { result } = renderHook(() => useRunfoodMappings({ initialStatus: 'ignored' }));
+
+    await waitFor(() => {
+      expect(result.current.items).toHaveLength(1);
+    });
+
+    await act(async () => {
+      const res = await result.current.handleUpdateMapping(50, { inventory_item_id: 8, factor: '1' });
       expect(res.ok).toBe(true);
     });
 
+    // Como ahora su status es confirmed y la pestaña es ignored, debe removerse de la lista
+    expect(result.current.items).toHaveLength(0);
     expect(result.current.successBanner).toBe('Mapeo de ingrediente guardado exitosamente.');
+  });
+
+  it('handleUpdateMapping desde Confirmados actualiza la fila en su sitio', async () => {
+    vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
+      ok: true,
+      data: { data: [{ id: 55, status: 'confirmed', factor: '1.000000' }], meta: {} }
+    });
+
+    vi.spyOn(client, 'updateRunfoodMapping').mockResolvedValueOnce({
+      ok: true,
+      data: { id: 55, status: 'confirmed', factor: '2.500000' }
+    });
+
+    const { result } = renderHook(() => useRunfoodMappings({ initialStatus: 'confirmed' }));
+
+    await waitFor(() => {
+      expect(result.current.items).toHaveLength(1);
+    });
+
+    await act(async () => {
+      const res = await result.current.handleUpdateMapping(55, { inventory_item_id: 8, factor: '2.5' });
+      expect(res.ok).toBe(true);
+    });
+
+    // Sigue en confirmados pero actualizada
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.items[0].factor).toBe('2.500000');
+  });
+
+  it('handleUpdateMapping con error 422 deja fieldErrors y mensaje general', async () => {
+    vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
+      ok: true,
+      data: { data: [{ id: 60, status: 'pending' }], meta: {} }
+    });
+
+    vi.spyOn(client, 'updateRunfoodMapping').mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: 'Error de validación',
+      data: {
+        message: 'Error de validación',
+        errors: {
+          factor: ['El factor no puede ser mayor a 100000.'],
+          inventory_item_id: ['El insumo seleccionado es inválido.']
+        }
+      }
+    });
+
+    const { result } = renderHook(() => useRunfoodMappings());
+
+    await act(async () => {
+      const res = await result.current.handleUpdateMapping(60, { inventory_item_id: 99, factor: '100001' });
+      expect(res.ok).toBe(false);
+    });
+
+    expect(result.current.fieldErrors).toEqual({
+      factor: ['El factor no puede ser mayor a 100000.'],
+      inventory_item_id: ['El insumo seleccionado es inválido.']
+    });
+    expect(result.current.actionError).toBe('Error de validación');
   });
 
   it('handleIgnoreMapping y handleReopenMapping ejecutan sus acciones', async () => {

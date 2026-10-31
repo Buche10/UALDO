@@ -54,7 +54,7 @@ describe('RunfoodMappingsPanel', () => {
     expect(screen.getByRole('button', { name: 'Ignorar' })).toBeInTheDocument();
   });
 
-  it('permite aceptar sugerencia y muestra mensaje de exito', async () => {
+  it('permite aceptar sugerencia y muestra mensaje de éxito', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
       data: {
@@ -87,7 +87,7 @@ describe('RunfoodMappingsPanel', () => {
     });
   });
 
-  it('requiere confirmacion en dos pasos para ignorar', async () => {
+  it('requiere confirmación en dos pasos para ignorar', async () => {
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
       ok: true,
       data: {

@@ -33,6 +33,7 @@ describe('RunfoodMappingEditModal', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Carne picada 100g')).toBeInTheDocument();
     expect(screen.getByText('Carne Molida (kg)')).toBeInTheDocument();
+    expect(screen.getByText('Cuántas unidades de Carne Molida (kg) equivalen a 1 unidad de RunFood de Carne picada 100g.')).toBeInTheDocument();
 
     const factorInput = screen.getByDisplayValue('0.1');
     fireEvent.change(factorInput, { target: { value: '0.2' } });
@@ -125,5 +126,58 @@ describe('RunfoodMappingEditModal', () => {
 
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('El factor debe ser mayor a 0 y hasta 100000 con máximo 6 decimales.');
+  });
+
+  it('muestra errores 422 junto a los campos correspondientes sin alerta general', () => {
+    const mapping = {
+      id: 16,
+      runfood_article: { descripcion: 'Pimienta' },
+      inventory_item: { id: 5, name: 'Pimienta Negra', unit: 'g' },
+      factor: '10'
+    };
+
+    render(
+      <RunfoodMappingEditModal
+        isOpen={true}
+        mapping={mapping}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+        submitting={false}
+        error="Error de validación"
+        fieldErrors={{
+          factor: ['El factor no puede superar 100000.'],
+          inventory_item_id: ['El insumo no es válido.']
+        }}
+      />
+    );
+
+    // No debe haber alerta general porque hay errores por campo
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('El factor no puede superar 100000.')).toBeInTheDocument();
+    expect(screen.getByText('El insumo no es válido.')).toBeInTheDocument();
+  });
+
+  it('llama a onClearErrors al abrir el modal para limpiar errores viejos', () => {
+    const onClearErrors = vi.fn();
+    const mapping = {
+      id: 17,
+      runfood_article: { descripcion: 'Orégano' },
+      inventory_item: null,
+      factor: '1'
+    };
+
+    render(
+      <RunfoodMappingEditModal
+        isOpen={true}
+        mapping={mapping}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+        submitting={false}
+        error="Error viejo"
+        onClearErrors={onClearErrors}
+      />
+    );
+
+    expect(onClearErrors).toHaveBeenCalledTimes(1);
   });
 });

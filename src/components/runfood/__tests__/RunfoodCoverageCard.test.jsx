@@ -9,7 +9,7 @@ describe('RunfoodCoverageCard', () => {
     expect(screen.getByText('Cargando cobertura de ventas...')).toBeInTheDocument();
   });
 
-  it('muestra error y boton de reintentar', () => {
+  it('muestra error y botón de reintentar', () => {
     const onRetry = vi.fn();
     render(<RunfoodCoverageCard error="Error de red" onRetry={onRetry} />);
     expect(screen.getByText('Error de red')).toBeInTheDocument();
@@ -19,6 +19,7 @@ describe('RunfoodCoverageCard', () => {
 
   it('renderiza barras de porcentaje y platos faltantes', () => {
     const mockData = {
+      total_cents: 150000,
       dias_analizados: 7,
       receta_completa: { total_formateado: '1050.00', porcentaje: '70.00' },
       stockeable_mapeado: { total_formateado: '300.00', porcentaje: '20.00' },
@@ -53,8 +54,9 @@ describe('RunfoodCoverageCard', () => {
     expect(screen.getByText('Receta incompleta')).toBeInTheDocument();
   });
 
-  it('muestra mensaje de 100% cuando no hay platos faltantes', () => {
+  it('muestra mensaje de 100% cuando no hay platos faltantes y hubo ventas', () => {
     const mockData = {
+      total_cents: 50000,
       receta_completa: { porcentaje: '100.00', total_formateado: '500.00' },
       stockeable_mapeado: { porcentaje: '0.00', total_formateado: '0.00' },
       sin_receta_o_incompleto: { porcentaje: '0.00', total_formateado: '0.00' },
@@ -63,5 +65,18 @@ describe('RunfoodCoverageCard', () => {
 
     render(<RunfoodCoverageCard data={mockData} />);
     expect(screen.getByText('Tus ventas están 100% cubiertas por recetas.')).toBeInTheDocument();
+  });
+
+  it('muestra mensaje de sin ventas cuando total_cents es 0', () => {
+    const mockData = {
+      total_cents: 0,
+      receta_completa: { porcentaje: '0.00', total_formateado: '0.00' },
+      stockeable_mapeado: { porcentaje: '0.00', total_formateado: '0.00' },
+      sin_receta_o_incompleto: { porcentaje: '0.00', total_formateado: '0.00' },
+      top_faltantes: []
+    };
+
+    render(<RunfoodCoverageCard data={mockData} />);
+    expect(screen.getByText('No hay ventas en este periodo.')).toBeInTheDocument();
   });
 });

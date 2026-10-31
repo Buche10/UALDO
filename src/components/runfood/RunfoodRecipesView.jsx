@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ChefHat, ShieldCheck, Utensils, BookOpen } from 'lucide-react';
-import { useRunfoodRecipes } from '../../hooks/useRunfoodRecipes';
+import { useRunfoodCoverage } from '../../hooks/useRunfoodCoverage';
 import RunfoodCoverageCard from './RunfoodCoverageCard';
 import RunfoodMappingsPanel from './RunfoodMappingsPanel';
 import RunfoodRecipesList from './RunfoodRecipesList';
@@ -12,29 +12,38 @@ const SECTIONS = [
 ];
 
 /**
- * Pantalla principal de recetas y mapeo de RunFood para el dueño (Brief 24p).
+ * Pantalla principal de recetas y mapeo de RunFood para el dueño (Brief 24p-fix).
  */
 export default function RunfoodRecipesView({ onBack }) {
   const [activeSection, setActiveSection] = useState('coverage');
+  const [mappingsSearch, setMappingsSearch] = useState('');
 
   const {
     days,
     setDays,
-    coverage
-  } = useRunfoodRecipes();
+    data: coverageData,
+    loading: coverageLoading,
+    error: coverageError,
+    reload: reloadCoverage
+  } = useRunfoodCoverage();
+
+  const handleResolveMapping = (ingredientDescription) => {
+    setMappingsSearch(ingredientDescription || '');
+    setActiveSection('mappings');
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Cabecera con botón de retroceso */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && (
           <button
             type="button"
             onClick={onBack}
             aria-label="Volver a Inventario"
             style={{
-              padding: '8px',
-              borderRadius: '9999px',
+              padding: 8,
+              borderRadius: 9999,
               border: '1px solid var(--border-glass)',
               background: 'var(--chip-bg)',
               color: 'var(--text-main)',
@@ -49,11 +58,11 @@ export default function RunfoodRecipesView({ onBack }) {
         )}
 
         <div>
-          <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ChefHat size={20} color="var(--accent)" />
+          <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ChefHat size={20} stroke="var(--accent)" />
             <span>Recetas de RunFood</span>
           </h2>
-          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
             Mapeo de insumos, verificación de recetas y cobertura de ventas.
           </p>
         </div>
@@ -65,10 +74,10 @@ export default function RunfoodRecipesView({ onBack }) {
         aria-label="Secciones de RunFood"
         style={{
           display: 'flex',
-          gap: '6px',
+          gap: 6,
           background: 'var(--chip-bg)',
-          padding: '4px',
-          borderRadius: '14px',
+          padding: 4,
+          borderRadius: 14,
           border: '1px solid var(--border-glass)'
         }}
       >
@@ -85,16 +94,16 @@ export default function RunfoodRecipesView({ onBack }) {
               style={{
                 flex: 1,
                 padding: '8px 10px',
-                borderRadius: '10px',
+                borderRadius: 10,
                 border: 'none',
                 background: active ? 'var(--primary)' : 'transparent',
                 color: active ? 'var(--on-primary)' : 'var(--text-muted)',
-                fontSize: '12px',
+                fontSize: 12,
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
+                gap: 6,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
@@ -109,22 +118,22 @@ export default function RunfoodRecipesView({ onBack }) {
       {/* Contenido de la sección activa */}
       {activeSection === 'coverage' && (
         <RunfoodCoverageCard
-          data={coverage.data}
-          loading={coverage.loading}
-          error={coverage.error}
-          onRetry={coverage.reload}
+          data={coverageData}
+          loading={coverageLoading}
+          error={coverageError}
+          onRetry={reloadCoverage}
           days={days}
           onDaysChange={setDays}
         />
       )}
 
       {activeSection === 'mappings' && (
-        <RunfoodMappingsPanel />
+        <RunfoodMappingsPanel initialSearch={mappingsSearch} />
       )}
 
       {activeSection === 'recipes' && (
         <RunfoodRecipesList
-          onResolveMapping={() => setActiveSection('mappings')}
+          onResolveMapping={handleResolveMapping}
         />
       )}
     </div>

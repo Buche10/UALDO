@@ -48,6 +48,39 @@ export function normalizeFactor(raw) {
 }
 
 /**
+ * Valida el parámetro de paginación per_page (1 a 100).
+ *
+ * @param {unknown} perPage
+ * @returns {{ valid: boolean, value?: number, error?: string }}
+ */
+export function validatePerPage(perPage) {
+  if (perPage === undefined) return { valid: true, value: 20 };
+  const num = Number(perPage);
+  if (!Number.isInteger(num) || num < 1 || num > 100) {
+    return { valid: false, error: 'Los registros por página deben estar entre 1 y 100.' };
+  }
+  return { valid: true, value: num };
+}
+
+/**
+ * Valida y obtiene un ID de mapeo obligatorio.
+ *
+ * @param {unknown} mappingId
+ * @returns {{ ok: true, id: number } | { ok: false, status: 400, error: string }}
+ */
+export function requireValidMappingId(mappingId) {
+  const id = parseId(mappingId);
+  if (!id) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Identificador de mapeo inválido.'
+    };
+  }
+  return { ok: true, id };
+}
+
+/**
  * Valida un texto de búsqueda no mayor a 60 caracteres.
  *
  * @param {string} search
@@ -90,14 +123,15 @@ export async function listRunfoodMappings({ status, search, page = 1, per_page =
     };
   }
 
-  const perPageNum = Number(per_page);
-  if (per_page !== undefined && (!Number.isInteger(perPageNum) || perPageNum < 1 || perPageNum > 100)) {
+  const perPageValidation = validatePerPage(per_page);
+  if (!perPageValidation.valid) {
     return {
       ok: false,
       status: 400,
-      error: 'Los registros por página deben estar entre 1 y 100.'
+      error: perPageValidation.error
     };
   }
+  const perPageNum = perPageValidation.value;
 
   const params = new URLSearchParams();
   if (status) params.set('status', status);
@@ -117,14 +151,9 @@ export async function listRunfoodMappings({ status, search, page = 1, per_page =
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
  */
 export async function updateRunfoodMapping(mappingId, { inventory_item_id, factor } = {}) {
-  const id = parseId(mappingId);
-  if (!id) {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Identificador de mapeo inválido.'
-    };
-  }
+  const check = requireValidMappingId(mappingId);
+  if (!check.ok) return check;
+  const id = check.id;
 
   const itemId = parseId(inventory_item_id);
   if (!itemId) {
@@ -160,16 +189,10 @@ export async function updateRunfoodMapping(mappingId, { inventory_item_id, facto
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
  */
 export async function acceptRunfoodMappingSuggestion(mappingId) {
-  const id = parseId(mappingId);
-  if (!id) {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Identificador de mapeo inválido.'
-    };
-  }
+  const check = requireValidMappingId(mappingId);
+  if (!check.ok) return check;
 
-  return request(`/restaurant/runfood/mappings/${id}/aceptar-sugerencia`, {
+  return request(`/restaurant/runfood/mappings/${check.id}/aceptar-sugerencia`, {
     method: 'POST'
   });
 }
@@ -181,16 +204,10 @@ export async function acceptRunfoodMappingSuggestion(mappingId) {
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
  */
 export async function ignoreRunfoodMapping(mappingId) {
-  const id = parseId(mappingId);
-  if (!id) {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Identificador de mapeo inválido.'
-    };
-  }
+  const check = requireValidMappingId(mappingId);
+  if (!check.ok) return check;
 
-  return request(`/restaurant/runfood/mappings/${id}/ignorar`, {
+  return request(`/restaurant/runfood/mappings/${check.id}/ignorar`, {
     method: 'POST'
   });
 }
@@ -202,16 +219,10 @@ export async function ignoreRunfoodMapping(mappingId) {
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
  */
 export async function reopenRunfoodMapping(mappingId) {
-  const id = parseId(mappingId);
-  if (!id) {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Identificador de mapeo inválido.'
-    };
-  }
+  const check = requireValidMappingId(mappingId);
+  if (!check.ok) return check;
 
-  return request(`/restaurant/runfood/mappings/${id}/reabrir`, {
+  return request(`/restaurant/runfood/mappings/${check.id}/reabrir`, {
     method: 'POST'
   });
 }
@@ -248,11 +259,21 @@ export async function listRunfoodRecipes({ estado, search, page = 1, per_page = 
     };
   }
 
+  const perPageValidation = validatePerPage(per_page);
+  if (!perPageValidation.valid) {
+    return {
+      ok: false,
+      status: 400,
+      error: perPageValidation.error
+    };
+  }
+  const perPageNum = perPageValidation.value;
+
   const params = new URLSearchParams();
   if (estado) params.set('estado', estado);
   if (search && search.trim()) params.set('search', search.trim());
   if (pageNum > 1) params.set('page', String(pageNum));
-  if (per_page !== 20) params.set('per_page', String(per_page));
+  if (perPageNum !== 20) params.set('per_page', String(perPageNum));
 
   const qs = params.toString();
   return request(qs ? `/restaurant/runfood/recipes?${qs}` : '/restaurant/runfood/recipes');

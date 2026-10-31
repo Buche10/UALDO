@@ -11,9 +11,10 @@ describe('RunfoodRecipesView', () => {
       ok: true,
       data: {
         dias_analizados: 7,
-        receta_completa: { porcentaje: '75.00' },
-        stockeable_mapeado: { porcentaje: '15.00' },
-        sin_receta_o_incompleto: { porcentaje: '10.00' }
+        total_cents: 100000,
+        receta_completa: { porcentaje: '75.00', total_formateado: '750.00' },
+        stockeable_mapeado: { porcentaje: '15.00', total_formateado: '150.00' },
+        sin_receta_o_incompleto: { porcentaje: '10.00', total_formateado: '100.00' }
       }
     });
     vi.spyOn(client, 'listRunfoodMappings').mockResolvedValue({
@@ -22,11 +23,28 @@ describe('RunfoodRecipesView', () => {
     });
     vi.spyOn(client, 'listRunfoodRecipes').mockResolvedValue({
       ok: true,
-      data: { data: [], meta: { total: 0 } }
+      data: {
+        data: [
+          {
+            id: 1,
+            descripcion: 'Lomo saltado',
+            estado: 'incompleta',
+            lineas: [
+              {
+                linea: 1,
+                descripcion_runfood: 'Cebolla morada',
+                cantidad: '0.100000',
+                mapeo: null
+              }
+            ]
+          }
+        ],
+        meta: { total: 1 }
+      }
     });
   });
 
-  it('renderiza cabecera, selector de secciones y seccion inicial de cobertura', async () => {
+  it('al montar se hace una sola llamada a cobertura y ninguna a recetas', async () => {
     const onBack = vi.fn();
     render(<RunfoodRecipesView onBack={onBack} />);
 
@@ -39,6 +57,9 @@ describe('RunfoodRecipesView', () => {
     await waitFor(() => {
       expect(screen.getByText('Cobertura de ventas')).toBeInTheDocument();
     });
+
+    expect(client.getRunfoodCoverage).toHaveBeenCalledTimes(1);
+    expect(client.listRunfoodRecipes).not.toHaveBeenCalled();
   });
 
   it('permite alternar entre secciones con botones pastilla', async () => {
@@ -54,7 +75,34 @@ describe('RunfoodRecipesView', () => {
 
     fireEvent.click(recBtn);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Completas' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Completas' })).toBeInTheDocument();
+    });
+  });
+
+  it('asociar en una receta abre ingredientes en pendientes con la búsqueda rellenada', async () => {
+    render(<RunfoodRecipesView />);
+
+    // Ir a Recetas
+    const recBtn = screen.getByRole('tab', { name: /recetas/i });
+    fireEvent.click(recBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Lomo saltado')).toBeInTheDocument();
+    });
+
+    // Desplegar acordeón
+    fireEvent.click(screen.getByRole('button', { name: /lomo saltado/i }));
+
+    // Clic en Asociar del ingrediente no asociado
+    const asociarBtn = screen.getByRole('button', { name: /asociar/i });
+    fireEvent.click(asociarBtn);
+
+    // Debe cambiar a la sección de ingredientes
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /pendientes/i })).toBeInTheDocument();
+      // El buscador debe tener rellenada la búsqueda
+      const searchInput = screen.getByPlaceholderText(/buscar ingrediente de runfood o insumo/i);
+      expect(searchInput).toHaveValue('Cebolla morada');
     });
   });
 });
