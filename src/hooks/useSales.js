@@ -63,7 +63,7 @@ export function getPresetDates(preset, baseDate = new Date()) {
  * Coordina la carga en paralelo de resumen, horas y foto de hoy,
  * junto con el listado paginado y ordenado de artículos.
  */
-export function useSales({ initialPreset = SALES_PRESETS.DAYS_7 } = {}) {
+export function useSales({ initialPreset = SALES_PRESETS.DAYS_7, section = 'ventas' } = {}) {
   const [preset, setPreset] = useState(initialPreset);
   const [customRange, setCustomRange] = useState(() => getPresetDates(SALES_PRESETS.DAYS_7));
   const [sort, setSort] = useState('quantity');
@@ -144,22 +144,34 @@ export function useSales({ initialPreset = SALES_PRESETS.DAYS_7 } = {}) {
   }, []);
 
   useEffect(() => {
-    loadRangeData(activeRange);
-  }, [activeRange, loadRangeData]);
+    if (section === 'ventas') {
+      loadRangeData(activeRange);
+    }
+  }, [section, activeRange, loadRangeData]);
 
   useEffect(() => {
-    loadTodayData();
-  }, [loadTodayData]);
+    if (section === 'ventas') {
+      loadTodayData();
+    }
+  }, [section, loadTodayData]);
 
   // Artículos paginados con usePagedList
   const fetchItemsPage = useCallback(
-    (page) => getSalesItems({
-      from: activeRange.from,
-      to: activeRange.to,
-      sort,
-      page
-    }),
-    [activeRange.from, activeRange.to, sort]
+    (page) => {
+      if (section !== 'ventas') {
+        return Promise.resolve({
+          ok: true,
+          data: { data: [], meta: { current_page: 1, last_page: 1, total: 0 } }
+        });
+      }
+      return getSalesItems({
+        from: activeRange.from,
+        to: activeRange.to,
+        sort,
+        page
+      });
+    },
+    [section, activeRange.from, activeRange.to, sort]
   );
 
   const items = usePagedList(fetchItemsPage, {

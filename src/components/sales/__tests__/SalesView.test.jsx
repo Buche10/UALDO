@@ -82,4 +82,25 @@ describe('SalesView', () => {
       expect(salesClient.getSalesSummary).toHaveBeenCalled();
     });
   });
+
+  it('permite alternar a la sección Personal y muestra el ranking', async () => {
+    vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValueOnce({
+      ok: true,
+      data: [{ runfood_user_id: 1, nombre: 'Carlos', total: '300.00' }]
+    });
+
+    render(<SalesView />);
+
+    const personalTab = screen.getByRole('tab', { name: 'Personal' });
+    expect(personalTab).toHaveAttribute('aria-selected', 'false');
+
+    fireEvent.click(personalTab);
+
+    await waitFor(() => {
+      expect(personalTab).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('Ranking del personal')).toBeInTheDocument();
+      expect(screen.getByText(/Carlos/)).toBeInTheDocument();
+      expect(salesClient.getSalesStaff).toHaveBeenCalled();
+    });
+  });
 });

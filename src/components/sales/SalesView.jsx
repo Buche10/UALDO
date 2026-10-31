@@ -1,28 +1,28 @@
-import React from 'react';
-import { TrendingUp, RefreshCw, Calendar } from 'lucide-react';
-import { useSales, SALES_PRESETS } from '../../hooks/useSales';
-import SalesTodayCard from './SalesTodayCard';
+import React, { useState } from 'react';
+import { TrendingUp, RefreshCw } from 'lucide-react';
+import { useSales } from '../../hooks/useSales';
+import SalesSectionSelector from './SalesSectionSelector';
+import SalesPeriodSelector from './SalesPeriodSelector';
+import SalesDaySummaryCard from './SalesDaySummaryCard';
 import SalesSummary from './SalesSummary';
 import SalesItemsList from './SalesItemsList';
 import SalesHoursChart from './SalesHoursChart';
-
-const PRESET_OPTIONS = [
-  { id: SALES_PRESETS.DAYS_7, label: 'Últimos 7 días' },
-  { id: SALES_PRESETS.DAYS_30, label: 'Últimos 30 días' },
-  { id: SALES_PRESETS.MONTH, label: 'Este mes' },
-  { id: SALES_PRESETS.CUSTOM, label: 'Personalizado' }
-];
+import SalesStaffRanking from './SalesStaffRanking';
 
 /**
- * Pantalla principal de analítica de ventas para el dueño (Brief 23p).
- * Integra foto de hoy, resumen del periodo, ranking de platos y ventas por hora.
+ * Pantalla principal de analítica de ventas para el dueño (Brief 23p/27p).
+ * Integra foto/resumen del día, analítica por periodo y ranking de personal.
  */
 export default function SalesView() {
+  const [activeSection, setActiveSection] = useState('ventas');
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const {
     preset,
     setPreset,
     customRange,
     setCustomRange,
+    activeRange,
     sort,
     setSort,
     summary,
@@ -30,10 +30,18 @@ export default function SalesView() {
     today,
     items,
     reloadAll
-  } = useSales();
+  } = useSales({ section: activeSection });
 
   const handleCustomDateChange = (field, value) => {
     setCustomRange((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleRefresh = () => {
+    if (activeSection === 'ventas') {
+      reloadAll();
+    } else {
+      setRefreshKey((k) => k + 1);
+    }
   };
 
   return (
@@ -52,7 +60,7 @@ export default function SalesView() {
 
         <button
           type="button"
-          onClick={reloadAll}
+          onClick={handleRefresh}
           aria-label="Actualizar datos de ventas"
           style={{
             padding: '8px',
@@ -70,140 +78,77 @@ export default function SalesView() {
         </button>
       </div>
 
-      {/* Foto parcial de ventas de hoy */}
-      <SalesTodayCard
-        data={today.data}
-        loading={today.loading}
-        error={today.error}
-        onRetry={today.reload}
+      {/* Selector de subsecciones: Ventas vs Personal */}
+      <SalesSectionSelector
+        activeSection={activeSection}
+        onSelectSection={setActiveSection}
       />
 
-      {/* Selector de periodo con botones pastilla */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div
-          role="group"
-          aria-label="Periodo de análisis"
-          style={{
-            display: 'flex',
-            gap: '6px',
-            background: 'var(--chip-bg)',
-            padding: '4px',
-            borderRadius: '14px',
-            border: '1px solid var(--border-glass)',
-            overflowX: 'auto'
-          }}
-        >
-          {PRESET_OPTIONS.map((opt) => {
-            const active = preset === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setPreset(opt.id)}
-                aria-pressed={active}
-                style={{
-                  flex: 1,
-                  minWidth: 'max-content',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: active ? 'var(--primary)' : 'transparent',
-                  color: active ? 'var(--on-primary)' : 'var(--text-muted)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
+      {activeSection === 'ventas' ? (
+        <>
+          {/* Tarjeta de Resumen del Día (Hoy / Ayer / Fecha) */}
+          <SalesDaySummaryCard
+            todayData={today.data}
+            todayLoading={today.loading}
+            todayError={today.error}
+            onRetryToday={today.reload}
+          />
 
-        {/* Inputs de fecha para rango personalizado */}
-        {preset === SALES_PRESETS.CUSTOM && (
-          <div
-            style={{
-              display: 'flex',
-              gap: '10px',
-              padding: '12px',
-              borderRadius: '12px',
-              background: 'var(--chip-bg)',
-              border: '1px solid var(--border-glass)',
-              alignItems: 'center'
-            }}
-          >
-            <Calendar size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
-            <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>
-                Desde
-                <input
-                  type="date"
-                  value={customRange.from}
-                  onChange={(e) => handleCustomDateChange('from', e.target.value)}
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-glass)',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    color: 'var(--text-main)',
-                    fontSize: '12px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </label>
+          {/* Selector de periodo de análisis */}
+          <SalesPeriodSelector
+            preset={preset}
+            onPresetChange={setPreset}
+            customRange={customRange}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>
-                Hasta
-                <input
-                  type="date"
-                  value={customRange.to}
-                  onChange={(e) => handleCustomDateChange('to', e.target.value)}
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-glass)',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    color: 'var(--text-main)',
-                    fontSize: '12px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
+          {/* Resumen del periodo seleccionado */}
+          <SalesSummary
+            data={summary.data}
+            loading={summary.loading}
+            error={summary.error}
+            onRetry={summary.reload}
+          />
 
-      {/* Resumen del periodo seleccionado */}
-      <SalesSummary
-        data={summary.data}
-        loading={summary.loading}
-        error={summary.error}
-        onRetry={summary.reload}
-      />
+          {/* Platos más vendidos */}
+          <SalesItemsList
+            items={items.items}
+            loading={items.loading}
+            error={items.error}
+            hasMore={items.hasMore}
+            onLoadMore={items.loadMore}
+            onRetry={items.reload}
+            sort={sort}
+            onSortChange={setSort}
+          />
 
-      {/* Platos más vendidos */}
-      <SalesItemsList
-        items={items.items}
-        loading={items.loading}
-        error={items.error}
-        hasMore={items.hasMore}
-        onLoadMore={items.loadMore}
-        onRetry={items.reload}
-        sort={sort}
-        onSortChange={setSort}
-      />
+          {/* Ventas por hora */}
+          <SalesHoursChart
+            data={hours.data}
+            loading={hours.loading}
+            error={hours.error}
+            onRetry={hours.reload}
+          />
+        </>
+      ) : (
+        <>
+          {/* Selector de periodo compartido para Personal */}
+          <SalesPeriodSelector
+            preset={preset}
+            onPresetChange={setPreset}
+            customRange={customRange}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
-      {/* Ventas por hora */}
-      <SalesHoursChart
-        data={hours.data}
-        loading={hours.loading}
-        error={hours.error}
-        onRetry={hours.reload}
-      />
+          {/* Ranking del personal en el rango */}
+          <SalesStaffRanking
+            key={refreshKey}
+            from={activeRange.from}
+            to={activeRange.to}
+            enabled={activeSection === 'personal'}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -7,7 +7,11 @@ import {
   getSalesSummary,
   getSalesItems,
   getSalesHours,
-  getSalesToday
+  getSalesToday,
+  getSalesDay,
+  getSalesStaff,
+  listRunfoodStaff,
+  updateRunfoodStaffAlias
 } from '../salesClient';
 
 describe('salesClient service', () => {
@@ -264,6 +268,159 @@ describe('salesClient service', () => {
       const res = await getSalesToday();
       expect(res.ok).toBe(false);
       expect(res.status).toBe(500);
+    });
+  });
+
+  describe('getSalesDay (Brief 27p)', () => {
+    it('rechaza fecha futura sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await getSalesDay({ fecha: '2099-12-31' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toBe('La fecha no puede ser futura.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza fecha invalida sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await getSalesDay({ fecha: '2026-02-31' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('llama a /restaurant/sales/day con parametro fecha', async () => {
+      const mockSummary = { fecha: '2026-10-29', total: '250.00' };
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: mockSummary
+      });
+
+      const res = await getSalesDay({ fecha: '2026-10-29' });
+      expect(apiClient.request).toHaveBeenCalledWith('/restaurant/sales/day?fecha=2026-10-29');
+      expect(res.ok).toBe(true);
+      expect(res.data).toEqual(mockSummary);
+    });
+
+    it('muestra mensaje descriptivo ante 404', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        error: 'Not found'
+      });
+
+      const res = await getSalesDay({ fecha: '2026-10-28' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(404);
+      expect(res.error).toBe('No hay cierre de ventas para ese día');
+    });
+  });
+
+  describe('getSalesStaff (Brief 27p)', () => {
+    it('rechaza rango de mas de 92 dias sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await getSalesStaff({ from: '2026-01-01', to: '2026-04-03' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toBe('El rango máximo permitido es de 92 días.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('llama a /restaurant/sales/staff con rango valido', async () => {
+      const mockStaff = [{ runfood_user_id: 1, nombre: 'Ana', total: '150.00' }];
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: mockStaff
+      });
+
+      const res = await getSalesStaff({ from: '2026-10-01', to: '2026-10-07' });
+      expect(apiClient.request).toHaveBeenCalledWith('/restaurant/sales/staff?from=2026-10-01&to=2026-10-07');
+      expect(res.ok).toBe(true);
+      expect(res.data).toEqual(mockStaff);
+    });
+  });
+
+  describe('listRunfoodStaff (Brief 27p)', () => {
+    it('rechaza pagina menor a 1 sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await listRunfoodStaff({ page: 0 });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('consulta lista paginada de personal en RunFood', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { data: [], current_page: 2 }
+      });
+
+      const res = await listRunfoodStaff({ page: 2 });
+      expect(apiClient.request).toHaveBeenCalledWith('/restaurant/runfood/staff?page=2');
+      expect(res.ok).toBe(true);
+    });
+  });
+
+  describe('updateRunfoodStaffAlias (Brief 27p)', () => {
+    it('rechaza id no numerico sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await updateRunfoodStaffAlias('abc', 'Alias');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toBe('El identificador de usuario debe ser numérico.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza alias con caracteres < o > sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await updateRunfoodStaffAlias(12, 'Juan <script>');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toBe('El alias no puede contener etiquetas HTML ni caracteres < o >.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza alias de 61 caracteres sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const longAlias = 'a'.repeat(61);
+      const res = await updateRunfoodStaffAlias(12, longAlias);
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toBe('El alias debe tener entre 1 y 60 caracteres.');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('envia alias valido con metodo PUT', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { runfood_user_id: 5, alias: 'Carlos' }
+      });
+
+      const res = await updateRunfoodStaffAlias(5, ' Carlos ');
+      expect(apiClient.request).toHaveBeenCalledWith('/restaurant/runfood/staff/5', {
+        method: 'PUT',
+        body: { alias: 'Carlos' }
+      });
+      expect(res.ok).toBe(true);
+    });
+
+    it('permite enviar null para quitar el alias', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { runfood_user_id: 5, alias: null }
+      });
+
+      const res = await updateRunfoodStaffAlias(5, null);
+      expect(apiClient.request).toHaveBeenCalledWith('/restaurant/runfood/staff/5', {
+        method: 'PUT',
+        body: { alias: null }
+      });
+      expect(res.ok).toBe(true);
     });
   });
 });

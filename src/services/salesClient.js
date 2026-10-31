@@ -10,6 +10,19 @@ export const ALLOWED_SORTS = ['quantity', 'total'];
 export const MAX_RANGE_DAYS = 92;
 
 /**
+ * Formatea la fecha de hoy local como AAAA-MM-DD.
+ *
+ * @returns {string}
+ */
+export function getTodayIso() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Valida si una fecha tiene formato AAAA-MM-DD y corresponde a un dia real de calendario.
  *
  * @param {string} dateStr
@@ -225,3 +238,131 @@ export async function getSalesToday() {
   }
   return res;
 }
+
+/**
+ * Resumen de ventas de un día cerrado (Brief 27p).
+ *
+ * @param {{ fecha?: string }} [options]
+ * @returns {Promise<{ ok: boolean, data?: object|null, error?: string, status?: number }>}
+ */
+export async function getSalesDay({ fecha } = {}) {
+  if (fecha !== undefined && fecha !== null && fecha !== '') {
+    if (!isValidDate(fecha)) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      };
+    }
+    if (fecha > getTodayIso()) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'La fecha no puede ser futura.'
+      };
+    }
+  }
+
+  const qs = fecha ? `?fecha=${fecha}` : '';
+  const res = await request(`/restaurant/sales/day${qs}`);
+  if (res.status === 404) {
+    return {
+      ...res,
+      error: 'No hay cierre de ventas para ese día'
+    };
+  }
+  return res;
+}
+
+/**
+ * Ranking de ventas por empleado en el rango (Brief 27p).
+ *
+ * @param {{ from?: string, to?: string }} [options]
+ * @returns {Promise<{ ok: boolean, data?: object|null, error?: string, status?: number }>}
+ */
+export async function getSalesStaff({ from, to } = {}) {
+  const validationError = validateDateRange(from, to);
+  if (validationError) {
+    return validationError;
+  }
+
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+
+  return request(qs ? `/restaurant/sales/staff?${qs}` : '/restaurant/sales/staff');
+}
+
+/**
+ * Listado paginado de usuarios del personal en RunFood (Brief 27p).
+ *
+ * @param {{ page?: number }} [options]
+ * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
+ */
+export async function listRunfoodStaff({ page = 1 } = {}) {
+  const pageNum = Number(page);
+  if (page !== undefined && page !== null && (!Number.isInteger(pageNum) || pageNum < 1)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'La página debe ser un número entero mayor o igual a 1.'
+    };
+  }
+
+  const params = new URLSearchParams();
+  if (page) params.set('page', String(page));
+
+  return request(`/restaurant/runfood/staff?${params.toString()}`);
+}
+
+/**
+ * Actualiza o quita el alias de un usuario de RunFood (Brief 27p).
+ *
+ * @param {string|number} runfoodUserId
+ * @param {string|null} alias
+ * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
+ */
+export async function updateRunfoodStaffAlias(runfoodUserId, alias) {
+  const idStr = String(runfoodUserId ?? '');
+  if (!/^\d+$/.test(idStr)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'El identificador de usuario debe ser numérico.'
+    };
+  }
+
+  let normalizedAlias = null;
+  if (alias !== null && alias !== undefined && alias !== '') {
+    if (typeof alias !== 'string') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'El alias debe ser un texto válido.'
+      };
+    }
+    const trimmed = alias.trim();
+    if (trimmed.length < 1 || alias.length > 60) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'El alias debe tener entre 1 y 60 caracteres.'
+      };
+    }
+    if (/[<>]/.test(alias)) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'El alias no puede contener etiquetas HTML ni caracteres < o >.'
+      };
+    }
+    normalizedAlias = trimmed;
+  }
+
+  return request(`/restaurant/runfood/staff/${idStr}`, {
+    method: 'PUT',
+    body: { alias: normalizedAlias }
+  });
+}
+
