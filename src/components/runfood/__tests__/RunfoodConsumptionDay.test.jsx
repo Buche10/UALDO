@@ -230,4 +230,22 @@ describe('RunfoodConsumptionDay', () => {
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
     expect(screen.queryByText('Consumo desactivado')).not.toBeInTheDocument();
   });
+
+  it('con carga fallida (consumption null y error) muestra "No disponible" y no muestra "Consumo desactivado" ni bloques', () => {
+    render(
+      <RunfoodConsumptionDay
+        date="2026-10-29"
+        onDateChange={vi.fn()}
+        onPreviousDay={vi.fn()}
+        onNextDay={vi.fn()}
+        consumption={null}
+        loading={false}
+        error="No se pudo cargar"
+      />
+    );
+    expect(screen.getByText('No se pudo cargar')).toBeInTheDocument();
+    expect(screen.getByText('No disponible')).toBeInTheDocument();
+    expect(screen.queryByText('Consumo desactivado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Insumos descontados')).not.toBeInTheDocument();
+  });
 });

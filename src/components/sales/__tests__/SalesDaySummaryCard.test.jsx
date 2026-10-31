@@ -85,6 +85,40 @@ describe('SalesDaySummaryCard (Brief 27p)', () => {
     });
   });
 
+  it('tocar dos veces "Ayer" con la petición en vuelo termina mostrando el resumen', async () => {
+    let resolvePromise;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    vi.spyOn(salesClient, 'getSalesDay').mockImplementation(() => pendingPromise);
+
+    render(<SalesDaySummaryCard todayData={null} todayLoading={false} />);
+
+    const ayerBtn = screen.getByRole('button', { name: 'Ayer' });
+    fireEvent.click(ayerBtn);
+    expect(screen.getByText('Cargando resumen...')).toBeInTheDocument();
+
+    // Segundo toque en el mismo modo con la petición en vuelo
+    fireEvent.click(ayerBtn);
+
+    resolvePromise({
+      ok: true,
+      data: {
+        fecha: '2026-10-29',
+        total: '950.00',
+        pedidos: 50,
+        ticket_promedio: '19.00',
+        top_platos: [],
+        top_empleados: []
+      }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('USD 950,00')).toBeInTheDocument();
+      expect(screen.queryByText('Cargando resumen...')).not.toBeInTheDocument();
+    });
+  });
+
   it('permite elegir una fecha específica en el input date', async () => {
     vi.spyOn(salesClient, 'getSalesDay').mockResolvedValue({
       ok: true,

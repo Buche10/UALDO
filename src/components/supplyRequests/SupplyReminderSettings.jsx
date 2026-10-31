@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Bell, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getSupplySettings, updateSupplySettings } from '../../services/supplyRequestsClient';
 import { styles } from '../common/uiStyles';
@@ -21,32 +21,30 @@ export function validateReminderTime(time) {
 export default function SupplyReminderSettings() {
   const [enabled, setEnabled] = useState(true);
   const [time, setTime] = useState('21:30');
+  const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  useEffect(() => {
-    let active = true;
-    const fetchSettings = async () => {
-      setLoading(true);
-      setError(null);
-      const res = await getSupplySettings();
-      if (!active) return;
-      setLoading(false);
-      if (res.ok && res.data) {
-        setEnabled(Boolean(res.data.faltantes_reminder_enabled));
-        setTime(String(res.data.faltantes_reminder_time || '21:30'));
-      } else if (!res.ok) {
-        setError(res.error || res.data?.message || 'No se pudieron cargar los ajustes.');
-      }
-    };
-    fetchSettings();
-    return () => {
-      active = false;
-    };
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await getSupplySettings();
+    setLoading(false);
+    if (res.ok && res.data) {
+      setEnabled(Boolean(res.data.faltantes_reminder_enabled));
+      setTime(String(res.data.faltantes_reminder_time || '21:30'));
+      setLoaded(true);
+    } else {
+      setError(res.error || res.data?.message || 'No se pudieron cargar los ajustes.');
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const handleSave = async (e) => {
     e?.preventDefault();
@@ -74,22 +72,24 @@ export default function SupplyReminderSettings() {
         setTime(String(res.data.faltantes_reminder_time || time));
       }
     } else {
-      const backendErrors = res.data?.errors || {};
-      const msg = res.data?.message || res.error || 'No se pudieron guardar los ajustes.';
-      if (backendErrors.faltantes_reminder_time?.[0]) {
-        setFieldErrors({ faltantes_reminder_time: backendErrors.faltantes_reminder_time[0] });
-      } else if (backendErrors.faltantes_reminder_enabled?.[0]) {
-        setFieldErrors({ faltantes_reminder_enabled: backendErrors.faltantes_reminder_enabled[0] });
-      } else {
-        setError(msg);
-      }
+      const errs = res.data?.errors || {};
+      const timeMsg = errs.faltantes_reminder_time?.[0];
+      const enabledMsg = errs.faltantes_reminder_enabled?.[0];
+      if (timeMsg) setFieldErrors({ faltantes_reminder_time: timeMsg });
+      else if (enabledMsg) setFieldErrors({ faltantes_reminder_enabled: enabledMsg });
+      else setError(res.data?.message || res.error || 'No se pudieron guardar los ajustes.');
     }
   };
 
-  if (loading) {
+  if (loading && !loaded) {
+    return <div style={{ ...styles.card, fontSize: '12px', color: 'var(--text-muted)' }}>Cargando ajuste de aviso...</div>;
+  }
+
+  if (!loaded && error) {
     return (
-      <div style={{ ...styles.card, fontSize: '12px', color: 'var(--text-muted)' }}>
-        Cargando ajuste de aviso...
+      <div style={{ ...styles.card, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+        <div role="alert" style={{ ...styles.errorBox, display: 'flex', alignItems: 'center', gap: '6px' }}><AlertCircle size={14} /><span>{error}</span></div>
+        <button type="button" onClick={fetchSettings} className="btn-primary" style={{ alignSelf: 'flex-start', padding: '4px 12px', fontSize: '11px', borderRadius: '9999px', fontWeight: 600, cursor: 'pointer' }}>Reintentar</button>
       </div>
     );
   }

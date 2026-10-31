@@ -2,9 +2,9 @@ import { request } from './apiClient';
 import { isValidLocation, DEFAULT_LOCATION } from './inventoryLocations';
 
 /**
- * Cliente para consumo automatico de insumos por ventas de RunFood (Brief 25p).
+ * Cliente para consumo automático de insumos por ventas de RunFood (Brief 25p).
  * Contrato: UaldoBusiness/docs/API-runfood-consumption.md
- * Restringido exclusivamente al dueno del negocio.
+ * Restringido exclusivamente al dueño del negocio.
  */
 
 export const CONSUMPTION_STATES = [
@@ -20,7 +20,7 @@ export const MAX_START_DATE_OFFSET_DAYS = 30;
 
 /**
  * Descompone y valida una fecha en formato YYYY-MM-DD.
- * Valida calendario real (anos bisiestos, dias por mes).
+ * Valida calendario real (años bisiestos, días por mes).
  *
  * @param {unknown} str
  * @returns {{ year: number, month: number, day: number, utcMs: number } | null}
@@ -50,7 +50,7 @@ export function parseIsoDateParts(str) {
 }
 
 /**
- * Valida si un string corresponde a una fecha valida YYYY-MM-DD.
+ * Valida si un string corresponde a una fecha válida YYYY-MM-DD.
  *
  * @param {unknown} str
  * @returns {boolean}
@@ -85,7 +85,7 @@ export function getYesterdayIsoString(refDate = new Date()) {
 }
 
 /**
- * Valida la fecha de inicio para activar el consumo (entre -30 y +30 dias de la fecha de referencia).
+ * Valida la fecha de inicio para activar el consumo (entre -30 y +30 días de la fecha de referencia).
  *
  * @param {string} startDateStr
  * @param {Date} [referenceDate]
@@ -115,7 +115,7 @@ export function validateStartDate(startDateStr, referenceDate = new Date()) {
 }
 
 /**
- * Valida el rango de fechas para el recalculo de consumo.
+ * Valida el rango de fechas para el recálculo de consumo.
  *
  * @param {string} desde
  * @param {string} hasta
@@ -148,7 +148,7 @@ export function validateRecalculateRange(desde, hasta) {
 }
 
 /**
- * Obtiene la configuracion actual de consumo automatico.
+ * Obtiene la configuración actual de consumo automático.
  *
  * @returns {Promise<{ ok: boolean, data?: { enabled: boolean, start_date: string|null, location: string }, error?: string, status?: number }>}
  */
@@ -157,7 +157,7 @@ export async function getConsumptionSettings() {
 }
 
 /**
- * Actualiza la configuracion de consumo automatico.
+ * Actualiza la configuración de consumo automático.
  *
  * @param {{ enabled: boolean, start_date?: string|null, location?: string }} payload
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
@@ -193,7 +193,7 @@ export async function updateConsumptionSettings({ enabled, start_date, location 
 }
 
 /**
- * Consulta el consumo de una fecha especifica.
+ * Consulta el consumo de una fecha específica.
  *
  * @param {string} [date]
  * @returns {Promise<{ ok: boolean, data?: object, error?: string, status?: number }>}
@@ -210,7 +210,7 @@ export async function getConsumption(date) {
 }
 
 /**
- * Encola el recalculo de consumo para un rango de fechas.
+ * Encola el recálculo de consumo para un rango de fechas.
  *
  * @param {{ desde: string, hasta: string }} range
  * @returns {Promise<{ ok: boolean, data?: { status: string, dias_encolados: number }, error?: string, status?: number }>}

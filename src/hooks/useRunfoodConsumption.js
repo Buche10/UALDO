@@ -44,6 +44,7 @@ export function useRunfoodConsumption({ initialDate } = {}) {
   const [recalculateError, setRecalculateError] = useState(null);
 
   const reqIdRef = useRef(0);
+  const lastLoadedDateRef = useRef(null);
 
   // Carga de ajustes de consumo
   const loadSettings = useCallback(async () => {
@@ -69,7 +70,10 @@ export function useRunfoodConsumption({ initialDate } = {}) {
   // Carga del consumo de una fecha
   const loadConsumption = useCallback(async (targetDate = date) => {
     const currentReq = ++reqIdRef.current;
-    setConsumption(null);
+    if (lastLoadedDateRef.current !== null && lastLoadedDateRef.current !== targetDate) {
+      setConsumption(null);
+    }
+    lastLoadedDateRef.current = targetDate;
     setConsumptionLoading(true);
     setConsumptionError(null);
     try {

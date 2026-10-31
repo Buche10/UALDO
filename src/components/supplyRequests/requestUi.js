@@ -76,3 +76,14 @@ export function itemsCount(request) {
   const count = (request?.items || []).length;
   return count === 1 ? '1 insumo' : `${count} insumos`;
 }
+
+/** Acciones posibles según el rol y el estado, como en el motor. */
+export function availableActions(request, { isOwner, userId }) {
+  if (isOwner) {
+    if (request.status === 'pending') return ['approve', 'reject', 'cancel'];
+    if (request.status === 'approved') return ['purchased', 'cancel'];
+    if (request.status === 'purchased') return ['received'];
+    return [];
+  }
+  return request.status === 'pending' && Number(request.requested_by) === Number(userId) ? ['cancel'] : [];
+}

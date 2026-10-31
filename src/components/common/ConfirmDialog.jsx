@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 /** Mantiene el foco dentro del diálogo con Tab y Mayús+Tab. */
-function trapTab(e, container) {
+export function trapTab(e, container) {
   // Los botones con aria-disabled siguen siendo enfocables; los disabled no.
   const focusable = Array.from(container?.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])') || []);
   if (focusable.length === 0) return;

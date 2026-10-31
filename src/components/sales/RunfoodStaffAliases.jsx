@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { listRunfoodStaff, updateRunfoodStaffAlias } from '../../services/salesClient';
+import { trapTab } from '../common/ConfirmDialog';
+import StaffAliasRow from './StaffAliasRow';
 
 /**
  * Modal para gestionar los alias de los usuarios de RunFood (Brief 27p).
@@ -16,6 +18,8 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
   const [editingAliases, setEditingAliases] = useState({});
   const [rowStatus, setRowStatus] = useState({});
   const [confirmRemoveId, setConfirmRemoveId] = useState(null);
+  const dialogRef = useRef(null);
+  const triggerRef = useRef(null);
 
   const loadPage = useCallback(async (pageNum, append = false) => {
     if (append) setLoadingMore(true);
@@ -32,9 +36,7 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
       setPage(res.data?.current_page || 1);
       setLastPage(res.data?.last_page || 1);
       const initialEdits = {};
-      items.forEach((u) => {
-        initialEdits[u.runfood_user_id] = u.alias || '';
-      });
+      items.forEach((u) => { initialEdits[u.runfood_user_id] = u.alias || ''; });
       setEditingAliases((prev) => ({ ...prev, ...initialEdits }));
     } else {
       setError(res.error || 'No se pudo cargar la lista de personal.');
@@ -42,11 +44,42 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      loadPage(1, false);
-      setConfirmRemoveId(null);
-    }
+    if (!isOpen) return undefined;
+    triggerRef.current = document.activeElement;
+    loadPage(1, false);
+    setConfirmRemoveId(null);
+    return () => {
+      const el = triggerRef.current;
+      if (el && el.isConnected) {
+        el.focus();
+      } else {
+        const btn = document.querySelector('button[aria-label="Nombres del personal"]') ||
+          Array.from(document.querySelectorAll('button')).find((b) => b.textContent.includes('Nombres del personal'));
+        btn?.focus();
+      }
+    };
   }, [isOpen, loadPage]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === 'Tab') {
+        trapTab(e, dialogRef.current);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!loading && users.length > 0) {
+      dialogRef.current?.querySelector('input')?.focus();
+    }
+  }, [isOpen, loading, users.length]);
 
   if (!isOpen) return null;
 
@@ -60,7 +93,8 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
       setUsers((prev) => prev.map((u) => (u.runfood_user_id === userId ? { ...u, alias: null } : u)));
       onAliasUpdated?.();
     } else {
-      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: res.error || 'Error al quitar', success: null } }));
+      const err = res.data?.errors?.alias?.[0] || res.error || 'Error al quitar';
+      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: err, success: null } }));
     }
   };
 
@@ -86,7 +120,6 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
     }
 
     setRowStatus((prev) => ({ ...prev, [userId]: { saving: true, error: null, success: null } }));
-
     const res = await updateRunfoodStaffAlias(userId, trimmed || null);
     setConfirmRemoveId(null);
     if (res.ok) {
@@ -94,13 +127,19 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
       setUsers((prev) => prev.map((u) => (u.runfood_user_id === userId ? { ...u, alias: trimmed || null } : u)));
       onAliasUpdated?.();
     } else {
-      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: res.error || 'Error al guardar', success: null } }));
+      const err = res.data?.errors?.alias?.[0] || res.error || 'Error al guardar';
+      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: err, success: null } }));
     }
+  };
+
+  const handleAliasChange = (userId, val) => {
+    setEditingAliases((prev) => ({ ...prev, [userId]: val }));
+    if (confirmRemoveId === userId) setConfirmRemoveId(null);
   };
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-labelledby="staff-aliases-title" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--overlay)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div className="glass-card" style={{ maxWidth: '520px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: '20px', gap: '14px', overflow: 'hidden' }}>
+      <div ref={dialogRef} className="glass-card" style={{ maxWidth: '520px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: '20px', gap: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UserCheck size={18} color="var(--accent)" />
@@ -124,65 +163,21 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', paddingRight: '4px' }}>
-            {users.map((u) => {
-              const uId = u.runfood_user_id;
-              const status = rowStatus[uId] || {};
-              const isConfirming = confirmRemoveId === uId;
-              const currentInput = (editingAliases[uId] ?? (u.alias || '')).trim();
-              const isClearing = isConfirming && currentInput === '';
-
-              return (
-                <div key={uId} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', borderRadius: '10px', background: 'var(--chip-bg)', border: '1px solid var(--border-glass)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{u.nombre_runfood || `Usuario ${uId}`}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {uId}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      placeholder="Alias para este usuario"
-                      maxLength={60}
-                      aria-label={`Alias para ${u.nombre_runfood || uId}`}
-                      value={editingAliases[uId] ?? ''}
-                      onChange={(e) => setEditingAliases((prev) => ({ ...prev, [uId]: e.target.value }))}
-                      style={{ flex: 1, padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'var(--surface-soft)', color: 'var(--text-main)', fontSize: '12px' }}
-                    />
-                    <button
-                      type="button"
-                      disabled={status.saving}
-                      onClick={() => handleSave(u)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: isClearing ? 'var(--error)' : 'var(--primary)',
-                        color: 'var(--on-primary)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        opacity: status.saving ? 0.6 : 1
-                      }}
-                    >
-                      {status.saving ? 'Guardando...' : isClearing ? '¿Confirmar quitar?' : 'Guardar'}
-                    </button>
-                    {u.alias && (
-                      <button
-                        type="button"
-                        disabled={status.saving}
-                        onClick={() => (isConfirming ? handleRemove(uId) : setConfirmRemoveId(uId))}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-error)', background: isConfirming ? 'var(--error)' : 'transparent', color: isConfirming ? 'var(--on-primary)' : 'var(--error)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        {isConfirming && !isClearing ? '¿Confirmar quitar?' : 'Quitar alias'}
-                      </button>
-                    )}
-                  </div>
-                  {status.error && <span style={{ fontSize: '11px', color: 'var(--error)' }}>{status.error}</span>}
-                  {status.success && <span style={{ fontSize: '11px', color: 'var(--accent)' }}>{status.success}</span>}
-                </div>
-              );
-            })}
+            {users.map((u) => (
+              <StaffAliasRow
+                key={u.runfood_user_id}
+                user={u}
+                status={rowStatus[u.runfood_user_id]}
+                isConfirming={confirmRemoveId === u.runfood_user_id}
+                editingAlias={editingAliases[u.runfood_user_id] ?? ''}
+                onAliasChange={handleAliasChange}
+                onSave={handleSave}
+                onRemove={handleRemove}
+                onStartRemove={setConfirmRemoveId}
+              />
+            ))}
             {page < lastPage && (
-              <button type="button" disabled={loadingMore} onClick={() => loadPage(page + 1, true)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', alignSelf: 'center', marginTop: '6px' }}>
+              <button type="button" disabled={loadingMore} onClick={() => loadPage(page + 1, true)} style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'var(--chip-bg)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', alignSelf: 'center', marginTop: '6px' }}>
                 {loadingMore ? 'Cargando más...' : 'Cargar más'}
               </button>
             )}

@@ -103,6 +103,38 @@ describe('SupplyReminderSettings (Brief 28p, punto 31)', () => {
     });
   });
 
+  it('con el GET fallido no existe el botón "Guardar horario", y "Reintentar" carga el formulario', async () => {
+    vi.spyOn(client, 'getSupplySettings')
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        error: 'No se pudieron cargar los ajustes.',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          faltantes_reminder_enabled: true,
+          faltantes_reminder_time: '21:30',
+        },
+      });
+
+    render(<SupplyReminderSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('No se pudieron cargar los ajustes.');
+    });
+
+    expect(screen.queryByRole('button', { name: 'Guardar horario' })).not.toBeInTheDocument();
+
+    const retryBtn = screen.getByRole('button', { name: 'Reintentar' });
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Guardar horario' })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Hora del aviso/i)).toHaveValue('21:30');
+    });
+  });
+
   it('el personal (no dueño) no ve el ajuste de aviso en Compras', async () => {
     vi.spyOn(client, 'getPurchasingOverview').mockResolvedValueOnce({
       ok: true,
@@ -112,8 +144,15 @@ describe('SupplyReminderSettings (Brief 28p, punto 31)', () => {
         bajo_minimo: [],
       },
     });
+    const settingsSpy = vi.spyOn(client, 'getSupplySettings');
 
     render(<ShoppingListPanel isOwner={false} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Cargando la información de compras...')).not.toBeInTheDocument();
+    });
+
     expect(screen.queryByText('Aviso de faltantes al personal')).not.toBeInTheDocument();
+    expect(settingsSpy).not.toHaveBeenCalled();
   });
 });

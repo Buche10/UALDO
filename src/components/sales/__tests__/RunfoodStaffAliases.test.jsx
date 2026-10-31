@@ -43,7 +43,7 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
     });
   });
 
-  it('muestra mensaje de error 422 junto al campo si falla la validación del motor', async () => {
+  it('muestra mensaje de error 422 con errors.alias[0] del motor junto al campo', async () => {
     vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
       ok: true,
       data: {
@@ -55,7 +55,13 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
     vi.spyOn(salesClient, 'updateRunfoodStaffAlias').mockResolvedValueOnce({
       ok: false,
       status: 422,
-      error: 'El alias contiene caracteres inválidos.'
+      data: {
+        message: 'The given data was invalid.',
+        errors: {
+          alias: ['El alias contiene caracteres inválidos.']
+        }
+      },
+      error: 'The given data was invalid.'
     });
 
     render(<RunfoodStaffAliases isOpen={true} onClose={vi.fn()} />);
@@ -70,6 +76,65 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
     await waitFor(() => {
       expect(screen.getByText('El alias contiene caracteres inválidos.')).toBeInTheDocument();
     });
+  });
+
+  it('si se envía un alias con < el cliente rechaza antes de llamar al motor y muestra el error', async () => {
+    vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ runfood_user_id: 10, nombre_runfood: 'User_10', alias: null }],
+        current_page: 1,
+        last_page: 1
+      }
+    });
+
+    render(<RunfoodStaffAliases isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('User_10')).toBeInTheDocument();
+    });
+
+    const input = screen.getByLabelText('Alias para User_10');
+    fireEvent.change(input, { target: { value: 'User <script>' } });
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('El alias no puede contener etiquetas HTML ni caracteres < o >.')).toBeInTheDocument();
+    });
+  });
+
+  it('gestiona el foco: primer campo enfocado, Escape cierra y devuelve el foco al botón', async () => {
+    const triggerBtn = document.createElement('button');
+    triggerBtn.textContent = 'Nombres del personal';
+    document.body.appendChild(triggerBtn);
+    triggerBtn.focus();
+
+    vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ runfood_user_id: 10, nombre_runfood: 'User_10', alias: null }],
+        current_page: 1,
+        last_page: 1
+      }
+    });
+
+    const onClose = vi.fn();
+    const { rerender } = render(<RunfoodStaffAliases isOpen={true} onClose={onClose} />);
+
+    await waitFor(() => {
+      const input = screen.getByLabelText('Alias para User_10');
+      expect(document.activeElement).toBe(input);
+    });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    rerender(<RunfoodStaffAliases isOpen={false} onClose={onClose} />);
+    expect(document.activeElement).toBe(triggerBtn);
+
+    document.body.removeChild(triggerBtn);
   });
 
   it('requiere confirmación de dos pasos para quitar un alias existente', async () => {
@@ -118,6 +183,7 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
     });
 
     render(<RunfoodStaffAliases isOpen={true} onClose={onClose} />);
+    await waitFor(() => expect(screen.queryByText('Cargando personal...')).not.toBeInTheDocument());
 
     const closeBtn = screen.getByRole('button', { name: /cerrar nombres del personal/i });
     fireEvent.click(closeBtn);
@@ -162,6 +228,33 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
       expect(salesClient.updateRunfoodStaffAlias).toHaveBeenCalledWith(10, null);
       expect(screen.getByText('Alias quitado')).toBeInTheDocument();
     });
+  });
+
+  it('escribir tras pulsar Guardar vacío anula la confirmación pendiente de quitar alias', async () => {
+    vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ runfood_user_id: 10, nombre_runfood: 'User_10', alias: 'Mario' }],
+        current_page: 1,
+        last_page: 1
+      }
+    });
+
+    render(<RunfoodStaffAliases isOpen={true} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('User_10')).toBeInTheDocument());
+
+    const input = screen.getByLabelText('Alias para User_10');
+    fireEvent.change(input, { target: { value: '   ' } });
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    fireEvent.click(saveBtn);
+
+    expect(screen.getByRole('button', { name: '¿Confirmar quitar?' })).toBeInTheDocument();
+
+    // Al escribir de nuevo en el campo, la confirmación se cancela
+    fireEvent.change(input, { target: { value: 'Nuevo Nombre' } });
+    expect(screen.queryByRole('button', { name: '¿Confirmar quitar?' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeInTheDocument();
   });
 
   it('acepta 60 caracteres con espacios recortables al guardar', async () => {

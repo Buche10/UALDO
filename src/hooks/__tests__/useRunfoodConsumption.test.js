@@ -107,6 +107,50 @@ describe('useRunfoodConsumption hook', () => {
     expect(result.current.settings.enabled).toBe(true);
   });
 
+  it('al guardar ajustes recarga el consumo de la misma fecha sin ponerlo en null para evitar parpadeo', async () => {
+    vi.spyOn(client, 'getConsumptionSettings').mockResolvedValue({
+      ok: true,
+      data: { enabled: false, start_date: null, location: 'kitchen' }
+    });
+    const initialConsumption = {
+      fecha: '2026-10-15',
+      estado: 'apagado',
+      lineas: [{ id: 1, nombre: 'Carne' }]
+    };
+    let resolveReload;
+    vi.spyOn(client, 'getConsumption')
+      .mockResolvedValueOnce({ ok: true, data: initialConsumption })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveReload = resolve; }));
+
+    vi.spyOn(client, 'updateConsumptionSettings').mockResolvedValue({
+      ok: true,
+      data: { enabled: true, start_date: '2026-10-10', location: 'kitchen' }
+    });
+
+    const { result } = renderHook(() => useRunfoodConsumption({ initialDate: '2026-10-15' }));
+
+    await waitFor(() => {
+      expect(result.current.consumption).toEqual(initialConsumption);
+    });
+
+    act(() => {
+      result.current.saveSettings({ enabled: true, start_date: '2026-10-10', location: 'kitchen' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.consumptionLoading).toBe(true);
+    });
+    expect(result.current.consumption).toEqual(initialConsumption);
+
+    const updatedConsumption = { ...initialConsumption, estado: 'aplicado' };
+    await act(async () => {
+      resolveReload({ ok: true, data: updatedConsumption });
+    });
+
+    expect(result.current.consumptionLoading).toBe(false);
+    expect(result.current.consumption).toEqual(updatedConsumption);
+  });
+
   it('maneja errores al guardar ajustes', async () => {
     vi.spyOn(client, 'getConsumptionSettings').mockResolvedValue({
       ok: true,

@@ -124,4 +124,30 @@ describe('SalesStaffRanking (Brief 27p)', () => {
       expect(screen.getByText('Asigna un nombre reconocible a cada usuario de RunFood para el ranking y los informes.')).toBeInTheDocument();
     });
   });
+
+  it('si anulados.total es null muestra "No disponible" en vez de USD 0,00', async () => {
+    vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        from: '2026-10-01',
+        to: '2026-10-07',
+        empleados: [
+          {
+            runfood_user_id: 1,
+            nombre: 'Juan Mesero',
+            total: '200.00',
+            pedidos: 10,
+            anulados: { pedidos: 2, total: null }
+          }
+        ]
+      }
+    });
+
+    render(<SalesStaffRanking from="2026-10-01" to="2026-10-07" enabled={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Anulaciones: No disponible')).toBeInTheDocument();
+      expect(screen.queryByText(/USD 0,00/)).not.toBeInTheDocument();
+    });
+  });
 });

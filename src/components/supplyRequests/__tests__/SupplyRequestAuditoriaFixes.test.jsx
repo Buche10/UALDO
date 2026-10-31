@@ -74,16 +74,13 @@ describe('SupplyRequestDetail - Cantidades al aprobar (Brief 28p, punto 28)', ()
     });
   });
 
-  it('muestra errores 422 del motor junto al campo de cantidad', async () => {
+  it('muestra errores 422 del motor en aviso role="alert" y marca los campos enviados con aria-invalid', async () => {
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: requestWithUndefinedItems } });
     vi.spyOn(client, 'decideRequest').mockResolvedValue({
       ok: false,
       status: 422,
       data: {
         message: 'El ítem ya tiene una cantidad definida.',
-        errors: {
-          'items.11.quantity': ['El ítem ya tiene una cantidad definida.'],
-        },
       },
     });
 
@@ -93,13 +90,17 @@ describe('SupplyRequestDetail - Cantidades al aprobar (Brief 28p, punto 28)', ()
     fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
 
     const inputHarina = screen.getByLabelText(/Harina de trigo/);
+    const inputAzucar = screen.getByLabelText(/Azúcar refinada/);
     fireEvent.change(inputHarina, { target: { value: '10' } });
 
     const dialogApproveBtn = screen.getAllByRole('button', { name: 'Aprobar' }).slice(-1)[0];
     fireEvent.click(dialogApproveBtn);
 
     await waitFor(() => {
-      expect(screen.getAllByText('El ítem ya tiene una cantidad definida.').length).toBeGreaterThanOrEqual(1);
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('El ítem ya tiene una cantidad definida.');
+      expect(inputHarina).toHaveAttribute('aria-invalid', 'true');
+      expect(inputAzucar).toHaveAttribute('aria-invalid', 'false');
     });
   });
 });

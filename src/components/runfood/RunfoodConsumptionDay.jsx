@@ -33,10 +33,16 @@ export default function RunfoodConsumptionDay({
   onNavigateToMappings
 }) {
   const isInitialLoading = loading && !consumption;
+  const hasFailed = !consumption && Boolean(error);
   const estado = consumption?.estado || 'apagado';
-  const cfg = isInitialLoading
-    ? { label: 'Cargando...', bg: 'var(--chip-bg)', color: 'var(--text-muted)', border: 'var(--border-glass)', icon: Clock }
-    : (STATE_CONFIG[estado] || STATE_CONFIG.apagado);
+  let cfg;
+  if (isInitialLoading) {
+    cfg = { label: 'Cargando...', bg: 'var(--chip-bg)', color: 'var(--text-muted)', border: 'var(--border-glass)', icon: Clock };
+  } else if (hasFailed) {
+    cfg = { label: 'No disponible', bg: 'var(--chip-bg)', color: 'var(--text-muted)', border: 'var(--border-glass)', icon: AlertCircle };
+  } else {
+    cfg = STATE_CONFIG[estado] || STATE_CONFIG.apagado;
+  }
   const StateIcon = cfg.icon;
 
   const sortedLines = useMemo(() => {
@@ -93,7 +99,7 @@ export default function RunfoodConsumptionDay({
         </div>
       )}
 
-      {ultimoError && (
+      {!hasFailed && ultimoError && (
         <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: 'var(--error-soft)', border: '1px solid var(--border-error)', color: 'var(--error)', fontSize: 12 }}>
           <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
@@ -103,7 +109,7 @@ export default function RunfoodConsumptionDay({
         </div>
       )}
 
-      {stockNegativo.length > 0 && (
+      {!hasFailed && stockNegativo.length > 0 && (
         <div role="status" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: 'var(--warning-soft)', border: '1px solid var(--border-warning)', color: 'var(--warning)', fontSize: 12 }}>
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
@@ -113,7 +119,7 @@ export default function RunfoodConsumptionDay({
         </div>
       )}
 
-      {consumption && (
+      {!hasFailed && consumption && (
         <RunfoodConsumptionUnmappedBlock
           sinReceta={consumption.sin_receta}
           incompletos={consumption.incompletos}
@@ -123,33 +129,35 @@ export default function RunfoodConsumptionDay({
         />
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Layers size={14} stroke="var(--accent)" />
-            <span>Insumos descontados</span>
-          </h4>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {sortedLines.length} {sortedLines.length === 1 ? 'insumo' : 'insumos'}
-          </span>
-        </div>
+      {!hasFailed && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Layers size={14} stroke="var(--accent)" />
+              <span>Insumos descontados</span>
+            </h4>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {sortedLines.length} {sortedLines.length === 1 ? 'insumo' : 'insumos'}
+            </span>
+          </div>
 
-        {loading ? (
-          <p style={{ margin: '12px 0', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-            Cargando consumo del día...
-          </p>
-        ) : sortedLines.length === 0 ? (
-          <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, background: 'var(--card-subtle-bg)', borderRadius: 8 }}>
-            {estado === 'sin_ventas' ? 'No hubo ventas registradas en esta fecha.' : 'No se registraron deducciones de inventario para este día.'}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {sortedLines.map((line) => (
-              <RunfoodConsumptionLineItem key={line.inventory_item_id} line={line} />
-            ))}
-          </div>
-        )}
-      </div>
+          {loading ? (
+            <p style={{ margin: '12px 0', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+              Cargando consumo del día...
+            </p>
+          ) : sortedLines.length === 0 ? (
+            <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, background: 'var(--card-subtle-bg)', borderRadius: 8 }}>
+              {estado === 'sin_ventas' ? 'No hubo ventas registradas en esta fecha.' : 'No se registraron deducciones de inventario para este día.'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {sortedLines.map((line) => (
+                <RunfoodConsumptionLineItem key={line.inventory_item_id} line={line} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

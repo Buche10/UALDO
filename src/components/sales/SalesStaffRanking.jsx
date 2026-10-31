@@ -123,9 +123,13 @@ export default function SalesStaffRanking({ from, to, enabled = true }) {
 
             let anulText = 'No disponible';
             if (emp.anulados != null && typeof emp.anulados === 'object') {
-              anulText = `${emp.anulados.pedidos ?? 0} (${formatUsd(emp.anulados.total || 0)})`;
+              anulText = emp.anulados.total != null
+                ? `${emp.anulados.pedidos ?? 0} (${formatUsd(emp.anulados.total)})`
+                : 'No disponible';
             } else if (emp.anulados_pedidos != null || emp.anulados_total != null) {
-              anulText = `${emp.anulados_pedidos ?? 0} (${formatUsd(emp.anulados_total || 0)})`;
+              anulText = emp.anulados_total != null
+                ? `${emp.anulados_pedidos ?? 0} (${formatUsd(emp.anulados_total)})`
+                : 'No disponible';
             }
 
             return (

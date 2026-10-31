@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
+import { Calendar, RefreshCw, Clock } from 'lucide-react';
 import { getSalesDay, getTodayIso } from '../../services/salesClient';
 import SalesDayMetrics from './SalesDayMetrics';
 import SalesDayTopLists from './SalesDayTopLists';
+import SalesStaleNotice from './SalesStaleNotice';
 
 function formatCaptureTime(iso) {
   if (!iso) return '';
@@ -99,8 +100,10 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
               type="button"
               aria-pressed={dayMode === mode}
               onClick={() => {
-                reqIdRef.current++;
-                setDayMode(mode);
+                if (mode !== dayMode) {
+                  reqIdRef.current++;
+                  setDayMode(mode);
+                }
               }}
               style={{
                 padding: '4px 10px',
@@ -142,26 +145,7 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
       )}
 
       {/* Aviso de foto parcial desactualizada */}
-      {isStale && (
-        <div
-          role="alert"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 12px',
-            borderRadius: '10px',
-            background: 'var(--warning-soft)',
-            border: '1px solid var(--border-warning)',
-            color: 'var(--warning)',
-            fontSize: '12px',
-            fontWeight: 500
-          }}
-        >
-          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span>La última lectura de RunFood tiene más de una hora.</span>
-        </div>
-      )}
+      <SalesStaleNotice isStale={isStale} />
 
       {/* Subtítulo informativo */}
       {dayMode === 'hoy' && captureTime && (
