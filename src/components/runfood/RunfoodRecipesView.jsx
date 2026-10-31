@@ -99,7 +99,10 @@ export default function RunfoodRecipesView({ onBack }) {
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setActiveSection(sec.id)}
+              onClick={() => {
+                setActiveSection(sec.id);
+                setMappingsSearch('');
+              }}
               style={{
                 flex: 1,
                 minWidth: 80,
@@ -139,7 +142,7 @@ export default function RunfoodRecipesView({ onBack }) {
       )}
 
       {activeSection === 'mappings' && (
-        <RunfoodMappingsPanel initialSearch={mappingsSearch} />
+        <RunfoodMappingsPanel key={mappingsSearch} initialSearch={mappingsSearch} />
       )}
 
       {activeSection === 'recipes' && (

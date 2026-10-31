@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { addCatalogItem, addFreeItem, mapItemErrors, removeItem, toPayloadItems, updateItem } from '../supplyRequestItems';
-import { useShoppingList, useSupplyRequestActions, useSupplyRequestDetail, useSupplyRequestForm } from '../useSupplyRequests';
+import { usePurchasingOverview, useSupplyRequestActions, useSupplyRequestDetail, useSupplyRequestForm } from '../useSupplyRequests';
 import * as client from '../../services/supplyRequestsClient';
 import { pendingRequest, shoppingList } from './supplyRequestFixtures';
 
@@ -137,13 +137,11 @@ describe('useSupplyRequestDetail and useSupplyRequestActions', () => {
     await act(async () => { resolve({ ok: true, data: {} }); await first; });
   });
 
-  it('loads the shopping list and reports errors', async () => {
-    vi.spyOn(client, 'getShoppingList')
-      .mockResolvedValueOnce({ ok: false, status: 500 })
-      .mockResolvedValueOnce({ ok: true, data: { data: shoppingList } });
-    const { result } = renderHook(() => useShoppingList());
-    await waitFor(() => expect(result.current.error).toBe('No se pudo cargar la lista de compras.'));
-    await act(async () => { await result.current.reload(); });
-    expect(result.current.items).toEqual(shoppingList);
+  it('loads the purchasing overview and reports errors without silent fallback', async () => {
+    vi.spyOn(client, 'getPurchasingOverview')
+      .mockResolvedValueOnce({ ok: false, status: 500, error: 'Error al consultar compras.' });
+    const { result } = renderHook(() => usePurchasingOverview());
+    await waitFor(() => expect(result.current.error).toBe('Error al consultar compras.'));
+    expect(result.current.overview).toEqual({ aprobado: [], por_aprobar: [], bajo_minimo: [] });
   });
 });

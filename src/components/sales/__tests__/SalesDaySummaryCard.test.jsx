@@ -109,4 +109,102 @@ describe('SalesDaySummaryCard (Brief 27p)', () => {
       expect(screen.getByText('USD 850,00')).toBeInTheDocument();
     });
   });
+
+  it('muestra aviso de foto desactualizada cuando todayData.desactualizado es true', () => {
+    const todayData = {
+      desactualizado: true,
+      resumen: {
+        fecha: '2026-10-30',
+        tipo: 'parcial',
+        total: '100.00',
+        pedidos: 5
+      }
+    };
+
+    render(<SalesDaySummaryCard todayData={todayData} todayLoading={false} />);
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('La última lectura de RunFood tiene más de una hora.')).toBeInTheDocument();
+  });
+
+  it('muestra "Aún no hay datos de hoy" cuando /sales/today llega sin resumen', () => {
+    const todayData = {
+      desactualizado: false,
+      resumen: null
+    };
+
+    render(<SalesDaySummaryCard todayData={todayData} todayLoading={false} />);
+
+    expect(screen.getByText('Aún no hay datos de hoy')).toBeInTheDocument();
+  });
+
+  it('muestra "Elige una fecha" y no llama a la API cuando el input de fecha está vacío', async () => {
+    const spy = vi.spyOn(salesClient, 'getSalesDay');
+
+    render(<SalesDaySummaryCard todayData={null} todayLoading={false} />);
+
+    const fechaBtn = screen.getByRole('button', { name: 'Fecha' });
+    fireEvent.click(fechaBtn);
+
+    const dateInput = screen.getByLabelText('Elegir fecha de resumen');
+    fireEvent.change(dateInput, { target: { value: '' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Elige una fecha')).toBeInTheDocument();
+    });
+    expect(spy).not.toHaveBeenCalledWith({ fecha: '' });
+  });
+
+  it('muestra "Cargando resumen..." durante la carga en cualquier modo', () => {
+    render(<SalesDaySummaryCard todayData={null} todayLoading={true} />);
+    expect(screen.getByText('Cargando resumen...')).toBeInTheDocument();
+  });
+
+  it('descarta respuestas fuera de orden entre peticiones', async () => {
+    let resolveFirst;
+    const firstPromise = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    vi.spyOn(salesClient, 'getSalesDay').mockImplementation(({ fecha }) => {
+      if (fecha === '2026-10-10') return firstPromise;
+      if (fecha === '2026-10-20') {
+        return Promise.resolve({
+          ok: true,
+          data: { fecha: '2026-10-20', total: '200.00', pedidos: 10 }
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        data: { fecha, total: '100.00', pedidos: 5 }
+      });
+    });
+
+    render(<SalesDaySummaryCard todayData={null} todayLoading={false} />);
+
+    const fechaBtn = screen.getByRole('button', { name: 'Fecha' });
+    fireEvent.click(fechaBtn);
+
+    const dateInput = screen.getByLabelText('Elegir fecha de resumen');
+    // Primera petición (lenta)
+    fireEvent.change(dateInput, { target: { value: '2026-10-10' } });
+    // Segunda petición (rápida)
+    fireEvent.change(dateInput, { target: { value: '2026-10-20' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('USD 200,00')).toBeInTheDocument();
+    });
+
+    // Se resuelve la primera petición después de la segunda
+    resolveFirst({
+      ok: true,
+      data: { fecha: '2026-10-10', total: '999.00', pedidos: 50 }
+    });
+
+    // El componente debe mantener los datos de la segunda petición (200, no 999)
+    await waitFor(() => {
+      expect(screen.getByText('USD 200,00')).toBeInTheDocument();
+      expect(screen.queryByText('USD 999,00')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -172,4 +172,92 @@ describe('useRunfoodConsumption hook', () => {
 
     expect(result.current.recalculateResult).toBeNull();
   });
+
+  it('un cambio de fecha con error no muestra datos del día anterior y queda en null', async () => {
+    vi.spyOn(client, 'getConsumptionSettings').mockResolvedValue({
+      ok: true,
+      data: { enabled: true, start_date: '2026-10-01', location: 'kitchen' }
+    });
+    vi.spyOn(client, 'getConsumption')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { fecha: '2026-10-15', estado: 'aplicado', lineas: [{ id: 1 }] }
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        error: 'Error del servidor'
+      });
+
+    const { result } = renderHook(() => useRunfoodConsumption({ initialDate: '2026-10-15' }));
+
+    await waitFor(() => {
+      expect(result.current.consumption?.fecha).toBe('2026-10-15');
+    });
+
+    await act(async () => {
+      result.current.setDate('2026-10-16');
+    });
+
+    await waitFor(() => {
+      expect(result.current.consumptionError).toBe('Error del servidor');
+    });
+
+    // consumption debe quedar en null y no mostrar los datos del 2026-10-15
+    expect(result.current.consumption).toBeNull();
+  });
+
+  it('descarta respuestas fuera de orden al cambiar de fecha', async () => {
+    vi.spyOn(client, 'getConsumptionSettings').mockResolvedValue({
+      ok: true,
+      data: { enabled: true, start_date: '2026-10-01', location: 'kitchen' }
+    });
+
+    let resolveFirst;
+    const slowPromise = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    vi.spyOn(client, 'getConsumption').mockImplementation((targetDate) => {
+      if (targetDate === '2026-10-10') return slowPromise;
+      if (targetDate === '2026-10-20') {
+        return Promise.resolve({
+          ok: true,
+          data: { fecha: '2026-10-20', estado: 'aplicado', lineas: [{ id: 20 }] }
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        data: { fecha: targetDate, estado: 'aplicado', lineas: [] }
+      });
+    });
+
+    const { result } = renderHook(() => useRunfoodConsumption({ initialDate: '2026-10-01' }));
+    await waitFor(() => expect(result.current.consumptionLoading).toBe(false));
+
+    // Lanzar fecha 1 (lenta)
+    act(() => {
+      result.current.setDate('2026-10-10');
+    });
+
+    // Lanzar fecha 2 (rápida)
+    act(() => {
+      result.current.setDate('2026-10-20');
+    });
+
+    await waitFor(() => {
+      expect(result.current.consumption?.fecha).toBe('2026-10-20');
+    });
+
+    // Se resuelve la primera fecha después
+    await act(async () => {
+      resolveFirst({
+        ok: true,
+        data: { fecha: '2026-10-10', estado: 'aplicado', lineas: [{ id: 10 }] }
+      });
+    });
+
+    // Debe conservar los datos de la fecha 2 (2026-10-20), descartando la respuesta tardía
+    expect(result.current.consumption?.fecha).toBe('2026-10-20');
+  });
 });

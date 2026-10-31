@@ -83,4 +83,30 @@ describe('RunfoodConsumptionSettingsCard', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Fecha de inicio fuera de rango');
   });
+
+  it('muestra errores 422 bajo cada campo y la casilla tiene role="checkbox" y aria-checked', () => {
+    const settings = { enabled: false, start_date: null, location: 'kitchen' };
+    const errors = {
+      start_date: ['La fecha de inicio no puede ser anterior a 30 días.'],
+      location: ['Ubicación no autorizada.'],
+    };
+
+    render(
+      <RunfoodConsumptionSettingsCard
+        settings={settings}
+        errors={errors}
+        onSave={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('La fecha de inicio no puede ser anterior a 30 días.')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación no autorizada.')).toBeInTheDocument();
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(checkbox);
+    expect(checkbox).toHaveAttribute('aria-checked', 'true');
+  });
 });

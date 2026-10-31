@@ -124,4 +124,74 @@ describe('RunfoodStaffAliases (Brief 27p)', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('guardar con campo vacío pide confirmación de dos pasos antes de quitar alias', async () => {
+    vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ runfood_user_id: 10, nombre_runfood: 'User_10', alias: 'Mario' }],
+        current_page: 1,
+        last_page: 1
+      }
+    });
+    vi.spyOn(salesClient, 'updateRunfoodStaffAlias').mockResolvedValueOnce({
+      ok: true,
+      data: { runfood_user_id: 10, alias: null }
+    });
+
+    render(<RunfoodStaffAliases isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('User_10')).toBeInTheDocument();
+    });
+
+    const input = screen.getByLabelText('Alias para User_10');
+    fireEvent.change(input, { target: { value: '   ' } });
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    fireEvent.click(saveBtn);
+
+    // Primer clic en guardar vacío no llama al motor, cambia texto a confirmación
+    expect(salesClient.updateRunfoodStaffAlias).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: '¿Confirmar quitar?' })).toBeInTheDocument();
+
+    // Segundo clic confirma
+    fireEvent.click(screen.getByRole('button', { name: '¿Confirmar quitar?' }));
+
+    await waitFor(() => {
+      expect(salesClient.updateRunfoodStaffAlias).toHaveBeenCalledWith(10, null);
+      expect(screen.getByText('Alias quitado')).toBeInTheDocument();
+    });
+  });
+
+  it('acepta 60 caracteres con espacios recortables al guardar', async () => {
+    vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        data: [{ runfood_user_id: 10, nombre_runfood: 'User_10', alias: null }],
+        current_page: 1,
+        last_page: 1
+      }
+    });
+    vi.spyOn(salesClient, 'updateRunfoodStaffAlias').mockResolvedValueOnce({
+      ok: true,
+      data: { runfood_user_id: 10, alias: 'a'.repeat(60) }
+    });
+
+    render(<RunfoodStaffAliases isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('User_10')).toBeInTheDocument();
+    });
+
+    const input = screen.getByLabelText('Alias para User_10');
+    fireEvent.change(input, { target: { value: 'a'.repeat(60) + ' ' } });
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(salesClient.updateRunfoodStaffAlias).toHaveBeenCalledWith(10, 'a'.repeat(60));
+    });
+  });
 });

@@ -103,4 +103,27 @@ describe('SalesView', () => {
       expect(salesClient.getSalesStaff).toHaveBeenCalled();
     });
   });
+
+  it('en la sección Ventas no pide el ranking y en Personal no pide el resumen del periodo', async () => {
+    const staffSpy = vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValue({
+      ok: true,
+      data: { empleados: [{ runfood_user_id: 1, nombre: 'Carlos', total: '300.00' }] }
+    });
+
+    render(<SalesView />);
+
+    // Inicialmente en Ventas: no llama a getSalesStaff
+    expect(staffSpy).not.toHaveBeenCalled();
+    expect(salesClient.getSalesSummary).toHaveBeenCalled();
+
+    // Cambiar a Personal
+    salesClient.getSalesSummary.mockClear();
+    const personalTab = screen.getByRole('tab', { name: 'Personal' });
+    fireEvent.click(personalTab);
+
+    await waitFor(() => {
+      expect(staffSpy).toHaveBeenCalled();
+      expect(salesClient.getSalesSummary).not.toHaveBeenCalled();
+    });
+  });
 });

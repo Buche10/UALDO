@@ -22,6 +22,10 @@ export default function RunfoodConsumptionUnmappedSection({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map((item, idx) => {
           const qty = item[qtyField];
+          const query = (Array.isArray(item.faltantes) && item.faltantes.length > 0 && item.faltantes[0])
+            ? item.faltantes[0]
+            : item.descripcion;
+
           return (
             <div
               key={`${item.articulo_runfood_id || idx}`}
@@ -32,17 +36,25 @@ export default function RunfoodConsumptionUnmappedSection({
                 fontSize: 12,
                 padding: '4px 8px',
                 background: 'var(--chip-bg)',
-                borderRadius: 6
+                borderRadius: 6,
+                gap: 8,
               }}
             >
-              <span style={{ color: 'var(--text-main)' }}>
-                {item.descripcion}
-                {qty ? ` (${formatQuantity(qty)} vend.)` : ''}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+                <span style={{ color: 'var(--text-main)' }}>
+                  {item.descripcion}
+                  {qty ? ` (${formatQuantity(qty)} vend.)` : ''}
+                </span>
+                {Array.isArray(item.faltantes) && item.faltantes.length > 0 && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    Faltantes: {item.faltantes.join(', ')}
+                  </span>
+                )}
+              </div>
               {onAction && (
                 <button
                   type="button"
-                  onClick={() => onAction(item.descripcion)}
+                  onClick={() => onAction(query)}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -52,7 +64,8 @@ export default function RunfoodConsumptionUnmappedSection({
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 4
+                    gap: 4,
+                    flexShrink: 0,
                   }}
                 >
                   {ActionIcon && <ActionIcon size={12} />}

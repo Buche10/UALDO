@@ -343,14 +343,14 @@ export async function updateRunfoodStaffAlias(runfoodUserId, alias) {
       };
     }
     const trimmed = alias.trim();
-    if (trimmed.length < 1 || alias.length > 60) {
+    if (trimmed.length < 1 || trimmed.length > 60) {
       return {
         ok: false,
         status: 400,
         error: 'El alias debe tener entre 1 y 60 caracteres.'
       };
     }
-    if (/[<>]/.test(alias)) {
+    if (/[<>]/.test(trimmed)) {
       return {
         ok: false,
         status: 400,

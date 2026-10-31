@@ -94,7 +94,7 @@ export function getYesterdayIsoString(refDate = new Date()) {
 export function validateStartDate(startDateStr, referenceDate = new Date()) {
   const parts = parseIsoDateParts(startDateStr);
   if (!parts) {
-    return { valid: false, error: 'La fecha de inicio debe tener formato AAAA-MM-DD valido.' };
+    return { valid: false, error: 'La fecha de inicio debe tener formato AAAA-MM-DD válido.' };
   }
 
   const refUtc = Date.UTC(
@@ -107,7 +107,7 @@ export function validateStartDate(startDateStr, referenceDate = new Date()) {
   if (diffDays < -MAX_START_DATE_OFFSET_DAYS || diffDays > MAX_START_DATE_OFFSET_DAYS) {
     return {
       valid: false,
-      error: 'La fecha de inicio debe estar entre 30 dias atras y 30 dias adelante.'
+      error: 'La fecha de inicio debe estar entre 30 días atrás y 30 días adelante.'
     };
   }
 
@@ -124,12 +124,12 @@ export function validateStartDate(startDateStr, referenceDate = new Date()) {
 export function validateRecalculateRange(desde, hasta) {
   const desdeParts = parseIsoDateParts(desde);
   if (!desdeParts) {
-    return { valid: false, error: 'La fecha inicial debe tener formato AAAA-MM-DD valido.' };
+    return { valid: false, error: 'La fecha inicial debe tener formato AAAA-MM-DD válido.' };
   }
 
   const hastaParts = parseIsoDateParts(hasta);
   if (!hastaParts) {
-    return { valid: false, error: 'La fecha final debe tener formato AAAA-MM-DD valido.' };
+    return { valid: false, error: 'La fecha final debe tener formato AAAA-MM-DD válido.' };
   }
 
   if (desdeParts.utcMs > hastaParts.utcMs) {
@@ -140,7 +140,7 @@ export function validateRecalculateRange(desde, hasta) {
   if (days > MAX_RECALCULATE_DAYS) {
     return {
       valid: false,
-      error: `El rango maximo permitido para recalcular es de ${MAX_RECALCULATE_DAYS} dias.`
+      error: `El rango máximo permitido para recalcular es de ${MAX_RECALCULATE_DAYS} días.`
     };
   }
 
@@ -164,12 +164,12 @@ export async function getConsumptionSettings() {
  */
 export async function updateConsumptionSettings({ enabled, start_date, location = DEFAULT_LOCATION }) {
   if (typeof enabled !== 'boolean') {
-    return { ok: false, status: 400, error: 'El parametro enabled debe ser booleano.' };
+    return { ok: false, status: 400, error: 'El parámetro enabled debe ser booleano.' };
   }
 
   const loc = location || DEFAULT_LOCATION;
   if (!isValidLocation(loc)) {
-    return { ok: false, status: 400, error: 'Ubicacion de inventario no permitida.' };
+    return { ok: false, status: 400, error: 'Ubicación de inventario no permitida.' };
   }
 
   if (enabled) {
@@ -201,7 +201,7 @@ export async function updateConsumptionSettings({ enabled, start_date, location 
 export async function getConsumption(date) {
   if (date !== undefined && date !== null && date !== '') {
     if (!isValidDateString(date)) {
-      return { ok: false, status: 400, error: 'La fecha debe tener formato AAAA-MM-DD valido.' };
+      return { ok: false, status: 400, error: 'La fecha debe tener formato AAAA-MM-DD válido.' };
     }
   }
 

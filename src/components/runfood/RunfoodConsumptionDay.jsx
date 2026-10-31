@@ -32,8 +32,11 @@ export default function RunfoodConsumptionDay({
   onNavigateToRecipes,
   onNavigateToMappings
 }) {
+  const isInitialLoading = loading && !consumption;
   const estado = consumption?.estado || 'apagado';
-  const cfg = STATE_CONFIG[estado] || STATE_CONFIG.apagado;
+  const cfg = isInitialLoading
+    ? { label: 'Cargando...', bg: 'var(--chip-bg)', color: 'var(--text-muted)', border: 'var(--border-glass)', icon: Clock }
+    : (STATE_CONFIG[estado] || STATE_CONFIG.apagado);
   const StateIcon = cfg.icon;
 
   const sortedLines = useMemo(() => {

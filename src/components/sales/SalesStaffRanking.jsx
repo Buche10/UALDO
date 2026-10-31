@@ -35,7 +35,7 @@ export default function SalesStaffRanking({ from, to, enabled = true }) {
 
   // Ordenar empleados por total descendente
   const sortedStaff = useMemo(() => {
-    const list = Array.isArray(data) ? data : data?.data || [];
+    const list = Array.isArray(data) ? data : (data?.empleados || data?.data || []);
     return [...list].sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
   }, [data]);
 
@@ -121,13 +121,11 @@ export default function SalesStaffRanking({ from, to, enabled = true }) {
             const ticketText = emp.ticket_promedio != null ? formatUsd(emp.ticket_promedio) : '-';
             const propinaText = emp.propina != null ? formatUsd(emp.propina) : '-';
 
-            let anulText = '-';
-            if (emp.anulaciones != null) {
-              if (typeof emp.anulaciones === 'object') {
-                anulText = `${emp.anulaciones.pedidos ?? 0} (${formatUsd(emp.anulaciones.total || 0)})`;
-              } else {
-                anulText = String(emp.anulaciones);
-              }
+            let anulText = 'No disponible';
+            if (emp.anulados != null && typeof emp.anulados === 'object') {
+              anulText = `${emp.anulados.pedidos ?? 0} (${formatUsd(emp.anulados.total || 0)})`;
+            } else if (emp.anulados_pedidos != null || emp.anulados_total != null) {
+              anulText = `${emp.anulados_pedidos ?? 0} (${formatUsd(emp.anulados_total || 0)})`;
             }
 
             return (
@@ -151,7 +149,7 @@ export default function SalesStaffRanking({ from, to, enabled = true }) {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-label={`Participación de ${empName}`}
-                  style={{ width: '100%', height: '6px', borderRadius: '9999px', background: 'var(--surface-sunken)', overflow: 'hidden' }}
+                  style={{ width: '100%', height: '6px', borderRadius: '9999px', background: 'var(--surface-soft)', overflow: 'hidden' }}
                 >
                   <div style={{ width: `${partPct}%`, height: '100%', background: 'var(--accent)', borderRadius: '9999px' }} />
                 </div>

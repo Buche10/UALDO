@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useSupplyRequestActions, useSupplyRequestDetail } from '../../hooks/useSupplyRequests';
+import { normalizeRequestQuantity } from '../../services/supplyRequestsClient';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { styles } from '../common/uiStyles';
 import { formatDateTime, quantityWithUnit, requesterName, statusLabel } from './requestUi';
@@ -88,6 +89,7 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
   const [note, setNote] = useState('');
   const [itemQuantities, setItemQuantities] = useState({});
+  const [itemErrors, setItemErrors] = useState({});
   const headingRef = useRef(null);
   const noteRef = useRef(null);
   const triggers = useRef({});
@@ -100,15 +102,36 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
     headingRef.current?.focus();
   };
   const actions = useSupplyRequestActions({ requestId: request.id, onStale: handleStale, onUpdated: (updated, action) => { setDialog(null); onUpdated(updated, NOTICES[action]); } });
-  const open = (action) => { actions.clearError(); setNote(''); setItemQuantities({}); dialogTriggerRef.current = triggers.current[action]; setDialog(action); };
+  const open = (action) => {
+    actions.clearError();
+    setNote('');
+    setItemQuantities({});
+    setItemErrors({});
+    dialogTriggerRef.current = triggers.current[action];
+    setDialog(action);
+  };
   const config = dialog ? DIALOGS[dialog] : null;
 
   const handleConfirm = () => {
     let itemsPayload;
     if (dialog === 'approve') {
-      const list = Object.entries(itemQuantities)
-        .map(([id, qty]) => ({ id: Number(id), quantity: qty }))
-        .filter((it) => it.quantity && String(it.quantity).trim() !== '');
+      const errors = {};
+      const list = [];
+      for (const [idStr, raw] of Object.entries(itemQuantities)) {
+        const text = String(raw ?? '').trim();
+        if (text === '') continue;
+        const normalized = normalizeRequestQuantity(text);
+        if (!normalized) {
+          errors[idStr] = 'Cantidad inválida. Ingresa un número positivo (hasta 3 decimales).';
+        } else {
+          list.push({ id: Number(idStr), quantity: normalized });
+        }
+      }
+      if (Object.keys(errors).length > 0) {
+        setItemErrors(errors);
+        return;
+      }
+      setItemErrors({});
       if (list.length > 0) itemsPayload = list;
     }
     actions.run(dialog, note, itemsPayload);
@@ -129,14 +152,46 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
         triggerRef={dialogTriggerRef} fallbackFocusRef={headingRef} initialFocusRef={config?.note ? noteRef : undefined}
       >
         {dialog === 'approve' && undefinedItems.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '8px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Fijar cantidades por definir (opcional):</span>
-            {undefinedItems.map((it) => (
-              <div key={it.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <label htmlFor={`approve-qty-${it.id}`} style={{ fontSize: '12px', color: 'var(--text-main)', flex: 1 }}>{it.name || it.free_text_name} ({it.unit || 'unidad'})</label>
-                <input id={`approve-qty-${it.id}`} type="text" inputMode="decimal" placeholder="Por definir" value={itemQuantities[it.id] || ''} onChange={(e) => setItemQuantities({ ...itemQuantities, [it.id]: e.target.value })} style={{ ...styles.input, width: '100px', padding: '4px 8px', fontSize: '12px' }} />
-              </div>
-            ))}
+            {undefinedItems.map((it, idx) => {
+              const err = itemErrors[it.id]
+                || actions.fieldErrors?.[it.id]
+                || actions.fieldErrors?.[`items.${it.id}`]
+                || actions.fieldErrors?.[`items.${it.id}.quantity`]
+                || actions.fieldErrors?.[`items.${idx}.quantity`]
+                || actions.fieldErrors?.[`items.${idx}.id`];
+              const errText = Array.isArray(err) ? err[0] : err;
+
+              return (
+                <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <label htmlFor={`approve-qty-${it.id}`} style={{ fontSize: '12px', color: 'var(--text-main)', flex: 1 }}>{it.name || it.free_text_name} ({it.unit || 'unidad'})</label>
+                    <input
+                      id={`approve-qty-${it.id}`}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Por definir"
+                      value={itemQuantities[it.id] || ''}
+                      onChange={(e) => {
+                        setItemQuantities({ ...itemQuantities, [it.id]: e.target.value });
+                        if (itemErrors[it.id]) {
+                          const next = { ...itemErrors };
+                          delete next[it.id];
+                          setItemErrors(next);
+                        }
+                      }}
+                      style={{ ...styles.input, width: '100px', padding: '4px 8px', fontSize: '12px' }}
+                    />
+                  </div>
+                  {errText && (
+                    <span style={{ fontSize: '11px', color: 'var(--error)', textAlign: 'right' }}>
+                      {errText}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         {config?.note && (

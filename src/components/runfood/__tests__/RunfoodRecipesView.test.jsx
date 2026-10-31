@@ -152,4 +152,28 @@ describe('RunfoodRecipesView', () => {
       expect(searchInput).toHaveValue('Postre Tres Leches');
     });
   });
+
+  it('limpia mappingsSearch cuando el usuario cambia de sección a mano', async () => {
+    render(<RunfoodRecipesView />);
+
+    // Ir a Recetas
+    fireEvent.click(screen.getByRole('tab', { name: /recetas/i }));
+    await waitFor(() => expect(screen.getByText('Lomo saltado')).toBeInTheDocument());
+
+    // Desplegar acordeón y navegar a ingredientes con búsqueda rellenada
+    fireEvent.click(screen.getByRole('button', { name: /lomo saltado/i }));
+    fireEvent.click(screen.getByRole('button', { name: /asociar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/buscar ingrediente de runfood o insumo/i)).toHaveValue('Cebolla morada');
+    });
+
+    // Cambiar de sección a mano con el botón de la pestaña
+    fireEvent.click(screen.getByRole('tab', { name: /ingredientes/i }));
+
+    // La búsqueda debe haberse limpiado
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/buscar ingrediente de runfood o insumo/i)).toHaveValue('');
+    });
+  });
 });

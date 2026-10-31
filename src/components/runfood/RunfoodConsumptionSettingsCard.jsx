@@ -10,13 +10,21 @@ export default function RunfoodConsumptionSettingsCard({
   settings,
   loading,
   error,
+  errors,
   onSave
 }) {
   const isEnabled = Boolean(settings?.enabled);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [localErrors, setLocalErrors] = useState({});
+  const activeErrors = errors || localErrors;
 
   const handleActivate = async ({ startDate, location }) => {
-    return onSave({ enabled: true, start_date: startDate, location });
+    setLocalErrors({});
+    const res = await onSave({ enabled: true, start_date: startDate, location });
+    if (res && !res.ok && res.errors) {
+      setLocalErrors(res.errors);
+    }
+    return res;
   };
 
   const handleDeactivate = async () => {
@@ -80,6 +88,7 @@ export default function RunfoodConsumptionSettingsCard({
           initialLocation={settings?.location}
           loading={loading}
           onActivate={handleActivate}
+          fieldErrors={activeErrors}
         />
       ) : (
         <div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   getConsumptionSettings,
   updateConsumptionSettings,
@@ -10,7 +10,7 @@ import {
 } from '../services/runfoodConsumptionClient';
 
 /**
- * Obtiene la fecha desplazada un numero de dias respecto a una fecha ISO.
+ * Obtiene la fecha desplazada un número de días respecto a una fecha ISO.
  *
  * @param {string} isoDate
  * @param {number} daysDelta
@@ -25,7 +25,7 @@ export function shiftIsoDate(isoDate, daysDelta) {
 }
 
 /**
- * Hook para la gestion de consumo automatico por ventas (Brief 25p).
+ * Hook para la gestión de consumo automático por ventas (Brief 25p).
  *
  * @param {{ initialDate?: string }} [options]
  */
@@ -43,6 +43,8 @@ export function useRunfoodConsumption({ initialDate } = {}) {
   const [recalculateResult, setRecalculateResult] = useState(null);
   const [recalculateError, setRecalculateError] = useState(null);
 
+  const reqIdRef = useRef(0);
+
   // Carga de ajustes de consumo
   const loadSettings = useCallback(async () => {
     setSettingsLoading(true);
@@ -56,7 +58,7 @@ export function useRunfoodConsumption({ initialDate } = {}) {
       setSettings(res.data);
       return { ok: true, data: res.data };
     } catch (err) {
-      const msg = err?.message || 'Error de conexion al cargar ajustes.';
+      const msg = err?.message || 'Error de conexión al cargar ajustes.';
       setSettingsError(msg);
       return { ok: false, error: msg };
     } finally {
@@ -66,22 +68,31 @@ export function useRunfoodConsumption({ initialDate } = {}) {
 
   // Carga del consumo de una fecha
   const loadConsumption = useCallback(async (targetDate = date) => {
+    const currentReq = ++reqIdRef.current;
+    setConsumption(null);
     setConsumptionLoading(true);
     setConsumptionError(null);
     try {
       const res = await getConsumption(targetDate);
+      if (currentReq !== reqIdRef.current) return { ok: false, aborted: true };
       if (!res.ok) {
-        setConsumptionError(res.error || res.data?.message || 'No se pudo cargar el consumo.');
+        setConsumption(null);
+        const msg = res.error || res.data?.message || 'No se pudo cargar el consumo.';
+        setConsumptionError(msg);
         return { ok: false };
       }
       setConsumption(res.data);
       return { ok: true, data: res.data };
     } catch (err) {
-      const msg = err?.message || 'Error de conexion al consultar consumo.';
+      if (currentReq !== reqIdRef.current) return { ok: false, aborted: true };
+      setConsumption(null);
+      const msg = err?.message || 'Error de conexión al consultar consumo.';
       setConsumptionError(msg);
       return { ok: false, error: msg };
     } finally {
-      setConsumptionLoading(false);
+      if (currentReq === reqIdRef.current) {
+        setConsumptionLoading(false);
+      }
     }
   }, [date]);
 
@@ -94,7 +105,7 @@ export function useRunfoodConsumption({ initialDate } = {}) {
       if (!res.ok) {
         const msg = res.error || res.data?.message || 'No se pudieron guardar los ajustes.';
         setSettingsError(msg);
-        return { ok: false, error: msg };
+        return { ok: false, error: msg, errors: res.data?.errors };
       }
       setSettings(res.data);
       loadConsumption(date);
@@ -108,7 +119,7 @@ export function useRunfoodConsumption({ initialDate } = {}) {
     }
   }, [date, loadConsumption]);
 
-  // Recalculo para un rango de fechas
+  // Recálculo para un rango de fechas
   const recalculate = useCallback(async ({ desde, hasta }) => {
     setRecalculating(true);
     setRecalculateError(null);
@@ -116,14 +127,14 @@ export function useRunfoodConsumption({ initialDate } = {}) {
     try {
       const res = await recalculateConsumption({ desde, hasta });
       if (!res.ok) {
-        const msg = res.error || res.data?.message || 'No se pudo iniciar el recalculo.';
+        const msg = res.error || res.data?.message || 'No se pudo iniciar el recálculo.';
         setRecalculateError(msg);
         return { ok: false, error: msg };
       }
       setRecalculateResult(res.data);
       return { ok: true, data: res.data };
     } catch (err) {
-      const msg = err?.message || 'Error al solicitar el recalculo.';
+      const msg = err?.message || 'Error al solicitar el recálculo.';
       setRecalculateError(msg);
       return { ok: false, error: msg };
     } finally {

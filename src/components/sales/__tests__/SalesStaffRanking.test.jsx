@@ -9,33 +9,38 @@ describe('SalesStaffRanking (Brief 27p)', () => {
     vi.restoreAllMocks();
   });
 
-  it('muestra el ranking ordenado por total con barra de participación y métricas', async () => {
+  it('muestra el ranking ordenado por total leyendo data.empleados con anulaciones del contrato', async () => {
     vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValueOnce({
       ok: true,
-      data: [
-        {
-          runfood_user_id: 1,
-          nombre: 'Juan Mesero',
-          total: '200.00',
-          pedidos: 10,
-          ticket_promedio: '20.00',
-          participacion: '20.0',
-          mesas: 8,
-          propina: '15.00',
-          anulaciones: { pedidos: 1, total: '10.00' }
-        },
-        {
-          runfood_user_id: 2,
-          nombre: 'Maria Bartender',
-          total: '800.00',
-          pedidos: 40,
-          ticket_promedio: '20.00',
-          participacion: '80.0',
-          mesas: 25,
-          propina: '60.00',
-          anulaciones: 0
-        }
-      ]
+      data: {
+        from: '2026-10-01',
+        to: '2026-10-07',
+        totales: { pedidos: 50, total: '1000.00' },
+        empleados: [
+          {
+            runfood_user_id: 1,
+            nombre: 'Juan Mesero',
+            total: '200.00',
+            pedidos: 10,
+            ticket_promedio: '20.00',
+            participacion: '20.0',
+            mesas: 8,
+            propina: '15.00',
+            anulados: { pedidos: 1, total: '10.00' }
+          },
+          {
+            runfood_user_id: 2,
+            nombre: 'Maria Bartender',
+            total: '800.00',
+            pedidos: 40,
+            ticket_promedio: '20.00',
+            participacion: '80.0',
+            mesas: 25,
+            propina: '60.00',
+            anulados: null
+          }
+        ]
+      }
     });
 
     render(<SalesStaffRanking from="2026-10-01" to="2026-10-07" enabled={true} />);
@@ -50,6 +55,8 @@ describe('SalesStaffRanking (Brief 27p)', () => {
       expect(screen.getByText('20% part.')).toBeInTheDocument();
       expect(screen.getByText('Mesas: 25')).toBeInTheDocument();
       expect(screen.getByText('Propina: USD 60,00')).toBeInTheDocument();
+      expect(screen.getByText('Anulaciones: 1 (USD 10,00)')).toBeInTheDocument();
+      expect(screen.getByText('Anulaciones: No disponible')).toBeInTheDocument();
     });
 
     const mariaProgress = screen.getByLabelText('Participación de Maria Bartender');
@@ -59,7 +66,7 @@ describe('SalesStaffRanking (Brief 27p)', () => {
   it('muestra estado vacío cuando no hay datos de personal', async () => {
     vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValueOnce({
       ok: true,
-      data: []
+      data: { from: '2026-10-01', to: '2026-10-07', empleados: [] }
     });
 
     render(<SalesStaffRanking from="2026-10-01" to="2026-10-07" enabled={true} />);
@@ -78,7 +85,7 @@ describe('SalesStaffRanking (Brief 27p)', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        data: []
+        data: { empleados: [] }
       });
 
     render(<SalesStaffRanking from="2026-10-01" to="2026-10-07" enabled={true} />);
@@ -95,10 +102,10 @@ describe('SalesStaffRanking (Brief 27p)', () => {
     });
   });
 
-  it('abre el modal de Nombres del personal al hacer clic en el botón', async () => {
+  it('abre el modal de Nombres del personal renderizado en document.body con portal', async () => {
     vi.spyOn(salesClient, 'getSalesStaff').mockResolvedValueOnce({
       ok: true,
-      data: []
+      data: { empleados: [] }
     });
     vi.spyOn(salesClient, 'listRunfoodStaff').mockResolvedValueOnce({
       ok: true,
@@ -111,7 +118,9 @@ describe('SalesStaffRanking (Brief 27p)', () => {
     fireEvent.click(aliasesBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(dialog.parentElement).toBe(document.body);
       expect(screen.getByText('Asigna un nombre reconocible a cada usuario de RunFood para el ranking y los informes.')).toBeInTheDocument();
     });
   });

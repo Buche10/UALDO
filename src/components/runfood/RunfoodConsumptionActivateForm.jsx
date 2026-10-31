@@ -10,7 +10,8 @@ export default function RunfoodConsumptionActivateForm({
   initialStartDate,
   initialLocation = DEFAULT_LOCATION,
   loading,
-  onActivate
+  onActivate,
+  fieldErrors = {}
 }) {
   const [startDate, setStartDate] = useState(() => initialStartDate || toIsoDateString());
   const [location, setLocation] = useState(initialLocation);
@@ -45,6 +46,11 @@ export default function RunfoodConsumptionActivateForm({
               fontSize: 12
             }}
           />
+          {fieldErrors?.start_date?.[0] && (
+            <span style={{ fontSize: 11, color: 'var(--error)', marginTop: 4, display: 'block' }}>
+              {fieldErrors.start_date[0]}
+            </span>
+          )}
         </div>
         <div>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
@@ -71,11 +77,18 @@ export default function RunfoodConsumptionActivateForm({
               </option>
             ))}
           </select>
+          {fieldErrors?.location?.[0] && (
+            <span style={{ fontSize: 11, color: 'var(--error)', marginTop: 4, display: 'block' }}>
+              {fieldErrors.location[0]}
+            </span>
+          )}
         </div>
       </div>
 
       <button
         type="button"
+        role="checkbox"
+        aria-checked={hasReopenedCount}
         onClick={() => setHasReopenedCount((prev) => !prev)}
         disabled={loading}
         style={{

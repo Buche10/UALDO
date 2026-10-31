@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { listRunfoodStaff, updateRunfoodStaffAlias } from '../../services/salesClient';
 
@@ -49,21 +50,6 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
 
   if (!isOpen) return null;
 
-  const handleSave = async (user) => {
-    const userId = user.runfood_user_id;
-    const newAlias = (editingAliases[userId] || '').trim();
-    setRowStatus((prev) => ({ ...prev, [userId]: { saving: true, error: null, success: null } }));
-
-    const res = await updateRunfoodStaffAlias(userId, newAlias || null);
-    if (res.ok) {
-      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: null, success: 'Alias guardado' } }));
-      setUsers((prev) => prev.map((u) => (u.runfood_user_id === userId ? { ...u, alias: newAlias || null } : u)));
-      onAliasUpdated?.();
-    } else {
-      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: res.error || 'Error al guardar', success: null } }));
-    }
-  };
-
   const handleRemove = async (userId) => {
     setRowStatus((prev) => ({ ...prev, [userId]: { saving: true, error: null, success: null } }));
     const res = await updateRunfoodStaffAlias(userId, null);
@@ -78,8 +64,42 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
     }
   };
 
-  return (
-    <div role="dialog" aria-modal="true" aria-labelledby="staff-aliases-title" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+  const handleSave = async (user) => {
+    const userId = user.runfood_user_id;
+    const rawVal = editingAliases[userId] ?? (user.alias || '');
+    const trimmed = rawVal.trim();
+
+    if (trimmed === '' && user.alias) {
+      if (confirmRemoveId !== userId) {
+        setConfirmRemoveId(userId);
+        return;
+      }
+      return handleRemove(userId);
+    }
+
+    if (trimmed.length > 60) {
+      setRowStatus((prev) => ({
+        ...prev,
+        [userId]: { saving: false, error: 'El alias no puede superar los 60 caracteres.', success: null }
+      }));
+      return;
+    }
+
+    setRowStatus((prev) => ({ ...prev, [userId]: { saving: true, error: null, success: null } }));
+
+    const res = await updateRunfoodStaffAlias(userId, trimmed || null);
+    setConfirmRemoveId(null);
+    if (res.ok) {
+      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: null, success: trimmed ? 'Alias guardado' : 'Alias quitado' } }));
+      setUsers((prev) => prev.map((u) => (u.runfood_user_id === userId ? { ...u, alias: trimmed || null } : u)));
+      onAliasUpdated?.();
+    } else {
+      setRowStatus((prev) => ({ ...prev, [userId]: { saving: false, error: res.error || 'Error al guardar', success: null } }));
+    }
+  };
+
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-labelledby="staff-aliases-title" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--overlay)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div className="glass-card" style={{ maxWidth: '520px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: '20px', gap: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -108,6 +128,9 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
               const uId = u.runfood_user_id;
               const status = rowStatus[uId] || {};
               const isConfirming = confirmRemoveId === uId;
+              const currentInput = (editingAliases[uId] ?? (u.alias || '')).trim();
+              const isClearing = isConfirming && currentInput === '';
+
               return (
                 <div key={uId} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', borderRadius: '10px', background: 'var(--chip-bg)', border: '1px solid var(--border-glass)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -122,10 +145,25 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
                       aria-label={`Alias para ${u.nombre_runfood || uId}`}
                       value={editingAliases[uId] ?? ''}
                       onChange={(e) => setEditingAliases((prev) => ({ ...prev, [uId]: e.target.value }))}
-                      style={{ flex: 1, padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'var(--surface-sunken)', color: 'var(--text-main)', fontSize: '12px' }}
+                      style={{ flex: 1, padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'var(--surface-soft)', color: 'var(--text-main)', fontSize: '12px' }}
                     />
-                    <button type="button" disabled={status.saving} onClick={() => handleSave(u)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', opacity: status.saving ? 0.6 : 1 }}>
-                      {status.saving ? 'Guardando...' : 'Guardar'}
+                    <button
+                      type="button"
+                      disabled={status.saving}
+                      onClick={() => handleSave(u)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: isClearing ? 'var(--error)' : 'var(--primary)',
+                        color: 'var(--on-primary)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        opacity: status.saving ? 0.6 : 1
+                      }}
+                    >
+                      {status.saving ? 'Guardando...' : isClearing ? '¿Confirmar quitar?' : 'Guardar'}
                     </button>
                     {u.alias && (
                       <button
@@ -134,7 +172,7 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
                         onClick={() => (isConfirming ? handleRemove(uId) : setConfirmRemoveId(uId))}
                         style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-error)', background: isConfirming ? 'var(--error)' : 'transparent', color: isConfirming ? 'var(--on-primary)' : 'var(--error)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                       >
-                        {isConfirming ? '¿Confirmar quitar?' : 'Quitar alias'}
+                        {isConfirming && !isClearing ? '¿Confirmar quitar?' : 'Quitar alias'}
                       </button>
                     )}
                   </div>
@@ -151,6 +189,7 @@ export default function RunfoodStaffAliases({ isOpen, onClose, onAliasUpdated })
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

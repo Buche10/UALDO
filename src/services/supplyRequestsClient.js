@@ -118,10 +118,14 @@ export const decideRequest = async (requestId, decision, note, items) => {
     const validItems = [];
     for (const it of items) {
       const itId = parseId(it?.id);
+      if (!itId) return invalid(400, 'Identificador de ítem inválido.');
       const itQty = normalizeRequestQuantity(it?.quantity);
-      if (itId && itQty) {
-        validItems.push({ id: itId, quantity: itQty });
+      if (!itQty) {
+        return invalid(422, 'La cantidad debe ser mayor a cero y no superar 100.000.', {
+          [`items.${itId}.quantity`]: ['La cantidad debe ser mayor a cero y no superar 100.000.']
+        });
       }
+      validItems.push({ id: itId, quantity: itQty });
     }
     if (validItems.length > 0) {
       body.items = validItems;
@@ -139,3 +143,13 @@ const transition = (action) => async (requestId) => {
 export const markPurchased = transition('purchased');
 export const markReceived = transition('received');
 export const cancelRequest = transition('cancel');
+
+export const getSupplySettings = async () => request('/supply-requests/settings');
+
+export const updateSupplySettings = async (settings = {}) => {
+  return request('/supply-requests/settings', {
+    method: 'PUT',
+    body: settings,
+  });
+};
+

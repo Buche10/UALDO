@@ -89,7 +89,7 @@ export default function SupplyRequestsView({ isOwner, userId, openRequest = null
       </div>
       {tab === 'shopping' && isOwner && (
         <div role="tabpanel">
-          <ShoppingListPanel onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }} />
+          <ShoppingListPanel onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }} isOwner={isOwner} />
         </div>
       )}
     </div>

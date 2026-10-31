@@ -63,7 +63,7 @@ describe('runfoodConsumptionClient', () => {
     it('rechaza fechas mayores a 30 dias de diferencia o con formato invalido', () => {
       const resOld = validateStartDate('2026-09-10', todayRef);
       expect(resOld.valid).toBe(false);
-      expect(resOld.error).toContain('30 dias');
+      expect(resOld.error).toContain('30 días');
 
       const resFuture = validateStartDate('2026-11-20', todayRef);
       expect(resFuture.valid).toBe(false);
@@ -94,7 +94,7 @@ describe('runfoodConsumptionClient', () => {
     it('rechaza si el rango supera 31 dias', () => {
       const res = validateRecalculateRange('2026-10-01', '2026-11-05');
       expect(res.valid).toBe(false);
-      expect(res.error).toContain('31 dias');
+      expect(res.error).toContain('31 días');
     });
 
     it('rechaza fechas con formato invalido', () => {
@@ -145,7 +145,7 @@ describe('runfoodConsumptionClient', () => {
       const reqSpy = vi.spyOn(apiClient, 'request');
       const res = await updateConsumptionSettings({ enabled: false, location: 'patio' });
       expect(res.ok).toBe(false);
-      expect(res.error).toContain('Ubicacion de inventario no permitida');
+      expect(res.error).toContain('Ubicación de inventario no permitida');
       expect(reqSpy).not.toHaveBeenCalled();
     });
 

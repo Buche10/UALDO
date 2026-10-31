@@ -183,7 +183,17 @@ describe('SupplyRequestsView for the owner', () => {
   });
 
   it('shows the consolidated shopping list and keeps a request form when switching tabs', async () => {
-    vi.spyOn(client, 'getShoppingList').mockResolvedValue({ ok: true, data: { data: shoppingList } });
+    vi.spyOn(client, 'getSupplySettings').mockResolvedValue({ ok: true, data: { faltantes_reminder_enabled: true, faltantes_reminder_time: '21:30' } });
+    vi.spyOn(client, 'getPurchasingOverview').mockResolvedValue({
+      ok: true,
+      data: {
+        data: {
+          aprobado: shoppingList,
+          por_aprobar: [],
+          bajo_minimo: []
+        }
+      }
+    });
     render(<SupplyRequestsView isOwner userId={1} />);
     expect(screen.getByText('Pedidos internos')).toBeInTheDocument();
     fireEvent.click(await screen.findByText('Nuevo pedido'));

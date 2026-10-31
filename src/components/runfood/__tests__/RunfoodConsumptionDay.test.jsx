@@ -130,9 +130,10 @@ describe('RunfoodConsumptionDay', () => {
 
     // Articulo incompleto
     expect(screen.getByText(/Ensalada Cesar/)).toBeInTheDocument();
+    expect(screen.getByText(/Faltantes: Aderezo Cesar/)).toBeInTheDocument();
     const mapIngredientBtn = screen.getByRole('button', { name: 'Mapear insumo' });
     fireEvent.click(mapIngredientBtn);
-    expect(onNavMappings).toHaveBeenCalledWith('Ensalada Cesar');
+    expect(onNavMappings).toHaveBeenCalledWith('Aderezo Cesar');
 
     // Articulo con opciones
     expect(screen.getByText(/Hamburguesa Especial/)).toBeInTheDocument();
@@ -213,5 +214,20 @@ describe('RunfoodConsumptionDay', () => {
       />
     );
     expect(screen.getByText('Falló la aplicación')).toBeInTheDocument();
+  });
+
+  it('muestra "Cargando..." en primera carga y no "Consumo desactivado"', () => {
+    render(
+      <RunfoodConsumptionDay
+        date="2026-10-29"
+        onDateChange={vi.fn()}
+        onPreviousDay={vi.fn()}
+        onNextDay={vi.fn()}
+        consumption={null}
+        loading={true}
+      />
+    );
+    expect(screen.getByText('Cargando...')).toBeInTheDocument();
+    expect(screen.queryByText('Consumo desactivado')).not.toBeInTheDocument();
   });
 });

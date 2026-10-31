@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, RefreshCw, Clock } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Calendar, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { getSalesDay, getTodayIso } from '../../services/salesClient';
 import SalesDayMetrics from './SalesDayMetrics';
 import SalesDayTopLists from './SalesDayTopLists';
@@ -34,12 +34,20 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
   const [closedDayLoading, setClosedDayLoading] = useState(false);
   const [closedDayError, setClosedDayError] = useState(null);
 
-  const targetDate = useMemo(() => (dayMode === 'ayer' ? getYesterdayIso() : customDate), [dayMode, customDate]);
+  const reqIdRef = useRef(0);
 
   const loadClosedDay = useCallback(async (date) => {
+    if (!date) {
+      setClosedDayData(null);
+      setClosedDayLoading(false);
+      setClosedDayError(null);
+      return;
+    }
+    const currentReqId = ++reqIdRef.current;
     setClosedDayLoading(true);
     setClosedDayError(null);
     const res = await getSalesDay({ fecha: date });
+    if (reqIdRef.current !== currentReqId) return;
     setClosedDayLoading(false);
     if (res.ok) {
       setClosedDayData(res.data);
@@ -49,15 +57,24 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
   }, []);
 
   useEffect(() => {
-    if (dayMode !== 'hoy') {
-      loadClosedDay(targetDate);
+    if (dayMode === 'ayer') {
+      loadClosedDay(getYesterdayIso());
+    } else if (dayMode === 'fecha') {
+      if (customDate) {
+        loadClosedDay(customDate);
+      } else {
+        setClosedDayData(null);
+        setClosedDayLoading(false);
+        setClosedDayError(null);
+      }
     }
-  }, [dayMode, targetDate, loadClosedDay]);
+  }, [dayMode, customDate, loadClosedDay]);
 
   const activeLoading = dayMode === 'hoy' ? todayLoading : closedDayLoading;
   const activeError = dayMode === 'hoy' ? todayError : closedDayError;
-  const activeSummary = dayMode === 'hoy' ? (todayData?.resumen || todayData) : closedDayData;
+  const activeSummary = dayMode === 'hoy' ? (todayData?.resumen ?? null) : closedDayData;
   const captureTime = dayMode === 'hoy' && activeSummary?.capturada_a ? formatCaptureTime(activeSummary.capturada_a) : null;
+  const isStale = dayMode === 'hoy' && Boolean(todayData?.desactualizado);
 
   return (
     <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -81,7 +98,10 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
               key={mode}
               type="button"
               aria-pressed={dayMode === mode}
-              onClick={() => setDayMode(mode)}
+              onClick={() => {
+                reqIdRef.current++;
+                setDayMode(mode);
+              }}
               style={{
                 padding: '4px 10px',
                 borderRadius: '8px',
@@ -121,6 +141,28 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
         </div>
       )}
 
+      {/* Aviso de foto parcial desactualizada */}
+      {isStale && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 12px',
+            borderRadius: '10px',
+            background: 'var(--warning-soft)',
+            border: '1px solid var(--border-warning)',
+            color: 'var(--warning)',
+            fontSize: '12px',
+            fontWeight: 500
+          }}
+        >
+          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+          <span>La última lectura de RunFood tiene más de una hora.</span>
+        </div>
+      )}
+
       {/* Subtítulo informativo */}
       {dayMode === 'hoy' && captureTime && (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -131,14 +173,14 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
       {/* Estados de carga, error y contenido */}
       {activeLoading ? (
         <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-          Cargando ventas de hoy...
+          Cargando resumen...
         </div>
       ) : activeError ? (
         <div style={{ padding: '12px', borderRadius: '10px', background: 'var(--error-soft)', border: '1px solid var(--border-error)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--error)' }}>{activeError}</p>
           <button
             type="button"
-            onClick={dayMode === 'hoy' ? onRetryToday : () => loadClosedDay(targetDate)}
+            onClick={dayMode === 'hoy' ? onRetryToday : () => loadClosedDay(dayMode === 'ayer' ? getYesterdayIso() : customDate)}
             style={{
               alignSelf: 'flex-start',
               padding: '4px 10px',
@@ -159,7 +201,7 @@ export default function SalesDaySummaryCard({ todayData, todayLoading, todayErro
         </div>
       ) : !activeSummary ? (
         <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-          {dayMode === 'hoy' ? 'Todavía no hay ventas de hoy desde RunFood.' : 'No hay datos para este día.'}
+          {dayMode === 'hoy' ? 'Aún no hay datos de hoy' : dayMode === 'fecha' && !customDate ? 'Elige una fecha' : 'No hay datos para este día.'}
         </div>
       ) : (
         <>

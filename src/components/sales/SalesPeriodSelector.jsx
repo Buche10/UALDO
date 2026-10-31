@@ -86,7 +86,7 @@ export default function SalesPeriodSelector({
                   padding: '6px 8px',
                   borderRadius: '8px',
                   border: '1px solid var(--border-glass)',
-                  background: 'var(--surface-sunken)',
+                  background: 'var(--surface-soft)',
                   color: 'var(--text-main)',
                   fontSize: '12px',
                   fontFamily: 'inherit'
@@ -104,7 +104,7 @@ export default function SalesPeriodSelector({
                   padding: '6px 8px',
                   borderRadius: '8px',
                   border: '1px solid var(--border-glass)',
-                  background: 'var(--surface-sunken)',
+                  background: 'var(--surface-soft)',
                   color: 'var(--text-main)',
                   fontSize: '12px',
                   fontFamily: 'inherit'
