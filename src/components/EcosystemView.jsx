@@ -87,7 +87,7 @@ export default function EcosystemView({
   } else if (currentSubTab === 'cashclose') {
     content = <CashCloseView onBack={() => handleSubTabChange('overview')} fechaInicial={negociosParams?.fecha} />;
   } else if (currentSubTab === 'inventory') {
-    content = <InventoryView />;
+    content = <InventoryView initialSubView={negociosParams?.subView} />;
   } else if (currentSubTab === 'pedidos') {
     const openRequest = negociosParams?.id ? { id: negociosParams.id, nav: negociosParams.nav } : null;
     content = <SupplyRequestsView isOwner={isOwner} userId={user?.id} openRequest={openRequest} onOpenConsumed={onParamsConsumed} />;

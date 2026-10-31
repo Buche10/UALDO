@@ -11,9 +11,10 @@ import TransferModal from './inventory/TransferModal';
 import CountsView from './inventory/counts/CountsView';
 import ProductionView from './inventory/production/ProductionView';
 import PurchasesView from './inventory/purchases/PurchasesView';
+import RunfoodRecipesView from './runfood/RunfoodRecipesView';
 import InventoryHeaderActions from './inventory/InventoryHeaderActions';
 
-export default function InventoryView() {
+export default function InventoryView({ initialSubView = null }) {
   const {
     items,
     alerts,
@@ -38,14 +39,14 @@ export default function InventoryView() {
   const [showCountsView, setShowCountsView] = useState(false);
   const [showProductionView, setShowProductionView] = useState(false);
   const [showPurchasesView, setShowPurchasesView] = useState(false);
+  const currentUser = getUser();
+  const isOwner = Boolean(currentUser?.capabilities?.is_owner || currentUser?.role === 'owner');
+  const [showRunfoodRecipes, setShowRunfoodRecipes] = useState(initialSubView === 'runfood-recetas' && isOwner);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
   const [selectedItemForTransfer, setSelectedItemForTransfer] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const toastTimerRef = useRef(null);
-
-  const currentUser = getUser();
-  const isOwner = Boolean(currentUser?.capabilities?.is_owner || currentUser?.role === 'owner');
 
   const showToast = (msg, type = 'success') => {
     if (toastTimerRef.current) {
@@ -93,6 +94,10 @@ export default function InventoryView() {
     return <CountsView isOwner={isOwner} onBack={() => { setShowCountsView(false); reload(); }} />;
   }
 
+  if (showRunfoodRecipes && isOwner) {
+    return <RunfoodRecipesView onBack={() => { setShowRunfoodRecipes(false); reload(); }} />;
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       {toastMessage && (
@@ -118,6 +123,7 @@ export default function InventoryView() {
           onProduction={() => setShowProductionView(true)}
           onPurchases={() => setShowPurchasesView(true)}
           onCounts={() => setShowCountsView(true)}
+          onRunfoodRecipes={() => setShowRunfoodRecipes(true)}
           onCreate={() => setShowCreateModal(true)}
         />
       </div>

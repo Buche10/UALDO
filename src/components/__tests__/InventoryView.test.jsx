@@ -208,5 +208,79 @@ describe('InventoryView component permissions and actions', () => {
     const countRequests = reqSpy.mock.calls.filter(([url]) => typeof url === 'string' && url.includes('/inventory/counts'));
     expect(countRequests.length).toBe(0);
   });
+
+  it('renders "Recetas de RunFood" button for owner and opens RunfoodRecipesView, while non-owner does not see it', async () => {
+    // Non-owner
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'staff',
+      capabilities: { is_owner: false },
+    });
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: dummyItems,
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    const { unmount } = render(<InventoryView />);
+    await waitFor(() => {
+      expect(screen.getByText('Inventario del Motor')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Recetas de RunFood/i })).not.toBeInTheDocument();
+    unmount();
+
+    // Owner
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'owner',
+      capabilities: { is_owner: true },
+    });
+
+    render(<InventoryView />);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Recetas de RunFood/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Recetas de RunFood/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Recetas de RunFood/i })).toBeInTheDocument();
+    });
+  });
+
+  it('mounts RunfoodRecipesView directly if initialSubView="runfood-recetas" and user is owner; non-owner stays in inventory', async () => {
+    // Non-owner
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'staff',
+      capabilities: { is_owner: false },
+    });
+    vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({
+      ok: true,
+      data: {
+        items: dummyItems,
+        totals: { count: 1, low_stock_count: 0 },
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    const { unmount } = render(<InventoryView initialSubView="runfood-recetas" />);
+    await waitFor(() => {
+      expect(screen.getByText('Inventario del Motor')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('heading', { name: /Recetas de RunFood/i })).not.toBeInTheDocument();
+    unmount();
+
+    // Owner
+    vi.spyOn(auth, 'getUser').mockReturnValue({
+      role: 'owner',
+      capabilities: { is_owner: true },
+    });
+
+    render(<InventoryView initialSubView="runfood-recetas" />);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Recetas de RunFood/i })).toBeInTheDocument();
+    });
+  });
 });
 

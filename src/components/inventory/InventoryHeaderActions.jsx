@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ClipboardList, Scissors, ShoppingCart } from 'lucide-react';
+import { Plus, ClipboardList, Scissors, ShoppingCart, ChefHat } from 'lucide-react';
 
 const secondaryButton = {
   padding: '8px 12px',
@@ -20,7 +20,7 @@ const secondaryButton = {
  * miembro (Brief 21p); "Compras" (Brief 20p), "Conteos" y "Nuevo Insumo",
  * solo para el dueño.
  */
-export default function InventoryHeaderActions({ isOwner, onProduction, onPurchases, onCounts, onCreate }) {
+export default function InventoryHeaderActions({ isOwner, onProduction, onPurchases, onCounts, onRunfoodRecipes, onCreate }) {
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <button type="button" className="glass-card-interactive" onClick={onProduction} style={secondaryButton}>
@@ -30,6 +30,11 @@ export default function InventoryHeaderActions({ isOwner, onProduction, onPurcha
 
       {isOwner && (
         <>
+          <button type="button" className="glass-card-interactive" onClick={onRunfoodRecipes} style={secondaryButton}>
+            <ChefHat size={16} />
+            <span>Recetas de RunFood</span>
+          </button>
+
           <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
             <ShoppingCart size={16} />
             <span>Compras</span>
