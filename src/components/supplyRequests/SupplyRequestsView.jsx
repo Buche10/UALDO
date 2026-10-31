@@ -87,7 +87,11 @@ export default function SupplyRequestsView({ isOwner, userId, openRequest = null
         {screen === 'detail' && detail.id && <SupplyRequestDetail key={`${detail.id}-${detail.version}`} requestId={detail.id} isOwner={isOwner} userId={userId} onBack={backToList} onSynced={(updated, message) => { syncList(updated); setNotice(message || null); }} />}
         {screen === 'list' && <SupplyRequestList list={list} status={status} onStatusChange={setStatus} isOwner={isOwner} onOpen={(r) => showDetail(r.id, null)} onNew={() => { setNotice(null); setScreen('new'); }} />}
       </div>
-      {tab === 'shopping' && isOwner && <div role="tabpanel"><ShoppingListPanel /></div>}
+      {tab === 'shopping' && isOwner && (
+        <div role="tabpanel">
+          <ShoppingListPanel onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }} />
+        </div>
+      )}
     </div>
   );
 }

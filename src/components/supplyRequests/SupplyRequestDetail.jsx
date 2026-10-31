@@ -87,6 +87,7 @@ function ActionButtons({ actions, triggers, onOpen }) {
 function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
   const [note, setNote] = useState('');
+  const [itemQuantities, setItemQuantities] = useState({});
   const headingRef = useRef(null);
   const noteRef = useRef(null);
   const triggers = useRef({});
@@ -99,8 +100,21 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
     headingRef.current?.focus();
   };
   const actions = useSupplyRequestActions({ requestId: request.id, onStale: handleStale, onUpdated: (updated, action) => { setDialog(null); onUpdated(updated, NOTICES[action]); } });
-  const open = (action) => { actions.clearError(); setNote(''); dialogTriggerRef.current = triggers.current[action]; setDialog(action); };
+  const open = (action) => { actions.clearError(); setNote(''); setItemQuantities({}); dialogTriggerRef.current = triggers.current[action]; setDialog(action); };
   const config = dialog ? DIALOGS[dialog] : null;
+
+  const handleConfirm = () => {
+    let itemsPayload;
+    if (dialog === 'approve') {
+      const list = Object.entries(itemQuantities)
+        .map(([id, qty]) => ({ id: Number(id), quantity: qty }))
+        .filter((it) => it.quantity && String(it.quantity).trim() !== '');
+      if (list.length > 0) itemsPayload = list;
+    }
+    actions.run(dialog, note, itemsPayload);
+  };
+
+  const undefinedItems = (request.items || []).filter((it) => it.quantity === null || it.quantity === undefined || it.quantity === '');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -111,9 +125,20 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
       <ActionButtons actions={availableActions(request, { isOwner, userId })} triggers={triggers} onOpen={open} />
       <ConfirmDialog
         isOpen={Boolean(dialog)} title={config?.title} message={config?.message} confirmLabel={config?.confirmLabel}
-        busy={Boolean(actions.busy)} error={actions.error} onClose={() => setDialog(null)} onConfirm={() => actions.run(dialog, note)}
+        busy={Boolean(actions.busy)} error={actions.error} onClose={() => setDialog(null)} onConfirm={handleConfirm}
         triggerRef={dialogTriggerRef} fallbackFocusRef={headingRef} initialFocusRef={config?.note ? noteRef : undefined}
       >
+        {dialog === 'approve' && undefinedItems.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '8px 0' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Fijar cantidades por definir (opcional):</span>
+            {undefinedItems.map((it) => (
+              <div key={it.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <label htmlFor={`approve-qty-${it.id}`} style={{ fontSize: '12px', color: 'var(--text-main)', flex: 1 }}>{it.name || it.free_text_name} ({it.unit || 'unidad'})</label>
+                <input id={`approve-qty-${it.id}`} type="text" inputMode="decimal" placeholder="Por definir" value={itemQuantities[it.id] || ''} onChange={(e) => setItemQuantities({ ...itemQuantities, [it.id]: e.target.value })} style={{ ...styles.input, width: '100px', padding: '4px 8px', fontSize: '12px' }} />
+              </div>
+            ))}
+          </div>
+        )}
         {config?.note && (
           <div>
             <label htmlFor="request-decision-note" style={styles.label}>{config.note}</label>

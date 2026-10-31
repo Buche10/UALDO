@@ -1,7 +1,7 @@
 import { request } from './apiClient';
 
 /**
- * Cliente de pedidos internos (Brief 22p).
+ * Cliente de pedidos internos (Brief 22p / 26p).
  * Contrato: UaldoBusiness/docs/API-supply-requests.md. Cualquier miembro pide
  * y sigue sus pedidos; el dueño decide, marca comprado y recibido y ve la
  * lista de compras. Las cantidades viajan como texto validado.
@@ -47,12 +47,24 @@ export const getRequest = async (requestId) => {
 
 export const getShoppingList = async () => request('/supply-requests/shopping-list');
 
+/** Obtiene la vista consolidada de compras con aprobado, por_aprobar y bajo_minimo (Brief 26p). */
+export const getPurchasingOverview = async () => request('/supply-requests/shopping-list?overview=1');
+
 /** Valida una línea del catálogo o en texto libre, con las claves del motor. */
 function buildItem(item, index, errors) {
   const key = (field) => `items.${index}.${field}`;
-  const quantity = normalizeRequestQuantity(item?.quantity);
-  if (!quantity) errors[key('quantity')] = ['La cantidad debe ser mayor que 0 y hasta 100000, con 3 decimales como máximo.'];
-  const entry = { quantity };
+  const rawQty = item?.quantity;
+  const entry = {};
+
+  // Cantidad es opcional (Brief 26p): si está vacía se omite, nunca envía 0
+  if (rawQty !== null && rawQty !== undefined && String(rawQty).trim() !== '') {
+    const quantity = normalizeRequestQuantity(rawQty);
+    if (!quantity) {
+      errors[key('quantity')] = ['La cantidad debe ser mayor que 0 y hasta 100000, con 3 decimales como máximo.'];
+    } else {
+      entry.quantity = quantity;
+    }
+  }
 
   const itemId = parseId(item?.inventory_item_id);
   if (itemId) {
@@ -93,7 +105,7 @@ export const createRequest = async (data, clientUuid) => {
   return request('/supply-requests', { method: 'POST', body });
 };
 
-export const decideRequest = async (requestId, decision, note) => {
+export const decideRequest = async (requestId, decision, note, items) => {
   const id = parseId(requestId);
   if (!id) return invalid(400, 'Identificador de pedido inválido.');
   if (decision !== 'approved' && decision !== 'rejected') return invalid(422, 'Decisión no válida.');
@@ -102,6 +114,19 @@ export const decideRequest = async (requestId, decision, note) => {
   if (text.length > 500) return invalid(422, 'La nota admite hasta 500 caracteres.', { note: ['La nota admite hasta 500 caracteres.'] });
   const body = { decision };
   if (text) body.note = text;
+  if (decision === 'approved' && Array.isArray(items) && items.length > 0) {
+    const validItems = [];
+    for (const it of items) {
+      const itId = parseId(it?.id);
+      const itQty = normalizeRequestQuantity(it?.quantity);
+      if (itId && itQty) {
+        validItems.push({ id: itId, quantity: itQty });
+      }
+    }
+    if (validItems.length > 0) {
+      body.items = validItems;
+    }
+  }
   return request(`/supply-requests/${id}/decision`, { method: 'POST', body });
 };
 

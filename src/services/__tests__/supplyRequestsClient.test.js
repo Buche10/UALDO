@@ -5,6 +5,7 @@ import {
   cancelRequest,
   createRequest,
   decideRequest,
+  getPurchasingOverview,
   getRequest,
   getShoppingList,
   listRequests,
@@ -27,7 +28,7 @@ describe('supplyRequestsClient', () => {
     ['0', '100000.001', '1.2345', '-1', 'abc', '', null].forEach((value) => expect(normalizeRequestQuantity(value)).toBeNull());
   });
 
-  it('lists with valid filters only', async () => {
+  it('lists with valid filters only and gets purchasing overview', async () => {
     await listRequests();
     expect(spy).toHaveBeenLastCalledWith('/supply-requests');
     await listRequests({ status: 'pending', mine: true, page: 2 });
@@ -36,6 +37,8 @@ describe('supplyRequestsClient', () => {
     expect(spy).toHaveBeenLastCalledWith('/supply-requests');
     await getShoppingList();
     expect(spy).toHaveBeenLastCalledWith('/supply-requests/shopping-list');
+    await getPurchasingOverview();
+    expect(spy).toHaveBeenLastCalledWith('/supply-requests/shopping-list?overview=1');
   });
 
   it('creates a request with catalog and free text items and the client uuid', async () => {
@@ -59,6 +62,21 @@ describe('supplyRequestsClient', () => {
         ],
       },
     });
+  });
+
+  it('omite la cantidad si está vacía (Brief 26p) y nunca envía 0', async () => {
+    const res = buildRequestBody({
+      priority: 'normal',
+      items: [
+        { inventory_item_id: 15, quantity: '' },
+        { free_text_name: 'Tomates', unit: 'kg', quantity: null },
+      ],
+    });
+    expect(Object.keys(res.errors)).toHaveLength(0);
+    expect(res.body.items).toEqual([
+      { inventory_item_id: 15 },
+      { free_text_name: 'Tomates', unit: 'kg' },
+    ]);
   });
 
   it('reports errors with the engine keys and does not call it', async () => {
@@ -86,7 +104,7 @@ describe('supplyRequestsClient', () => {
     expect(buildRequestBody({ items: [{ inventory_item_id: 1, quantity: '1' }] }).body.priority).toBe('normal');
   });
 
-  it('decides with a required reason to reject', async () => {
+  it('decides with a required reason to reject and accepts optional items with quantity', async () => {
     expect((await decideRequest(9, 'rejected', '  ')).data.errors.note).toBeDefined();
     expect((await decideRequest(9, 'otra', 'x')).status).toBe(422);
     expect((await decideRequest(9, 'approved', 'x'.repeat(501))).status).toBe(422);
@@ -97,6 +115,16 @@ describe('supplyRequestsClient', () => {
     expect(spy).toHaveBeenLastCalledWith('/supply-requests/9/decision', { method: 'POST', body: { decision: 'approved' } });
     await decideRequest(9, 'rejected', ' Ya hay stock ');
     expect(spy).toHaveBeenLastCalledWith('/supply-requests/9/decision', { method: 'POST', body: { decision: 'rejected', note: 'Ya hay stock' } });
+
+    // Con items fijados en aprobacion (Brief 26p)
+    await decideRequest(9, 'approved', null, [{ id: 101, quantity: '3,5' }]);
+    expect(spy).toHaveBeenLastCalledWith('/supply-requests/9/decision', {
+      method: 'POST',
+      body: {
+        decision: 'approved',
+        items: [{ id: 101, quantity: '3.5' }],
+      },
+    });
   });
 
   it('runs the transitions with validated ids', async () => {

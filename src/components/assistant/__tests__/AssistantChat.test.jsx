@@ -24,12 +24,12 @@ describe('AssistantChat component', () => {
 
     render(<AssistantChat user={staffUser} />);
 
-    const chip = screen.getByText('Pedir insumos');
+    const chip = screen.getByText('Reportar faltantes');
     expect(chip).toBeInTheDocument();
     fireEvent.click(chip);
 
     await waitFor(() => {
-      expect(screen.getByText('Quiero pedir insumos para el restaurante')).toBeInTheDocument();
+      expect(screen.getByText('Quiero reportar lo que falta en el local')).toBeInTheDocument();
       expect(screen.getByText('Abriendo pedidos de insumos...')).toBeInTheDocument();
     });
   });
@@ -38,7 +38,7 @@ describe('AssistantChat component', () => {
     render(<AssistantChat user={ownerUser} />);
 
     expect(screen.getByText('Pedidos por aprobar')).toBeInTheDocument();
-    expect(screen.getByText('Lista de compras')).toBeInTheDocument();
+    expect(screen.getByText('Qué hay que comprar')).toBeInTheDocument();
     expect(screen.getByText('Pedir insumos')).toBeInTheDocument();
   });
 

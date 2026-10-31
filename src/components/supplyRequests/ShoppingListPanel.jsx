@@ -1,47 +1,52 @@
 import React from 'react';
-import { useShoppingList } from '../../hooks/useSupplyRequests';
+import { usePurchasingOverview } from '../../hooks/useSupplyRequests';
 import { styles } from '../common/uiStyles';
-import { quantityWithUnit } from './requestUi';
+import ApprovedPurchases from './ApprovedPurchases';
+import PendingReports from './PendingReports';
+import LowStockSuggestions from './LowStockSuggestions';
 
 /**
- * Lista de compras consolidada (Brief 22p, solo el dueño): lo aprobado y sin
- * comprar, agrupado por insumo y con los urgentes primero, como lo manda el
- * motor.
+ * Panel de compras consolidado para el dueño (Brief 22p / 26p).
+ * Muestra lo reportado por aprobar, lo aprobado para compra y los insumos bajo mínimo.
  */
-export default function ShoppingListPanel() {
-  const { items, loading, error, reload } = useShoppingList();
+export default function ShoppingListPanel({ onViewRequest }) {
+  const { overview, loading, error, reload } = usePurchasingOverview();
 
-  if (loading) return <div style={styles.muted}>Cargando la lista de compras...</div>;
+  const isEmpty = !overview.aprobado.length && !overview.por_aprobar.length && !overview.bajo_minimo.length;
+
+  if (loading && isEmpty && !error) {
+    return <div style={styles.muted}>Cargando la información de compras...</div>;
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div aria-live="polite">
         {error && (
           <div style={{ ...styles.errorBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
             <span>{error}</span>
-            <button type="button" onClick={reload} className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '9999px' }}>Reintentar</button>
+            <button type="button" onClick={reload} className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '9999px' }}>
+              Reintentar
+            </button>
           </div>
         )}
       </div>
 
-      {!error && items.length === 0 && <div style={styles.muted}>No hay pedidos aprobados por comprar.</div>}
+      {/* Bloque 1: Reportes del personal por aprobar */}
+      <PendingReports
+        reports={overview.por_aprobar}
+        onView={onViewRequest}
+        onReload={reload}
+      />
 
-      {items.map((item) => (
-        <div key={`${item.inventory_item_id ?? 'libre'}-${item.name}-${item.unit}`} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px' }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-              {item.name}{item.has_urgent ? ' (urgente)' : ''}
-            </div>
-            <div style={{ color: 'var(--text-muted)' }}>
-              {item.inventory_item_id
-                ? `Stock ${quantityWithUnit(item.stock, item.unit)}, mínimo ${quantityWithUnit(item.min_stock, item.unit)}.`
-                : 'Fuera del catálogo.'}
-              {` ${item.requests_count === 1 ? '1 pedido' : `${item.requests_count} pedidos`}.`}
-            </div>
-          </div>
-          <div style={{ fontWeight: 700, color: item.has_urgent ? 'var(--warning)' : 'var(--text-main)', whiteSpace: 'nowrap' }}>{quantityWithUnit(item.quantity, item.unit)}</div>
-        </div>
-      ))}
+      {/* Bloque 2: Compras aprobadas */}
+      <ApprovedPurchases
+        items={overview.aprobado}
+      />
+
+      {/* Bloque 3: Insumos bajo mínimo sin pedir */}
+      <LowStockSuggestions
+        items={overview.bajo_minimo}
+      />
     </div>
   );
 }

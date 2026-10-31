@@ -3,6 +3,7 @@ import {
   cancelRequest,
   createRequest,
   decideRequest,
+  getPurchasingOverview,
   getRequest,
   getShoppingList,
   listRequests,
@@ -51,7 +52,7 @@ export function useSupplyRequestDetail(requestId) {
 }
 
 const ACTIONS = {
-  approve: (id, note) => decideRequest(id, 'approved', note),
+  approve: (id, note, items) => (items ? decideRequest(id, 'approved', note, items) : decideRequest(id, 'approved', note)),
   reject: (id, note) => decideRequest(id, 'rejected', note),
   purchased: (id) => markPurchased(id),
   received: (id) => markReceived(id),
@@ -59,7 +60,7 @@ const ACTIONS = {
 };
 
 /**
- * Transiciones de un pedido (Brief 22p). Un 409 explica el motivo del motor y
+ * Transiciones de un pedido (Brief 22p / 26p). Un 409 explica el motivo del motor y
  * pide el estado real (`onStale`).
  */
 export function useSupplyRequestActions({ requestId, onUpdated, onStale }) {
@@ -69,12 +70,12 @@ export function useSupplyRequestActions({ requestId, onUpdated, onStale }) {
   // pasaría el control. El ref lo bloquea de inmediato.
   const busyRef = useRef(false);
 
-  const run = async (action, note) => {
+  const run = async (action, note, items) => {
     if (busyRef.current) return false;
     busyRef.current = true;
     setError(null);
     setBusy(action);
-    const res = await ACTIONS[action](requestId, note);
+    const res = await ACTIONS[action](requestId, note, items);
     busyRef.current = false;
     setBusy(null);
     if (res.ok) {
@@ -88,6 +89,50 @@ export function useSupplyRequestActions({ requestId, onUpdated, onStale }) {
   };
 
   return { busy, error, run, clearError: () => setError(null) };
+}
+
+/** Vista consolidada de compras del dueño: aprobado, por_aprobar y bajo_minimo (Brief 26p). */
+export function usePurchasingOverview() {
+  const [overview, setOverview] = useState({ aprobado: [], por_aprobar: [], bajo_minimo: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    let res = await getPurchasingOverview();
+    const hasData = res.ok && (Array.isArray(res.data?.data) || res.data?.data?.aprobado);
+    if (!hasData) {
+      const fallback = await getShoppingList();
+      if (fallback.ok && fallback.data?.data) {
+        res = fallback;
+      }
+    }
+    setLoading(false);
+    if (!res.ok) {
+      setError(res.error || 'No se pudo cargar la información de compras.');
+      return;
+    }
+    const data = res.data?.data || res.data || {};
+    if (Array.isArray(data)) {
+      setOverview({
+        aprobado: data,
+        por_aprobar: [],
+        bajo_minimo: []
+      });
+    } else {
+      setOverview({
+        aprobado: Array.isArray(data.aprobado) ? data.aprobado : [],
+        por_aprobar: Array.isArray(data.por_aprobar) ? data.por_aprobar : [],
+        bajo_minimo: Array.isArray(data.bajo_minimo) ? data.bajo_minimo : []
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { overview, loading, error, reload: load };
 }
 
 /** Lista de compras consolidada de lo aprobado y sin comprar (solo el dueño). */

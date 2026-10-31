@@ -3,19 +3,19 @@ import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart } from '
 
 const SUGGESTIONS_BY_ROLE = {
   staff: [
-    { label: 'Pedir insumos', prompt: 'Quiero pedir insumos para el restaurante', icon: PackagePlus },
+    { label: 'Reportar faltantes', prompt: 'Quiero reportar lo que falta en el local', icon: PackagePlus },
     { label: 'Mis pedidos', prompt: 'Muéstrame mis pedidos recientes', icon: ClipboardList },
     { label: 'Buscar un insumo', prompt: 'Buscar existencias de un insumo', icon: Search }
   ],
   owner: [
     { label: 'Pedidos por aprobar', prompt: '¿Hay pedidos pendientes por aprobar?', icon: CheckCircle2 },
-    { label: 'Lista de compras', prompt: 'Muéstrame la lista de compras del restaurante', icon: ShoppingCart },
+    { label: 'Qué hay que comprar', prompt: '¿Qué hay que comprar?', icon: ShoppingCart },
     { label: 'Pedir insumos', prompt: 'Quiero pedir insumos para el restaurante', icon: PackagePlus }
   ]
 };
 
 const DEFAULT_SUGGESTIONS = [
-  { label: 'Pedir insumos', prompt: 'Quiero pedir insumos para el restaurante', icon: PackagePlus },
+  { label: 'Reportar faltantes', prompt: 'Quiero reportar lo que falta en el local', icon: PackagePlus },
   { label: 'Mis pedidos', prompt: 'Muéstrame mis pedidos recientes', icon: ClipboardList }
 ];
 

@@ -57,6 +57,9 @@ function ItemRow({ line, errors, onChange, onRemove, disabled }) {
         <div>
           <label htmlFor={`${base}-qty`} style={styles.label}>Cantidad</label>
           <input id={`${base}-qty`} type="text" inputMode="decimal" value={line.quantity} disabled={disabled} onChange={(e) => onChange(line.key, 'quantity', e.target.value)} style={styles.input} />
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+            Déjala vacía si no sabes cuánto falta
+          </span>
           <span aria-live="polite" style={styles.fieldError}>{errors?.quantity || errors?.inventory_item_id || null}</span>
         </div>
         <div>
@@ -75,7 +78,7 @@ function ItemRow({ line, errors, onChange, onRemove, disabled }) {
 }
 
 /**
- * Líneas de un pedido: del catálogo o en texto libre (Brief 22p). Al agregar
+ * Líneas de un pedido: del catálogo o en texto libre (Brief 22p / 26p). Al agregar
  * una línea, el foco pasa a su primer campo.
  */
 export default function RequestItemsEditor({ items, itemErrors, onAddCatalog, onAddFree, onChange, onRemove, disabled }) {

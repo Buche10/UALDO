@@ -19,7 +19,7 @@ describe('requestUi', () => {
     expect(requesterName({})).toBe('Personal');
     expect(formatDateTime(null)).toBe('');
     expect(formatDateTime('no es fecha')).toBe('');
-    expect(quantityWithUnit(null, 'kg')).toBe('Sin dato');
+    expect(quantityWithUnit(null, 'kg')).toBe('Cantidad por definir');
     expect(quantityWithUnit(2.5, '')).toBe('2,5');
     expect(itemsCount({ items: [{}] })).toBe('1 insumo');
     expect(itemsCount({})).toBe('0 insumos');
@@ -72,6 +72,9 @@ describe('ShoppingListPanel and SupplyRequestDetail errors', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it('retries the shopping list and explains an empty one', async () => {
+    vi.spyOn(client, 'getPurchasingOverview')
+      .mockResolvedValueOnce({ ok: false, status: 0, error: 'Sin conexión' })
+      .mockResolvedValueOnce({ ok: true, data: { data: { aprobado: [], por_aprobar: [], bajo_minimo: [] } } });
     vi.spyOn(client, 'getShoppingList')
       .mockResolvedValueOnce({ ok: false, status: 0, error: 'Sin conexión' })
       .mockResolvedValueOnce({ ok: true, data: { data: [] } });
