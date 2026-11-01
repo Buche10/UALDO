@@ -1,4 +1,4 @@
-import { Package, ClipboardList, Calculator, TrendingUp } from 'lucide-react';
+import { Package, ClipboardList, Calculator, TrendingUp, ClipboardCheck } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
 /**
@@ -42,6 +42,22 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.SALES_TOTALS],
     subView: 'ventas',
     roleRequiredLabel: 'dueño o administración',
+  },
+  {
+    id: 'daily_close',
+    label: 'Cierre del día',
+    description: 'Conteo físico por área y conciliación con el sistema.',
+    icon: ClipboardCheck,
+    permissions: [
+      ABILITIES.INVENTORY_COUNT_KITCHEN,
+      ABILITIES.INVENTORY_COUNT_LOUNGE,
+      ABILITIES.INVENTORY_COUNT_WAREHOUSE,
+      ABILITIES.INVENTORY_VALIDATE_KITCHEN,
+      ABILITIES.INVENTORY_VALIDATE_LOUNGE,
+      ABILITIES.INVENTORY_ADJUST,
+    ],
+    subView: 'daily_close',
+    roleRequiredLabel: 'jefe de cocina, salón, bodega, administración o dueño',
   },
 ];
 

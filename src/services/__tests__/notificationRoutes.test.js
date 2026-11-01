@@ -13,7 +13,8 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('pedidos')).toBe(true);
       expect(ALLOWED_SCREENS.has('cierre_caja')).toBe(true);
       expect(ALLOWED_SCREENS.has('chat')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(5);
+      expect(ALLOWED_SCREENS.has('daily_close')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(6);
     });
   });
 
@@ -30,6 +31,12 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ date: '07-10-2026' })).toEqual({});
       expect(sanitizeActionParams({ date: '2026/10/07' })).toEqual({});
       expect(sanitizeActionParams({ date: 'invalid-date' })).toEqual({});
+    });
+
+    it('allows valid subView in whitelist', () => {
+      expect(sanitizeActionParams({ subView: 'daily_close' })).toEqual({ subView: 'daily_close' });
+      expect(sanitizeActionParams({ subView: 'inventory' })).toEqual({ subView: 'inventory' });
+      expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
     it('never allows arbitrary URLs or script injections', () => {
@@ -58,6 +65,24 @@ describe('notificationRoutes security and routing', () => {
         tab: 'negocios',
         subView: 'inventory',
         params: { id: 15 },
+      });
+    });
+
+    it('resolves inventario with subView daily_close to daily_close screen (Brief 31p)', () => {
+      const route = resolveNotificationRoute('inventario', { subView: 'daily_close' });
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'daily_close',
+        params: { subView: 'daily_close' },
+      });
+    });
+
+    it('resolves daily_close screen directly to negocios daily_close', () => {
+      const route = resolveNotificationRoute('daily_close', {});
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'daily_close',
+        params: {},
       });
     });
 

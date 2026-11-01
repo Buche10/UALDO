@@ -5,6 +5,7 @@ import InventoryView from './InventoryView';
 import CashCloseView from './CashCloseView';
 import SupplyRequestsView from './supplyRequests/SupplyRequestsView';
 import SalesView from './sales/SalesView';
+import DailyCloseView from './inventory/dailyClose/DailyCloseView';
 import ModuleGrid from './modules/ModuleGrid';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
@@ -106,6 +107,14 @@ export default function EcosystemView({
         userId={user?.id}
         openRequest={openRequest}
         onOpenConsumed={onParamsConsumed}
+      />
+    );
+  } else if (currentSubTab === 'daily_close') {
+    content = (
+      <DailyCloseView
+        user={user}
+        initialDate={negociosParams?.date || negociosParams?.fecha}
+        onBack={() => handleSubTabChange('overview')}
       />
     );
   }

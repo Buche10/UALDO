@@ -102,5 +102,18 @@ describe('EcosystemView (Brief 22p / 30p)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Volver a módulos' }));
       expect(onSubViewChange).toHaveBeenCalledWith('overview');
     });
+
+    it('renders DailyCloseView on subView="daily_close" for authorized user', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 1,
+        role: 'owner',
+        capabilities: { abilities: [ABILITIES.INVENTORY_COUNT_KITCHEN] },
+      });
+      render(<EcosystemView subView="daily_close" onSubViewChange={vi.fn()} />);
+      expect(screen.getByText('Cierre del día')).toBeInTheDocument();
+
+
+
+    });
   });
 });

@@ -93,6 +93,9 @@ describe('ModuleGrid component (Brief 30p)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Inventario:/i }));
     expect(onSelect).toHaveBeenCalledWith('inventory');
+
+    fireEvent.click(screen.getByRole('button', { name: /Cierre del día:/i }));
+    expect(onSelect).toHaveBeenCalledWith('daily_close');
   });
 
   it('muestra mensaje informativo si el usuario no tiene módulos habilitados', () => {
