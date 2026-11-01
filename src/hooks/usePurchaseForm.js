@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { createPurchase } from '../services/purchasesClient';
 import { generateClientUuid } from './useMovementSubmit';
-import { addItem, mapLineErrors, removeLine, toPayloadLines, updateLine } from './purchaseLines';
+import { addItem, addOtherLine, mapLineErrors, removeLine, toPayloadLines, updateLine } from './purchaseLines';
 
 /** Fecha de hoy en el teléfono, como AAAA-MM-DD. */
 export function todayIso(now = new Date()) {
@@ -18,6 +18,7 @@ export function useLinesState(initialLines = []) {
   const [lineErrors, setLineErrors] = useState({});
 
   const onAddItem = useCallback((item) => setLines((prev) => addItem(prev, item)), []);
+  const onAddOther = useCallback(() => setLines((prev) => addOtherLine(prev)), []);
   const onRemove = useCallback((key) => setLines((prev) => removeLine(prev, key)), []);
   const onChange = useCallback((key, field, value) => {
     setLines((prev) => updateLine(prev, key, field, value));
@@ -29,7 +30,7 @@ export function useLinesState(initialLines = []) {
     });
   }, []);
 
-  return { lines, lineErrors, setLineErrors, onAddItem, onRemove, onChange };
+  return { lines, lineErrors, setLineErrors, onAddItem, onAddOther, onRemove, onChange };
 }
 
 /** Clave del error del motor para cada campo de la cabecera. */

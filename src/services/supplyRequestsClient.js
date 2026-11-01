@@ -153,3 +153,59 @@ export const updateSupplySettings = async (settings = {}) => {
   });
 };
 
+
+export const savePurchaseOutcome = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return invalid(422, 'Debe enviar al menos un ítem.', { items: ['Debe enviar al menos un ítem.'] });
+  }
+  if (items.length > 100) {
+    return invalid(422, 'No puede registrar más de 100 ítems por lote.', { items: ['No puede registrar más de 100 ítems por lote.'] });
+  }
+  const errors = {};
+  const normalized = [];
+  const validOutcomes = ['purchased', 'partial', 'not_purchased'];
+
+  items.forEach((item, index) => {
+    const key = (f) => `items.${index}.${f}`;
+    const id = parseId(item?.supply_request_item_id ?? item?.id);
+    if (!id) errors[key('supply_request_item_id')] = ['Identificador de ítem inválido.'];
+
+    const outcome = trimmed(item?.outcome);
+    if (!validOutcomes.includes(outcome)) {
+      errors[key('outcome')] = ['Resultado de compra no válido.'];
+    }
+
+    const reason = trimmed(item?.reason);
+    if ((outcome === 'partial' || outcome === 'not_purchased') && !reason) {
+      errors[key('reason')] = ['El motivo es obligatorio cuando la compra no es completa.'];
+    }
+
+    let purchasedQuantity = null;
+    if (outcome === 'partial') {
+      purchasedQuantity = normalizeRequestQuantity(item?.purchased_quantity);
+      if (!purchasedQuantity) {
+        errors[key('purchased_quantity')] = ['Indica la cantidad comprada.'];
+      }
+    } else if (outcome === 'purchased' && item?.purchased_quantity !== undefined && item?.purchased_quantity !== null) {
+      purchasedQuantity = normalizeRequestQuantity(item?.purchased_quantity);
+    }
+
+    const row = {
+      supply_request_item_id: id,
+      outcome,
+      ...(reason ? { reason } : {}),
+      ...(purchasedQuantity ? { purchased_quantity: purchasedQuantity } : {}),
+      ...(item?.purchase_line_id ? { purchase_line_id: parseId(item.purchase_line_id) } : {}),
+    };
+    normalized.push(row);
+  });
+
+  if (Object.keys(errors).length > 0) {
+    return invalid(422, 'Revisa los resultados de compra.', errors);
+  }
+
+  return request('/supply-requests/purchase-outcome', {
+    method: 'POST',
+    body: { items: normalized },
+  });
+};

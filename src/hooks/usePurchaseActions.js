@@ -58,7 +58,7 @@ export function usePurchaseActions({ purchaseId, onUpdated, onStale }) {
     return { ok: false, res };
   };
 
-  const receive = () => run('receive', () => receivePurchase(purchaseId));
+  const receive = (lines) => run('receive', () => receivePurchase(purchaseId, lines));
   const cancel = () => run('cancel', () => cancelPurchase(purchaseId));
 
   /** Devuelve los errores por línea y el general si se rechazan las líneas. */

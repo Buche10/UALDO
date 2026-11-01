@@ -6,9 +6,13 @@ import PurchaseForm from './PurchaseForm';
 import PurchaseDetail from './PurchaseDetail';
 import SuppliersPanel from './SuppliersPanel';
 import ValuationPanel from './ValuationPanel';
+import OtherPurchasesPanel from './OtherPurchasesPanel';
+import ReconciliationPanel from './ReconciliationPanel';
 
 const TABS = [
   { id: 'purchases', label: 'Compras' },
+  { id: 'other', label: 'Otras' },
+  { id: 'reconciliation', label: 'Conciliación' },
   { id: 'suppliers', label: 'Proveedores' },
   { id: 'valuation', label: 'Valor' },
 ];
@@ -22,11 +26,7 @@ const NOTICES = {
 };
 
 /**
- * Compras, proveedores y valor del inventario (Brief 20p). Solo el dueño
- * llega aquí; el motor igual responde 403 al personal.
- *
- * La pestaña Compras queda montada (oculta) al cambiar de pestaña: así un
- * formulario a medias conserva lo escrito y su client_uuid.
+ * Compras, proveedores, otras compras y conciliación (Brief 20p / 33p).
  */
 export default function PurchasesView({ onBack }) {
   const [tab, setTab] = useState('purchases');
@@ -36,7 +36,6 @@ export default function PurchasesView({ onBack }) {
   const [notice, setNotice] = useState(null);
   const list = usePurchases(status);
 
-  // La lista filtrada solo muestra compras que cumplen el filtro.
   const syncList = (purchase) => {
     if (!purchase?.id) return;
     if (!status || purchase.status === status) list.upsert(purchase);
@@ -78,9 +77,9 @@ export default function PurchasesView({ onBack }) {
         </button>
       </div>
 
-      <div role="tablist" aria-label="Secciones de compras" style={{ display: 'flex', gap: '6px', background: 'var(--chip-bg)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+      <div role="tablist" aria-label="Secciones de compras" style={{ display: 'flex', gap: '6px', background: 'var(--chip-bg)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)', overflowX: 'auto' }}>
         {TABS.map((t) => (
-          <button key={t.id} id={`purchases-tab-${t.id}`} type="button" role="tab" aria-selected={tab === t.id} aria-controls={`purchases-panel-${t.id}`} onClick={() => { setTab(t.id); setNotice(null); }} style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: 'none', background: tab === t.id ? 'var(--primary)' : 'transparent', color: tab === t.id ? 'var(--on-primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+          <button key={t.id} id={`purchases-tab-${t.id}`} type="button" role="tab" aria-selected={tab === t.id} aria-controls={`purchases-panel-${t.id}`} onClick={() => { setTab(t.id); setNotice(null); }} style={{ flex: '1 0 auto', padding: '8px 10px', borderRadius: '8px', border: 'none', background: tab === t.id ? 'var(--primary)' : 'transparent', color: tab === t.id ? 'var(--on-primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             {t.label}
           </button>
         ))}
@@ -93,6 +92,8 @@ export default function PurchasesView({ onBack }) {
       <div id="purchases-panel-purchases" role="tabpanel" aria-labelledby="purchases-tab-purchases" hidden={tab !== 'purchases'}>
         {purchasesContent}
       </div>
+      {tab === 'other' && <div id="purchases-panel-other" role="tabpanel" aria-labelledby="purchases-tab-other"><OtherPurchasesPanel /></div>}
+      {tab === 'reconciliation' && <div id="purchases-panel-reconciliation" role="tabpanel" aria-labelledby="purchases-tab-reconciliation"><ReconciliationPanel /></div>}
       {tab === 'suppliers' && <div id="purchases-panel-suppliers" role="tabpanel" aria-labelledby="purchases-tab-suppliers"><SuppliersPanel /></div>}
       {tab === 'valuation' && <div id="purchases-panel-valuation" role="tabpanel" aria-labelledby="purchases-tab-valuation"><ValuationPanel /></div>}
     </div>

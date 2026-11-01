@@ -6,7 +6,12 @@ import { locationLabel } from '../../../services/inventoryLocations';
  * formatea lo que manda el motor: no suma ni divide montos.
  */
 
-export const STATUS_LABELS = { draft: 'Borrador', received: 'Recibida', cancelled: 'Cancelada' };
+export const STATUS_LABELS = {
+  draft: 'En borrador',
+  received: 'Recibida',
+  received_with_issues: 'Recibida con diferencias',
+  cancelled: 'Cancelada',
+};
 
 export function statusLabel(status) {
   return STATUS_LABELS[status] || 'Sin dato';

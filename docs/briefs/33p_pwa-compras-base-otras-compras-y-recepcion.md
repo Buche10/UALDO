@@ -55,6 +55,16 @@ Administración carga la base y los mínimos de cada insumo, marca qué se compr
 7. **Conciliación.** `ReconciliationPanel.jsx` en Compras, con fecha y una tabla por insumo (pedido, comprado, facturado, recibido) que resalta las filas con alerta. En móvil, cada fila se muestra como tarjeta.
 8. **Ajustes** (`settings.manage`): factor de exceso de la base, tolerancia de recepción e importe de aviso de otras compras. Componente `PurchasingSettingsForm.jsx`.
 
+### Pendientes de la auditoría del Brief 32p_fix
+
+La auditoría del 2026-11-01 aprobó el 32p_fix con observaciones. Corrígelas en esta misma rama:
+
+- **Accesos rápidos del chat** (`src/components/assistant/SuggestionChips.jsx`). El 32p_fix cambió su presentación sin que se pidiera: quitó la clase `assistant-chips-container` (una sola fila con desplazamiento horizontal, definida en `src/styles/assistant.css`), cambió `role="toolbar"` por `role="region"` y añadió estilos en línea que pisan los de `.chip-btn`. En el celular, los accesos ahora ocupan varias filas encima del campo de texto. Restaura el contenedor, el `role` y las clases originales; conserva solo la lógica nueva de los retiros (accesos "Voy a la bodega" y "Cerrar mi retiro"). Test: el contenedor tiene la clase `assistant-chips-container` y `role="toolbar"`.
+- **Componentes de más de 200 líneas.** El reporte del 32p_fix decía que todos quedaban por debajo de 200, pero `WithdrawalSettingsForm.jsx` tiene 268 y `WithdrawalsView.jsx` 214. Divídelos:
+  - `WithdrawalSettingsForm.jsx`: extrae el bloque de error con "Reintentar" a `WithdrawalSettingsLoadError.jsx`, y el botón de guardar con sus mensajes a `WithdrawalSettingsActions.jsx`.
+  - `WithdrawalsView.jsx`: extrae la carga paginada (`loadData`, `handleLoadMore`, `page`, `hasMore`) a un hook `src/hooks/useWithdrawalsList.js`, y el botón "Ver más" a `WithdrawalsLoadMore.jsx`.
+  - Sin cambiar el comportamiento. Comprueba el tamaño con `wc -l` antes de entregar.
+
 ## Restricciones técnicas
 
 - CERO EMOJIS, sin excepción: ni en interfaz, textos, código, comentarios, logs, consola, commits, docs, tests, datos semilla o nombres de archivo. Iconos solo en SVG (`lucide-react`).
@@ -90,4 +100,5 @@ cd C:/laragon/www/UALDO && npm run build
 - [ ] Otras compras en la compra y en su reporte.
 - [ ] Recepción con peso real, diferencias visibles y resolución.
 - [ ] Conciliación diaria.
+- [ ] Pendientes del 32p_fix: accesos del chat con su presentación original; `WithdrawalSettingsForm.jsx` y `WithdrawalsView.jsx` por debajo de 200 líneas.
 - [ ] Lint, tests y build en verde; cero emojis; marca Ualdo; sin colores fijos.

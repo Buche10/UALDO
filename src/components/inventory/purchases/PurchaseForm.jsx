@@ -76,7 +76,7 @@ export default function PurchaseForm({ onBack, onCreated }) {
         <textarea id="purchase-notes" rows={2} maxLength={500} value={header.notes} onChange={(e) => setField('notes', e.target.value)} style={{ ...styles.input, resize: 'vertical' }} />
       </Field>
 
-      <PurchaseLinesEditor lines={form.lines} lineErrors={form.lineErrors} onAddItem={form.onAddItem} onChange={form.onChange} onRemove={form.onRemove} disabled={submitting} />
+      <PurchaseLinesEditor lines={form.lines} lineErrors={form.lineErrors} onAddItem={form.onAddItem} onAddOther={form.onAddOther} onChange={form.onChange} onRemove={form.onRemove} disabled={submitting} />
 
       <button type="submit" disabled={submitting} className="btn-primary" style={{ padding: '12px', borderRadius: '9999px', fontWeight: 600, cursor: 'pointer' }}>
         {submitting ? 'Guardando...' : 'Guardar borrador'}
