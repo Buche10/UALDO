@@ -65,7 +65,7 @@ export default function WithdrawalCloseActions({
             fontSize: '13px',
             fontWeight: 600,
             background: 'var(--primary)',
-            color: 'var(--text-on-primary)',
+            color: 'var(--on-primary)',
             border: 'none',
             cursor: disabled || hasAnyOver ? 'not-allowed' : 'pointer',
             display: 'flex',

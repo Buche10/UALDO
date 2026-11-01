@@ -18,13 +18,18 @@ export default function WithdrawalsView({ user, initialId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [activeWithdrawal, setActiveWithdrawal] = useState(null);
   const [cancelModalItem, setCancelModalItem] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await listWithdrawals();
+    setPage(1);
+    const res = await listWithdrawals({ page: 1 });
     setLoading(false);
     if (!res.ok) {
       setError(res.error || 'No se pudieron cargar los retiros.');
@@ -32,7 +37,28 @@ export default function WithdrawalsView({ user, initialId }) {
     }
     const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
     setWithdrawals(data);
+    const meta = res.data?.meta;
+    setHasMore(Boolean(meta && meta.current_page < meta.last_page));
   }, []);
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const res = await listWithdrawals({ page: nextPage });
+    setLoadingMore(false);
+    if (!res.ok) return;
+
+    const newItems = Array.isArray(res.data) ? res.data : res.data?.data || [];
+    setWithdrawals((prev) => {
+      const existing = new Set(prev.map((w) => w.id));
+      const unique = newItems.filter((w) => !existing.has(w.id));
+      return [...prev, ...unique];
+    });
+    setPage(nextPage);
+    const meta = res.data?.meta;
+    setHasMore(Boolean(meta && meta.current_page < meta.last_page));
+  };
 
   useEffect(() => {
     loadData();
@@ -42,8 +68,13 @@ export default function WithdrawalsView({ user, initialId }) {
     if (initialId) {
       getWithdrawal(initialId).then((res) => {
         if (res.ok && res.data) {
-          setActiveWithdrawal(res.data);
-          setViewMode('close');
+          const st = res.data.status;
+          if (st === 'open' || st === 'escalated') {
+            setActiveWithdrawal(res.data);
+            setViewMode('close');
+          } else {
+            setError('Ese retiro ya se cerró o se canceló.');
+          }
         }
       });
     }
@@ -131,16 +162,40 @@ export default function WithdrawalsView({ user, initialId }) {
           Cargando retiros...
         </div>
       ) : (
-        <WithdrawalsList
-          withdrawals={displayedList}
-          currentUser={user}
-          showAuthor={activeTab === 'area'}
-          onCloseClick={(w) => {
-            setActiveWithdrawal(w);
-            setViewMode('close');
-          }}
-          onCancelClick={(w) => setCancelModalItem(w)}
-        />
+        <>
+          <WithdrawalsList
+            withdrawals={displayedList}
+            currentUser={user}
+            showAuthor={activeTab === 'area'}
+            onCloseClick={(w) => {
+              setActiveWithdrawal(w);
+              setViewMode('close');
+            }}
+            onCancelClick={(w) => setCancelModalItem(w)}
+          />
+
+          {hasMore && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="btn-secondary"
+              style={{
+                alignSelf: 'center',
+                padding: '8px 20px',
+                borderRadius: '9999px',
+                border: '1px solid var(--border-glass)',
+                background: 'var(--surface-soft)',
+                color: 'var(--text-main)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: loadingMore ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {loadingMore ? 'Cargando...' : 'Ver más'}
+            </button>
+          )}
+        </>
       )}
 
       {cancelModalItem && (

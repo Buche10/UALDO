@@ -48,7 +48,7 @@ export default function WithdrawalsViewHeader({
                 padding: '6px 14px',
                 borderRadius: '9999px',
                 background: 'var(--primary)',
-                color: 'var(--text-on-primary)',
+                color: 'var(--on-primary)',
                 border: 'none',
                 fontSize: '12px',
                 fontWeight: 600,

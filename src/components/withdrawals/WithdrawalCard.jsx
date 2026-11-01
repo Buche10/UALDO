@@ -97,20 +97,36 @@ export default function WithdrawalCard({
             color: 'var(--text-muted)',
           }}
         >
-          {items.map((it, idx) => (
-            <div key={it.id || idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>{it.item_name || it.name || 'Insumo'}</span>
-              <span>
-                {it.quantity} {it.unit || ''}
-                {it.consumed !== undefined ? ` · Usado: ${it.consumed} · Devuelto: ${it.returned}` : ''}
-              </span>
+          {items.map((it, idx) => {
+            const consumedVal = it.consumed_quantity !== null && it.consumed_quantity !== undefined ? it.consumed_quantity : it.consumed;
+            const returnedVal = it.returned_quantity !== null && it.returned_quantity !== undefined ? it.returned_quantity : it.returned;
+            const keptVal = it.kept_quantity !== null && it.kept_quantity !== undefined ? it.kept_quantity : it.kept;
+            const hasUsage = consumedVal !== undefined && consumedVal !== null;
+            const keptNum = parseFloat(keptVal) || 0;
+
+            return (
+              <div key={it.id || idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                <span>{it.item_name || it.name || 'Insumo'}</span>
+                <span>
+                  {it.quantity} {it.unit || ''}
+                  {hasUsage ? ` · Usado: ${consumedVal} · Devuelto: ${returnedVal}` : ''}
+                  {keptNum > 0 ? ` · Quedó: ${keptVal}` : ''}
+                </span>
+              </div>
+            );
+          })}
+          {withdrawal.closing_note && (
+            <div style={{ fontStyle: 'italic', marginTop: '4px' }}>
+              Nota de cierre: {withdrawal.closing_note}
             </div>
-          ))}
-          {withdrawal.note && (
-            <div style={{ fontStyle: 'italic', marginTop: '4px' }}>Nota: {withdrawal.note}</div>
+          )}
+          {withdrawal.cancellation_note && (
+            <div style={{ fontStyle: 'italic', color: 'var(--error)', marginTop: '4px' }}>
+              Motivo de cancelación: {withdrawal.cancellation_note}
+            </div>
           )}
           {withdrawal.late_reason && (
-            <div style={{ fontStyle: 'italic', color: 'var(--warning)' }}>
+            <div style={{ fontStyle: 'italic', color: 'var(--warning)', marginTop: '4px' }}>
               Retiro tardío: {withdrawal.late_reason}
             </div>
           )}
@@ -152,7 +168,7 @@ export default function WithdrawalCard({
               fontSize: '12px',
               fontWeight: 600,
               background: 'var(--primary)',
-              color: 'var(--text-on-primary)',
+              color: 'var(--on-primary)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',

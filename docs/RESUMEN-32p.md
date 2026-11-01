@@ -1,4 +1,4 @@
-# Resumen Brief 32p: Retiros de bodega en la app
+# Resumen Brief 32p y 32p_fix: Retiros de bodega en la app
 
 ## 1. Alcance y Objetivo
 Implementación completa del frontend para la declaración previa y confirmación de uso de retiros de bodega en la PWA de Ualdo Negocios (`C:\laragon\www\UALDO`), rama `feat/pwa-retiros-de-bodega`.
@@ -7,60 +7,70 @@ Permite que cualquier trabajador declare insumos antes de sacarlos de la bodega 
 
 ---
 
-## 2. Archivos Creados y Modificados
+## 2. Correcciones de Auditoría (Brief 32p_fix)
 
-### Servicios y Rutas
-- `src/services/withdrawalsClient.js`: cliente API completo con endpoints (`createWithdrawal`, `listWithdrawals`, `getWithdrawal`, `closeWithdrawal`, `cancelWithdrawal`, `getWithdrawalSettings`, `updateWithdrawalSettings`), normalización de cantidades (hasta 3 decimales), validación de 1 a 15 insumos, `client_uuid` estable e idempotente, validación de `withdrawn_at` (máx. 24h atrás) con `late_reason`, y mapeo de errores `422` de stock insuficiente a la línea del insumo correspondiente.
-- `src/services/notificationRoutes.js`: inclusión de rutas seguras para notificaciones de retiros (`screen: 'retiros'` y `screen: 'withdrawals'`).
-- `src/components/modules/moduleRegistry.js`: registro del módulo de retiros con icono `ArrowDownRight`, permisos `withdrawals.declare` y `withdrawals.supervise`, y `subView: 'withdrawals'`.
+### Desempaquetado Único de Respuestas del Motor (HIGH)
+- En `src/services/withdrawalsClient.js`: se incorporó la función auxiliar `unwrap(res)` que desenvuelve `{ ...res, data: res.data.data }` cuando `res.ok && res.data?.data`.
+- Aplicado en los endpoints que devuelven recursos individuales o ajustes: `getWithdrawal`, `createWithdrawal`, `closeWithdrawal`, `cancelWithdrawal`, `getWithdrawalSettings`, `updateWithdrawalSettings`.
+- Se preserva el formato de paginación intacto en `listWithdrawals` (`res.data` contiene `{ data: [...], links: {...}, meta: {...} }`).
+- Simplificación en `WithdrawalForm.jsx`: `onSuccess?.(res.data)` sin dobles lecturas manuales.
 
-### Componentes de UI (`src/components/withdrawals/`)
-- `withdrawalHelpers.js`: helpers puros de visualización (traducción de ubicaciones, badges de estado con CSS variables, primer nombre de usuario y lógica de capacidad de cancelación dentro de 15 minutos).
-- `WithdrawalForm.jsx`: formulario de declaración rápida con destino por defecto según área, buscador con `useItemSearch`, chips de sugerencias rápidas ("Producción", "Mise en place", "Servicio"), casilla de retiro tardío y manejo de errores 422 en línea. (193 líneas).
-- `WithdrawalFormItems.jsx`: gestor de lista dinámica de insumos (1 a 15 elementos). (59 líneas).
-- `WithdrawalItemRow.jsx`: fila individual con buscador en catálogo de inventario, cambio de insumo, cantidad y visualización de unidad. (189 líneas).
-- `WithdrawalFormLateFields.jsx`: campos de fecha/hora y motivo para retiros tardíos. (62 líneas).
-- `WithdrawalCloseForm.jsx`: formulario de confirmación de cierre de retiro. (175 líneas).
-- `WithdrawalCloseRow.jsx`: fila de cierre con inputs "Usé" y "Devolví", cálculo en vivo de "Queda en {área}" y validación visual cuando la suma supera lo retirado. (117 líneas).
-- `WithdrawalCloseActions.jsx`: nota explicativa obligatoria (si queda insumo o si un supervisor cierra en nombre de otro) y botones pastilla de acción. (84 líneas).
-- `WithdrawalCancelModal.jsx`: modal de cancelación que muestra tiempo restante para el autor (primeros 15 minutos) o exige motivo obligatorio para supervisores tras 15 minutos. (166 líneas).
-- `WithdrawalCard.jsx`: tarjeta de retiro con badge de estado, resumen de insumos, autor, acordeón de detalles y acciones de cerrar y cancelar. (171 líneas).
-- `WithdrawalsList.jsx`: lista con ordenamiento prioritario (abiertos y escalados primero, luego cerrados y cancelados cronológicamente). (61 líneas).
-- `WithdrawalsView.jsx`: vista principal con navegación entre lista, declaración, cierre y modal de cancelación. Pestañas "Mis retiros" y "Mi área" (restringida a `withdrawals.supervise`). (159 líneas).
-- `WithdrawalsViewHeader.jsx`: cabecera con botón de recarga, botón "+ Declarar retiro" y pestañas filtradas. (105 líneas).
-- `WithdrawalSettingsForm.jsx`: formulario de configuración de recordatorios para administración (`settings.manage`). (195 líneas).
-- `WithdrawalSettingsIntervals.jsx`: campos de primer recordatorio e intervalo entre avisos. (46 líneas).
-- `WithdrawalSettingsQuietHours.jsx`: campos de franja horaria silenciosa. (42 líneas).
+### Ajustes de Retiros (WithdrawalSettingsForm) (HIGH)
+- Manejo estricto de errores de carga: si falla la petición, no se inicializan ni muestran valores por defecto ni se permite guardar una configuración errónea. Se oculta el formulario y el botón de guardado, mostrando mensaje de error y botón de "Reintentar".
+- Al guardar ajustes, el formulario se actualiza fielmente con los valores devueltos por el motor (`res.data`).
 
-### Integraciones
-- `src/components/modules/ModuleCard.jsx`: soporte de insignias numéricas (badges) con variables CSS.
-- `src/components/modules/ModuleGrid.jsx`: carga y renderizado de la cantidad de retiros abiertos propios en la tarjeta de módulo.
-- `src/components/EcosystemView.jsx`: enrutamiento del submódulo `withdrawals`.
-- `src/components/SettingsView.jsx`: renderizado de `WithdrawalSettingsForm` condicionado a `settings.manage`.
-- `src/components/assistant/SuggestionChips.jsx`: chips rápidos en el chat asistente ("Voy a la bodega" y "Cerrar mi retiro" si el usuario tiene retiros abiertos).
+### Mocks Realistas en Tests (HIGH)
+- `withdrawalsClient.test.js`: pruebas de `unwrap` con la estructura real del motor (`{ data: { ... } }`).
+- `WithdrawalSettingsForm.test.jsx`: prueba con respuesta del motor (`reminder_after_minutes: 45`) comprobando que se muestre 45 (y no el valor por defecto de 120), y prueba de fallo de carga donde no se muestra "Guardar ajustes" sino "Reintentar".
+- `WithdrawalsView.test.jsx`: prueba de apertura con `initialId` con la estructura `{ data: { ... } }` verificando que el formulario de cierre renderice las líneas e insumos correctamente.
+
+### Tokens de Color y Estilos de Marca (MEDIUM y LOW)
+- Se reemplazó la variable inexistente `var(--text-on-primary)` por `var(--on-primary)` en:
+  - `WithdrawalCancelModal.jsx`
+  - `WithdrawalCard.jsx`
+  - `WithdrawalCloseActions.jsx`
+  - `WithdrawalSettingsForm.jsx`
+  - `WithdrawalsViewHeader.jsx`
+- En `WithdrawalCancelModal.jsx`: se reemplazó el fondo fijo `rgba(0, 0, 0, 0.6)` por la variable semántica `var(--overlay)`.
+
+### Nombres de Campos Reales del Motor en la Tarjeta de Retiro (MEDIUM)
+- En `WithdrawalCard.jsx`:
+  - Lectura de cantidades de insumos: `consumed_quantity`, `returned_quantity` y `kept_quantity` (mostrando "Quedó: {cant}" únicamente si es mayor a cero).
+  - Notas de cierre y cancelación: lectura de `closing_note` ("Nota de cierre: ...") y `cancellation_note` ("Motivo de cancelación: ...").
+
+### Dependencias y Memoización (MEDIUM)
+- En `ModuleGrid.jsx`: se cambiaron las dependencias del `useEffect` de retiros a `[userId, canDeclare, badges.withdrawals]` para evitar peticiones redundantes ante referencias de usuario no mutadas. Se añadió test unitario validando una sola llamada a `/withdrawals` tras dos renders consecutivos con el mismo usuario.
+- En `withdrawalHelpers.js`: se exportó la función pura `countMyPendingWithdrawals(list, userId)` para filtrar retiros propios (`w.user?.id || w.user_id`) con estado `open` o `escalated`.
+- En `SuggestionChips.jsx`: el chip "Cerrar mi retiro" se calcula con `countMyPendingWithdrawals(list, userId)`, asegurando que no aparezca si los retiros abiertos pertenecen a otros usuarios.
+
+### Retiro ya Cerrado o Cancelado por Notificación e Historial (LOW)
+- En `WithdrawalsView.jsx`: al ingresar por `initialId`, si el retiro ya se encuentra en estado `closed` o `cancelled`, no se abre la vista de cierre; la vista se mantiene en la lista y se despliega el aviso `"Ese retiro ya se cerró o se canceló."`.
+
+### Paginación en Lista de Retiros (LOW)
+- En `WithdrawalsView.jsx`: soporte de paginación para negocios con alto volumen de retiros. Carga la primera página (30 registros) y si `meta.current_page < meta.last_page`, muestra el botón "Ver más", solicitando la siguiente página y concatenando los resultados sin duplicar identificadores.
 
 ---
 
 ## 3. Pruebas y Cobertura
 
 ### Tests Unitarios
-- `src/services/__tests__/withdrawalsClient.test.js`: 14 tests (100% éxito).
+- `src/services/__tests__/withdrawalsClient.test.js`: 15 tests (100% éxito).
 - `src/services/__tests__/notificationRoutes.test.js`: 13 tests (100% éxito).
-- `src/components/assistant/__tests__/SuggestionChips.test.jsx`: 5 tests (100% éxito).
-- `src/components/modules/__tests__/ModuleGrid.test.jsx`: 5 tests (100% éxito).
-- `src/components/withdrawals/__tests__/withdrawalHelpers.test.js`: 8 tests (100% éxito).
+- `src/components/assistant/__tests__/SuggestionChips.test.jsx`: 6 tests (100% éxito).
+- `src/components/modules/__tests__/ModuleGrid.test.jsx`: 6 tests (100% éxito).
+- `src/components/withdrawals/__tests__/withdrawalHelpers.test.js`: 9 tests (100% éxito).
 - `src/components/withdrawals/__tests__/WithdrawalForm.test.jsx`: 5 tests (100% éxito).
 - `src/components/withdrawals/__tests__/WithdrawalCloseForm.test.jsx`: 4 tests (100% éxito).
 - `src/components/withdrawals/__tests__/WithdrawalCancelModal.test.jsx`: 3 tests (100% éxito).
-- `src/components/withdrawals/__tests__/WithdrawalCard.test.jsx`: 3 tests (100% éxito).
+- `src/components/withdrawals/__tests__/WithdrawalCard.test.jsx`: 4 tests (100% éxito).
 - `src/components/withdrawals/__tests__/WithdrawalsList.test.jsx`: 2 tests (100% éxito).
-- `src/components/withdrawals/__tests__/WithdrawalsView.test.jsx`: 7 tests (100% éxito).
-- `src/components/withdrawals/__tests__/WithdrawalSettingsForm.test.jsx`: 2 tests (100% éxito).
+- `src/components/withdrawals/__tests__/WithdrawalsView.test.jsx`: 9 tests (100% éxito).
+- `src/components/withdrawals/__tests__/WithdrawalSettingsForm.test.jsx`: 3 tests (100% éxito).
 
-### Cobertura de Código Nuevo (`src/components/withdrawals/`)
-- Total componentes retiros: **97.71% en líneas**, superando holgadamente el umbral del 80% exigido:
+### Cobertura de Código en `src/components/withdrawals/`
+- Total componentes retiros: **98.00% en líneas**, superando holgadamente el 80% exigido:
   - `WithdrawalCancelModal.jsx`: 87.85%
-  - `WithdrawalCard.jsx`: 98.00%
+  - `WithdrawalCard.jsx`: 98.15%
   - `WithdrawalCloseActions.jsx`: 100.00%
   - `WithdrawalCloseForm.jsx`: 95.86%
   - `WithdrawalCloseRow.jsx`: 100.00%
@@ -68,17 +78,17 @@ Permite que cualquier trabajador declare insumos antes de sacarlos de la bodega 
   - `WithdrawalFormItems.jsx`: 100.00%
   - `WithdrawalFormLateFields.jsx`: 100.00%
   - `WithdrawalItemRow.jsx`: 98.79%
-  - `WithdrawalSettingsForm.jsx`: 98.77%
+  - `WithdrawalSettingsForm.jsx`: 100.00%
   - `WithdrawalSettingsIntervals.jsx`: 100.00%
   - `WithdrawalSettingsQuietHours.jsx`: 100.00%
   - `WithdrawalsList.jsx`: 100.00%
-  - `WithdrawalsView.jsx`: 94.48%
+  - `WithdrawalsView.jsx`: 96.02%
   - `WithdrawalsViewHeader.jsx`: 100.00%
   - `withdrawalHelpers.js`: 100.00%
 
 ### Verificación Global
-- `npm run lint`: 0 errores, 47 warnings (sin warnings añadidos sobre la línea base).
-- `npm test -- --run`: 130 suites pasadas, 934 tests pasados de 934 (100%).
-- `securityGuard.test.js`: 5/5 tests pasados (cero emojis, cero colores fijos, cero tokens prohibidos).
-- `npm run build`: compilación limpia en 3.93s sin errores.
-- Todos los componentes `.jsx` tienen menos de 200 líneas (ninguno excede 195 líneas).
+- `npm run lint`: 0 errores, 47 warnings (línea base respetada sin adición de advertencias).
+- `npm test -- --run`: 130 suites pasadas, 942 tests pasados de 942 (100%).
+- `npm run build`: compilación limpia con Vite 5.
+- Todos los componentes `.jsx` tienen menos de 200 líneas (e.g. `WithdrawalSettingsForm.jsx`: 196 líneas, `WithdrawalsView.jsx`: 194 líneas, `WithdrawalCard.jsx`: 182 líneas).
+- Cero emojis y respeto estricto de variables semánticas CSS y tildes en español.

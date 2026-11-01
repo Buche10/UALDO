@@ -68,3 +68,16 @@ export function getCancelCapability(withdrawal, currentUser) {
 
   return { canCancel: false, remainingMinutes: 0, requiresNote: false, isAuthor };
 }
+
+/**
+ * Cuenta los retiros propios pendientes de cierre (open o escalated).
+ */
+export function countMyPendingWithdrawals(list = [], userId) {
+  if (!Array.isArray(list) || !userId) return 0;
+  return list.filter((w) => {
+    const isOwner = Number(w.user?.id || w.user_id) === Number(userId);
+    const isPending = w.status === 'open' || w.status === 'escalated';
+    return isOwner && isPending;
+  }).length;
+}
+

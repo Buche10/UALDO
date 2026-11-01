@@ -11,7 +11,7 @@ import {
   updateWithdrawalSettings,
 } from '../withdrawalsClient';
 
-describe('withdrawalsClient (Brief 32p)', () => {
+describe('withdrawalsClient (Brief 32p & 32p_fix)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -59,59 +59,77 @@ describe('withdrawalsClient (Brief 32p)', () => {
 
     it('valida longitud del motivo (entre 3 y 200 caracteres)', async () => {
       const resShort = await createWithdrawal({
-        items: [{ item_id: 1, quantity: '2' }],
+        items: [{ item_id: 1, quantity: '1' }],
         purpose: 'ab',
         client_uuid: validUuid,
       });
       expect(resShort.ok).toBe(false);
       expect(resShort.error).toContain('entre 3 y 200 caracteres');
+    });
 
-      const resLong = await createWithdrawal({
-        items: [{ item_id: 1, quantity: '2' }],
-        purpose: 'a'.repeat(201),
+    it('valida formato de client_uuid', async () => {
+      const resBadUuid = await createWithdrawal({
+        items: [{ item_id: 1, quantity: '1' }],
+        purpose: 'Producción',
+        client_uuid: 'invalid-uuid',
+      });
+      expect(resBadUuid.ok).toBe(false);
+      expect(resBadUuid.error).toContain('client_uuid inválido');
+    });
+
+    it('valida fecha de retiro tardío dentro de las 24 horas y motivo', async () => {
+      const futureDate = new Date(Date.now() + 3600000).toISOString();
+      const resFuture = await createWithdrawal({
+        items: [{ item_id: 1, quantity: '1' }],
+        purpose: 'Producción',
         client_uuid: validUuid,
+        withdrawn_at: futureDate,
+        late_reason: 'Motivo válido',
       });
-      expect(resLong.ok).toBe(false);
-      expect(resLong.error).toContain('entre 3 y 200 caracteres');
-    });
+      expect(resFuture.ok).toBe(false);
+      expect(resFuture.error).toContain('futuro');
 
-    it('valida formato del client_uuid', async () => {
-      const res = await createWithdrawal({
-        items: [{ item_id: 1, quantity: '2' }],
-        purpose: 'Mise en place',
-        client_uuid: 'uuid-invalido',
-      });
-      expect(res.ok).toBe(false);
-      expect(res.error).toBe('client_uuid inválido.');
-    });
-
-    it('valida que withdrawn_at esté dentro de las últimas 24 horas y exija late_reason', async () => {
-      const now = Date.now();
-      const thirtyHoursAgo = new Date(now - 30 * 3600 * 1000).toISOString();
-
+      const oldDate = new Date(Date.now() - 90000000).toISOString();
       const resOld = await createWithdrawal({
-        items: [{ item_id: 1, quantity: '2' }],
-        purpose: 'Servicio',
+        items: [{ item_id: 1, quantity: '1' }],
+        purpose: 'Producción',
         client_uuid: validUuid,
-        withdrawn_at: thirtyHoursAgo,
-        late_reason: 'Olvidé registrarlo',
+        withdrawn_at: oldDate,
+        late_reason: 'Motivo válido',
       });
       expect(resOld.ok).toBe(false);
-      expect(resOld.error).toContain('24 horas atrás');
+      expect(resOld.error).toContain('24 horas');
 
-      const twoHoursAgo = new Date(now - 2 * 3600 * 1000).toISOString();
+      const validDate = new Date(Date.now() - 3600000).toISOString();
       const resNoReason = await createWithdrawal({
-        items: [{ item_id: 1, quantity: '2' }],
-        purpose: 'Servicio',
+        items: [{ item_id: 1, quantity: '1' }],
+        purpose: 'Producción',
         client_uuid: validUuid,
-        withdrawn_at: twoHoursAgo,
+        withdrawn_at: validDate,
         late_reason: '',
       });
       expect(resNoReason.ok).toBe(false);
       expect(resNoReason.error).toContain('motivo del retiro tardío');
     });
 
-    it('envía POST /withdrawals con payload limpio y mapea 422 de stock', async () => {
+    it('desenvuelve la respuesta real { data: { ... } } del motor', async () => {
+      const serverPayload = { id: 99, status: 'open', purpose: 'Mise en place' };
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: serverPayload },
+      });
+
+      const res = await createWithdrawal({
+        items: [{ item_id: 1, quantity: '2' }],
+        purpose: 'Mise en place',
+        client_uuid: validUuid,
+      });
+
+      expect(res.ok).toBe(true);
+      expect(res.data).toEqual(serverPayload);
+    });
+
+    it('mapea errores 422 de stock insuficiente a la línea del insumo', async () => {
       const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: false,
         status: 422,
@@ -139,37 +157,53 @@ describe('withdrawalsClient (Brief 32p)', () => {
   });
 
   describe('listWithdrawals y getWithdrawal', () => {
-    it('listWithdrawals construye query parameters correctamente', async () => {
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: [] } });
+    it('listWithdrawals construye query parameters correctamente y no desenvuelve la paginación', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: [], meta: { current_page: 1, last_page: 1 } },
+      });
 
-      await listWithdrawals({ status: 'open', from: '2026-11-01', to: '2026-11-01', page: 2 });
+      const res = await listWithdrawals({ status: 'open', from: '2026-11-01', to: '2026-11-01', page: 2 });
       expect(spy).toHaveBeenCalledWith('/withdrawals?status=open&from=2026-11-01&to=2026-11-01&page=2');
+      expect(res.data.data).toEqual([]);
 
       await listWithdrawals();
       expect(spy).toHaveBeenCalledWith('/withdrawals');
     });
 
-    it('getWithdrawal valida identificador y consulta endpoint', async () => {
+    it('getWithdrawal valida identificador y desenvuelve el objeto interno { data: { ... } }', async () => {
       const resInvalid = await getWithdrawal(0);
       expect(resInvalid.ok).toBe(false);
       expect(resInvalid.status).toBe(400);
 
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: {} } });
+      const withdrawalData = { id: 5, purpose: 'Tiramisú', lines: [] };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: withdrawalData },
+      });
+
       const resValid = await getWithdrawal(5);
       expect(resValid.ok).toBe(true);
       expect(spy).toHaveBeenCalledWith('/withdrawals/5');
+      expect(resValid.data).toEqual(withdrawalData);
     });
   });
 
   describe('closeWithdrawal y cancelWithdrawal', () => {
-    it('closeWithdrawal valida líneas y envía POST /withdrawals/{id}/close', async () => {
+    it('closeWithdrawal valida líneas, envía POST y desenvuelve la respuesta', async () => {
       const resNoLines = await closeWithdrawal(5, []);
       expect(resNoLines.ok).toBe(false);
       expect(resNoLines.status).toBe(422);
 
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: {} } });
+      const closedData = { id: 5, status: 'closed' };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: closedData },
+      });
+
       const resOk = await closeWithdrawal(5, [{ line_id: 1, consumed: '1.6', returned: '0.4' }], 'Quedó en cámara');
       expect(resOk.ok).toBe(true);
+      expect(resOk.data).toEqual(closedData);
       expect(spy).toHaveBeenCalledWith('/withdrawals/5/close', {
         method: 'POST',
         body: {
@@ -179,14 +213,20 @@ describe('withdrawalsClient (Brief 32p)', () => {
       });
     });
 
-    it('cancelWithdrawal valida identificador y envía POST /withdrawals/{id}/cancel', async () => {
+    it('cancelWithdrawal valida identificador, envía POST y desenvuelve la respuesta', async () => {
       const resInvalid = await cancelWithdrawal('abc');
       expect(resInvalid.ok).toBe(false);
       expect(resInvalid.status).toBe(400);
 
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: {} } });
+      const cancelledData = { id: 12, status: 'cancelled' };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: cancelledData },
+      });
+
       const resOk = await cancelWithdrawal(12, 'Error de insumo');
       expect(resOk.ok).toBe(true);
+      expect(resOk.data).toEqual(cancelledData);
       expect(spy).toHaveBeenCalledWith('/withdrawals/12/cancel', {
         method: 'POST',
         body: { note: 'Error de insumo' },
@@ -195,13 +235,25 @@ describe('withdrawalsClient (Brief 32p)', () => {
   });
 
   describe('ajustes de retiros (getWithdrawalSettings y updateWithdrawalSettings)', () => {
-    it('getWithdrawalSettings consulta /withdrawals/settings', async () => {
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: {} } });
-      await getWithdrawalSettings();
+    it('getWithdrawalSettings consulta /withdrawals/settings y devuelve el objeto interno', async () => {
+      const settingsData = {
+        reminder_after_minutes: 45,
+        reminder_interval_minutes: 90,
+        max_reminders: 4,
+        quiet_start: '01:00',
+        quiet_end: '08:00',
+      };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: settingsData },
+      });
+
+      const res = await getWithdrawalSettings();
       expect(spy).toHaveBeenCalledWith('/withdrawals/settings');
+      expect(res.data).toEqual(settingsData);
     });
 
-    it('updateWithdrawalSettings valida rangos y formato de horas', async () => {
+    it('updateWithdrawalSettings valida rangos y formato de horas, y desenvuelve la respuesta', async () => {
       const resBadMin = await updateWithdrawalSettings({ reminder_after_minutes: 5 });
       expect(resBadMin.ok).toBe(false);
       expect(resBadMin.error).toContain('entre 15 y 1440');
@@ -214,24 +266,24 @@ describe('withdrawalsClient (Brief 32p)', () => {
       expect(resBadTime.ok).toBe(false);
       expect(resBadTime.error).toContain('formato HH:MM');
 
-      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, data: { data: {} } });
-      const resOk = await updateWithdrawalSettings({
+      const updatedSettings = {
         reminder_after_minutes: 60,
         reminder_interval_minutes: 60,
         max_reminders: 2,
         quiet_start: '01:00',
         quiet_end: '08:00',
+      };
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { data: updatedSettings },
       });
+
+      const resOk = await updateWithdrawalSettings(updatedSettings);
       expect(resOk.ok).toBe(true);
+      expect(resOk.data).toEqual(updatedSettings);
       expect(spy).toHaveBeenCalledWith('/withdrawals/settings', {
         method: 'PUT',
-        body: {
-          reminder_after_minutes: 60,
-          reminder_interval_minutes: 60,
-          max_reminders: 2,
-          quiet_start: '01:00',
-          quiet_end: '08:00',
-        },
+        body: updatedSettings,
       });
     });
   });

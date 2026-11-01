@@ -5,6 +5,16 @@ const QTY_REGEX = /^\d+(\.\d{1,3})?$/;
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /**
+ * Desenvuelve el sobre { data: ... } si la respuesta es exitosa y contiene la propiedad data.
+ */
+function unwrap(res) {
+  if (res && res.ok && res.data && typeof res.data === 'object' && 'data' in res.data) {
+    return { ...res, data: res.data.data };
+  }
+  return res;
+}
+
+/**
  * Normaliza una cantidad a formato numérico con punto decimal y hasta 3 decimales.
  */
 export function normalizeWithdrawalQuantity(val) {
@@ -175,7 +185,7 @@ export const createWithdrawal = async (data = {}) => {
     body: payload,
   });
 
-  return mapStockErrorToLine(res, items);
+  return unwrap(mapStockErrorToLine(res, items));
 };
 
 /**
@@ -208,7 +218,8 @@ export const getWithdrawal = async (id) => {
     };
   }
 
-  return request(`/withdrawals/${parsedId}`);
+  const res = await request(`/withdrawals/${parsedId}`);
+  return unwrap(res);
 };
 
 /**
@@ -268,13 +279,14 @@ export const closeWithdrawal = async (id, lines = [], note = null) => {
 
   const cleanNote = typeof note === 'string' && note.trim() ? note.trim() : null;
 
-  return request(`/withdrawals/${parsedId}/close`, {
+  const res = await request(`/withdrawals/${parsedId}/close`, {
     method: 'POST',
     body: {
       lines: normalizedLines,
       note: cleanNote,
     },
   });
+  return unwrap(res);
 };
 
 /**
@@ -293,19 +305,21 @@ export const cancelWithdrawal = async (id, note = null) => {
 
   const cleanNote = typeof note === 'string' && note.trim() ? note.trim() : null;
 
-  return request(`/withdrawals/${parsedId}/cancel`, {
+  const res = await request(`/withdrawals/${parsedId}/cancel`, {
     method: 'POST',
     body: {
       note: cleanNote,
     },
   });
+  return unwrap(res);
 };
 
 /**
  * GET /api/v1/withdrawals/settings
  */
 export const getWithdrawalSettings = async () => {
-  return request('/withdrawals/settings');
+  const res = await request('/withdrawals/settings');
+  return unwrap(res);
 };
 
 /**
@@ -377,8 +391,9 @@ export const updateWithdrawalSettings = async (data = {}) => {
     payload.quiet_end = data.quiet_end;
   }
 
-  return request('/withdrawals/settings', {
+  const res = await request('/withdrawals/settings', {
     method: 'PUT',
     body: payload,
   });
+  return unwrap(res);
 };

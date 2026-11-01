@@ -4,10 +4,11 @@ import {
   getFirstName,
   getWithdrawalStatusBadge,
   getCancelCapability,
+  countMyPendingWithdrawals,
 } from '../withdrawalHelpers';
 import { ABILITIES } from '../../../services/permissions';
 
-describe('withdrawalHelpers', () => {
+describe('withdrawalHelpers (Brief 32p & 32p_fix)', () => {
   describe('getLocationLabel', () => {
     it('traduce ubicaciones conocidas', () => {
       expect(getLocationLabel('kitchen')).toBe('Cocina');
@@ -133,6 +134,26 @@ describe('withdrawalHelpers', () => {
       const cap = getCancelCapability(withdrawal, supervisor);
       expect(cap.canCancel).toBe(true);
       expect(cap.requiresNote).toBe(false);
+    });
+  });
+
+  describe('countMyPendingWithdrawals', () => {
+    it('cuenta únicamente retiros propios en estado open o escalated', () => {
+      const list = [
+        { id: 1, user_id: 5, status: 'open' },
+        { id: 2, user: { id: 5 }, status: 'escalated' },
+        { id: 3, user_id: 5, status: 'closed' },
+        { id: 4, user_id: 5, status: 'cancelled' },
+        { id: 5, user_id: 99, status: 'open' },
+        { id: 6, user: { id: 88 }, status: 'escalated' },
+      ];
+
+      expect(countMyPendingWithdrawals(list, 5)).toBe(2);
+      expect(countMyPendingWithdrawals(list, 99)).toBe(1);
+      expect(countMyPendingWithdrawals(list, 100)).toBe(0);
+      expect(countMyPendingWithdrawals([], 5)).toBe(0);
+      expect(countMyPendingWithdrawals(null, 5)).toBe(0);
+      expect(countMyPendingWithdrawals(list, null)).toBe(0);
     });
   });
 });

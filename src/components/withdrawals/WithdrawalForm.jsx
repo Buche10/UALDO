@@ -71,7 +71,7 @@ export default function WithdrawalForm({ user, onSuccess, onCancel }) {
     setSubmitting(false);
 
     if (res.ok) {
-      onSuccess?.(res.data?.data || res.data);
+      onSuccess?.(res.data);
     } else {
       if (res.status === 409) clientUuidRef.current = generateClientUuid();
       if (res.lineErrors) setLineErrors(res.lineErrors);

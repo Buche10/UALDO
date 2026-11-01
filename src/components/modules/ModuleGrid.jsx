@@ -3,6 +3,7 @@ import ModuleCard from './ModuleCard';
 import { getVisibleModules } from './moduleRegistry';
 import { can, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
+import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 
 /**
  * Cuadrícula de módulos de Ualdo Negocios filtrada según los permisos del usuario.
@@ -11,29 +12,29 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
   const visibleModules = getVisibleModules(user);
   const [openWithdrawalsCount, setOpenWithdrawalsCount] = useState(badges.withdrawals || 0);
 
+  const userId = user?.id;
+  const canDeclare = can(user, ABILITIES.WITHDRAWALS_DECLARE);
+
   useEffect(() => {
     if (badges.withdrawals !== undefined) {
       setOpenWithdrawalsCount(badges.withdrawals);
       return;
     }
-    if (!can(user, ABILITIES.WITHDRAWALS_DECLARE)) return;
+    if (!canDeclare || !userId) return;
 
     let mounted = true;
-    listWithdrawals({ status: 'open' })
+    listWithdrawals()
       .then((res) => {
         if (!mounted || !res.ok) return;
         const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        const myOpen = list.filter(
-          (w) => Number(w.user_id || w.user?.id) === Number(user?.id)
-        );
-        setOpenWithdrawalsCount(myOpen.length);
+        setOpenWithdrawalsCount(countMyPendingWithdrawals(list, userId));
       })
       .catch(() => {});
 
     return () => {
       mounted = false;
     };
-  }, [user, badges.withdrawals]);
+  }, [userId, canDeclare, badges.withdrawals]);
 
   if (visibleModules.length === 0) {
     return (

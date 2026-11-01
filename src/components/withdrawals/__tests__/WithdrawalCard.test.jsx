@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import WithdrawalCard from '../WithdrawalCard';
 
-describe('WithdrawalCard (Brief 32p)', () => {
+describe('WithdrawalCard (Brief 32p & 32p_fix)', () => {
   const dummy = {
     id: 1,
     status: 'open',
@@ -13,7 +13,6 @@ describe('WithdrawalCard (Brief 32p)', () => {
     lines: [
       { id: 1, item_name: 'Pimienta', quantity: '0.500', unit: 'kg' },
     ],
-    note: 'Nota de prueba',
   };
 
   it('renderiza información básica y autor cuando showAuthor es true', () => {
@@ -34,21 +33,69 @@ describe('WithdrawalCard (Brief 32p)', () => {
     expect(screen.getByText(/0.500 kg Pimienta/i)).toBeInTheDocument();
   });
 
-  it('permite alternar la vista de detalles', () => {
+  it('un retiro cerrado muestra usado, devuelto, lo que quedó y la nota de cierre', () => {
+    const closedWithdrawal = {
+      id: 2,
+      status: 'closed',
+      to_location: 'kitchen',
+      purpose: 'Producción salsa',
+      closing_note: 'Sobró un poco y se guardó en frasco rotulado.',
+      lines: [
+        {
+          id: 10,
+          item_name: 'Tomate triturado',
+          quantity: '10.000',
+          unit: 'kg',
+          consumed_quantity: '7.500',
+          returned_quantity: '1.500',
+          kept_quantity: '1.000',
+        },
+      ],
+    };
+
     render(
       <WithdrawalCard
-        withdrawal={dummy}
+        withdrawal={closedWithdrawal}
         currentUser={{ id: 10, capabilities: { abilities: [] } }}
         onCloseClick={vi.fn()}
         onCancelClick={vi.fn()}
       />
     );
 
-    expect(screen.queryByText(/Nota: Nota de prueba/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Detalles'));
+
+    expect(screen.getByText(/Usado: 7.500/i)).toBeInTheDocument();
+    expect(screen.getByText(/Devuelto: 1.500/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quedó: 1.000/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Nota de cierre: Sobró un poco y se guardó en frasco rotulado\./i)
+    ).toBeInTheDocument();
+  });
+
+  it('un retiro cancelado muestra el motivo de cancelación', () => {
+    const cancelledWithdrawal = {
+      id: 3,
+      status: 'cancelled',
+      to_location: 'lounge',
+      purpose: 'Bebidas',
+      cancellation_note: 'Selección de insumo equivocada por el salón.',
+      lines: [],
+    };
+
+    render(
+      <WithdrawalCard
+        withdrawal={cancelledWithdrawal}
+        currentUser={{ id: 10, capabilities: { abilities: [] } }}
+        onCloseClick={vi.fn()}
+        onCancelClick={vi.fn()}
+      />
+    );
 
     fireEvent.click(screen.getByText('Detalles'));
 
-    expect(screen.getByText(/Nota: Nota de prueba/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Motivo de cancelación: Selección de insumo equivocada por el salón\./i)
+    ).toBeInTheDocument();
   });
 
   it('dispara los callbacks de cerrar y cancelar', () => {
