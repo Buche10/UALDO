@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Layers, ShieldAlert } from 'lucide-react';
 import { getUser } from '../../services/auth';
+import { can, ABILITIES } from '../../services/permissions';
 import PaymentMappingsPanel from './PaymentMappingsPanel';
 import CommissionRatesPanel from './CommissionRatesPanel';
 
 export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
   const [activeTab, setActiveTab] = useState(initialTab === 'commissions' ? 'commissions' : 'mappings');
   const [currentUser] = useState(() => getUser());
-  const isOwner = Boolean(currentUser?.capabilities?.is_owner);
+  const canManageSettings = can(currentUser, ABILITIES.SETTINGS_MANAGE);
 
-  if (!isOwner) {
+  if (!canManageSettings) {
     return (
       <div className="glass-card" style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
         <ShieldAlert size={32} color="var(--warning)" />

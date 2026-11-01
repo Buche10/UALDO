@@ -71,7 +71,8 @@ function ActionButtons({ actions, triggers, onOpen }) {
   );
 }
 
-function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
+function RequestBody({ request, canDecide, isOwner, userId, onBack, onUpdated, onStale }) {
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
   const [dialog, setDialog] = useState(null);
   const [note, setNote] = useState('');
   const [itemQuantities, setItemQuantities] = useState({});
@@ -81,8 +82,7 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
   const noteRef = useRef(null);
   const triggers = useRef({});
   const dialogTriggerRef = useRef(null);
-  // Tras un 409 el estado cambió: se cierra el diálogo (su acción ya no aplica),
-  // el motivo queda en la página, se recarga el pedido y el foco va al título.
+
   const handleStale = async () => {
     setDialog(null);
     await onStale();
@@ -125,11 +125,11 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} /><span>Volver a pedidos</span></button>
+      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} aria-hidden="true" /><span>Volver a pedidos</span></button>
       <RequestSummary request={request} headingRef={headingRef} />
       <div aria-live="polite">{actions.error && !dialog && <div style={styles.errorBox}>{actions.error}</div>}</div>
       <RequestItems items={request.items} />
-      <ActionButtons actions={availableActions(request, { isOwner, userId })} triggers={triggers} onOpen={open} />
+      <ActionButtons actions={availableActions(request, { canDecide: hasDecide, isOwner: hasDecide, userId })} triggers={triggers} onOpen={open} />
       <ConfirmDialog
         isOpen={Boolean(dialog)} title={config?.title} message={config?.message} confirmLabel={config?.confirmLabel}
         busy={Boolean(actions.busy)} error={dialog === 'approve' && undefinedItems.length > 0 ? null : actions.error} onClose={() => setDialog(null)} onConfirm={handleConfirm}
@@ -159,7 +159,7 @@ function RequestBody({ request, isOwner, userId, onBack, onUpdated, onStale }) {
 function LoadError({ error, retryable, onBack, onRetry }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} /><span>Volver a pedidos</span></button>
+      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} aria-hidden="true" /><span>Volver a pedidos</span></button>
       <div aria-live="polite" style={{ ...styles.errorBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <span>{error}</span>
         {retryable && <button type="button" onClick={onRetry} className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '9999px' }}>Reintentar</button>}
@@ -168,8 +168,9 @@ function LoadError({ error, retryable, onBack, onRetry }) {
   );
 }
 
-export default function SupplyRequestDetail({ requestId, isOwner, userId, onBack, onSynced }) {
+export default function SupplyRequestDetail({ requestId, canDecide, isOwner, userId, onBack, onSynced }) {
   const { request, setRequest, loading, error, retryable, reload } = useSupplyRequestDetail(requestId);
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
 
   const handleUpdated = (updated, notice) => {
     if (updated) setRequest(updated);
@@ -185,7 +186,7 @@ export default function SupplyRequestDetail({ requestId, isOwner, userId, onBack
   return (
     <>
       <div aria-live="polite">{error && <div style={{ ...styles.errorBox, marginBottom: '10px' }}>No se pudo cargar el estado actual: {error}</div>}</div>
-      <RequestBody request={request} isOwner={isOwner} userId={userId} onBack={onBack} onUpdated={handleUpdated} onStale={handleStale} />
+      <RequestBody request={request} canDecide={hasDecide} isOwner={hasDecide} userId={userId} onBack={onBack} onUpdated={handleUpdated} onStale={handleStale} />
     </>
   );
 }

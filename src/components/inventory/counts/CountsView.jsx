@@ -5,10 +5,11 @@ import { INVENTORY_LOCATIONS } from '../../../services/inventoryLocations';
 import CountSheet from './CountSheet';
 import NewCountModal from './NewCountModal';
 
-export default function CountsView({ isOwner, onBack }) {
+export default function CountsView({ isOwner, canCount, onBack }) {
   const [activeCountId, setActiveCountId] = useState(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const newCountBtnRef = useRef(null);
+  const allowCounts = canCount !== undefined ? canCount : Boolean(isOwner);
 
   const {
     counts,
@@ -22,7 +23,7 @@ export default function CountsView({ isOwner, onBack }) {
     setLocationFilter,
     statusFilter,
     setStatusFilter,
-  } = useCounts({ isOwner });
+  } = useCounts({ isOwner: allowCounts, canCount: allowCounts });
 
   if (activeCountId) {
     return (

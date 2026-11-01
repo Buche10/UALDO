@@ -28,6 +28,7 @@ export default function App() {
   const [user, setUser] = useState(getUser);
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [authChecking, setAuthChecking] = useState(true);
+  const [sessionNotice, setSessionNotice] = useState(null);
 
   const { unreadCount, refreshUnreadCount } = useUnreadCount({
     enabled: authenticated,
@@ -69,9 +70,10 @@ export default function App() {
 
     initAuth();
 
-    const handleUnauthorized = () => {
+    const handleUnauthorized = (event) => {
       setAuthenticated(false);
       setUser(null);
+      setSessionNotice(event?.detail?.message || 'Tu cargo cambió. Inicia sesión otra vez.');
     };
 
     window.addEventListener('ualdo:unauthorized', handleUnauthorized);
@@ -87,6 +89,7 @@ export default function App() {
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setAuthenticated(true);
+    setSessionNotice(null);
     checkConnection();
     refreshUnreadCount();
   };
@@ -140,6 +143,7 @@ export default function App() {
         unreadCount={unreadCount}
         onOpenNotifications={() => setShowNotifications(true)}
         isAuthenticated={authenticated}
+        user={user}
       />
 
       <main className="view-container">
@@ -148,7 +152,7 @@ export default function App() {
           authenticated ? (
             <TrabajoView onLogout={() => { setAuthenticated(false); setUser(null); }} />
           ) : (
-            <LoginView onLoginSuccess={handleLoginSuccess} />
+            <LoginView onLoginSuccess={handleLoginSuccess} notice={sessionNotice} />
           )
         )}
 
@@ -167,7 +171,7 @@ export default function App() {
               onParamsConsumed={() => setNegociosParams(null)}
             />
           ) : (
-            <LoginView onLoginSuccess={handleLoginSuccess} />
+            <LoginView onLoginSuccess={handleLoginSuccess} notice={sessionNotice} />
           )
         )}
 
@@ -176,7 +180,7 @@ export default function App() {
           authenticated ? (
             <AssistantChat user={user} />
           ) : (
-            <LoginView onLoginSuccess={handleLoginSuccess} />
+            <LoginView onLoginSuccess={handleLoginSuccess} notice={sessionNotice} />
           )
         )}
 

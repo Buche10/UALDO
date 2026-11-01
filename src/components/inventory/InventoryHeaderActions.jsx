@@ -16,45 +16,63 @@ const secondaryButton = {
 };
 
 /**
- * Acciones de la cabecera de Inventario. "Producción" es para cualquier
- * miembro (Brief 21p); "Compras" (Brief 20p), "Conteos" y "Nuevo Insumo",
- * solo para el dueño.
+ * Acciones de la cabecera de Inventario.
+ * Filtra cada acción según los permisos concretos del usuario (Brief 30p).
  */
-export default function InventoryHeaderActions({ isOwner, onProduction, onPurchases, onCounts, onRunfoodRecipes, onCreate }) {
+export default function InventoryHeaderActions({
+  canManageSettings,
+  canManagePurchases,
+  canCount,
+  isOwner,
+  onProduction,
+  onPurchases,
+  onCounts,
+  onRunfoodRecipes,
+  onCreate,
+}) {
+  const allowRecipes = canManageSettings !== undefined ? canManageSettings : Boolean(isOwner);
+  const allowPurchases = canManagePurchases !== undefined ? canManagePurchases : Boolean(isOwner);
+  const allowCounts = canCount !== undefined ? canCount : Boolean(isOwner);
+  const allowCreate = canManageSettings !== undefined ? canManageSettings : Boolean(isOwner);
+
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <button type="button" className="glass-card-interactive" onClick={onProduction} style={secondaryButton}>
-        <Scissors size={16} />
+        <Scissors size={16} aria-hidden="true" />
         <span>Producción</span>
       </button>
 
-      {isOwner && (
-        <>
-          <button type="button" className="glass-card-interactive" onClick={onRunfoodRecipes} style={secondaryButton}>
-            <ChefHat size={16} />
-            <span>Recetas de RunFood</span>
-          </button>
+      {allowRecipes && (
+        <button type="button" className="glass-card-interactive" onClick={onRunfoodRecipes} style={secondaryButton}>
+          <ChefHat size={16} aria-hidden="true" />
+          <span>Recetas de RunFood</span>
+        </button>
+      )}
 
-          <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
-            <ShoppingCart size={16} />
-            <span>Compras</span>
-          </button>
+      {allowPurchases && (
+        <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
+          <ShoppingCart size={16} aria-hidden="true" />
+          <span>Compras</span>
+        </button>
+      )}
 
-          <button type="button" className="glass-card-interactive" onClick={onCounts} style={secondaryButton}>
-            <ClipboardList size={16} />
-            <span>Conteos</span>
-          </button>
+      {allowCounts && (
+        <button type="button" className="glass-card-interactive" onClick={onCounts} style={secondaryButton}>
+          <ClipboardList size={16} aria-hidden="true" />
+          <span>Conteos</span>
+        </button>
+      )}
 
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={onCreate}
-            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Plus size={16} />
-            <span>Nuevo Insumo</span>
-          </button>
-        </>
+      {allowCreate && (
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={onCreate}
+          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Plus size={16} aria-hidden="true" />
+          <span>Nuevo Insumo</span>
+        </button>
       )}
     </div>
   );

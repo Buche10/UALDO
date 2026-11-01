@@ -12,7 +12,7 @@ import ProductionRunDetail from './ProductionRunDetail';
  *
  * Pantallas: lista, elegir ficha, formulario y detalle.
  */
-export default function ProductionView({ isOwner, onBack }) {
+export default function ProductionView({ canSeeCosts, canVoid, isOwner, onBack }) {
   const [screen, setScreen] = useState('list');
   const [template, setTemplate] = useState(null);
   const [run, setRun] = useState(null);
@@ -47,7 +47,16 @@ export default function ProductionView({ isOwner, onBack }) {
   } else if (screen === 'form' && template) {
     content = <ProductionRunForm key={template.id} template={template} onBack={() => setScreen('pick')} onRecorded={handleRecorded} />;
   } else if (screen === 'detail' && run) {
-    content = <ProductionRunDetail run={run} isOwner={isOwner} onBack={backToList} onVoided={handleVoided} />;
+    content = (
+      <ProductionRunDetail
+        run={run}
+        canSeeCosts={canSeeCosts}
+        canVoid={canVoid}
+        isOwner={isOwner}
+        onBack={backToList}
+        onVoided={handleVoided}
+      />
+    );
   } else {
     content = (
       <ProductionRunList

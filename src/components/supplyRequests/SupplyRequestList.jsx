@@ -4,9 +4,10 @@ import { styles } from '../common/uiStyles';
 import { formatDateTime, itemsCount, requesterName, statusLabel, STATUS_FILTERS } from './requestUi';
 
 /**
- * Pedidos internos (Brief 22p): el dueño ve todos; el personal, los suyos.
+ * Pedidos internos (Brief 22p / 30p): quien decide ve todos; el resto, los suyos.
  */
-export default function SupplyRequestList({ list, status, onStatusChange, onOpen, onNew, isOwner }) {
+export default function SupplyRequestList({ list, status, onStatusChange, onOpen, onNew, canDecide, isOwner }) {
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
   const { items, loading, error, hasMore, loadMore, reload } = list;
 
   return (
@@ -19,7 +20,7 @@ export default function SupplyRequestList({ list, status, onStatusChange, onOpen
           </select>
         </div>
         <button type="button" onClick={onNew} className="btn-primary" style={{ padding: '10px 14px', fontSize: '12px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={16} />
+          <Plus size={16} aria-hidden="true" />
           <span>Nuevo pedido</span>
         </button>
       </div>
@@ -36,7 +37,7 @@ export default function SupplyRequestList({ list, status, onStatusChange, onOpen
       {loading && items.length === 0 ? (
         <div style={styles.muted}>Cargando pedidos...</div>
       ) : items.length === 0 && !error ? (
-        <div style={styles.muted}>{isOwner ? 'No hay pedidos con este filtro.' : 'Todavía no tienes pedidos con este filtro.'}</div>
+        <div style={styles.muted}>{hasDecide ? 'No hay pedidos con este filtro.' : 'Todavía no tienes pedidos con este filtro.'}</div>
       ) : (
         items.map((request) => (
           <button key={request.id} type="button" onClick={() => onOpen(request)} className="glass-card-interactive" style={{ ...styles.card, textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: '10px', color: 'var(--text-main)' }}>
@@ -48,14 +49,14 @@ export default function SupplyRequestList({ list, status, onStatusChange, onOpen
             </span>
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', fontWeight: 600, background: 'var(--chip-bg)', color: 'var(--accent)' }}>{statusLabel(request.status)}</span>
-              {request.priority === 'urgent' && <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--warning)' }}>Urgente</span>}
+              {request.priority === 'urgent' && <span style={{ fontSize: '10px', color: 'var(--error)', fontWeight: 700 }}>Urgente</span>}
             </span>
           </button>
         ))
       )}
 
       {hasMore && (
-        <button type="button" onClick={loadMore} disabled={loading} style={{ ...styles.secondary, color: 'var(--accent)', fontSize: '12px' }}>
+        <button type="button" onClick={loadMore} className="btn-primary" style={{ ...styles.secondary, width: '100%', padding: '10px', borderRadius: '9999px', color: 'var(--text-main)' }}>
           {loading ? 'Cargando más...' : 'Cargar más'}
         </button>
       )}

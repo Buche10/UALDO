@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { listCounts, createCount, cancelCount } from '../services/inventoryCountsClient';
 
 /**
- * Hook para listar y gestionar conteos físicos por ubicación (dueño).
+ * Hook para listar y gestionar conteos físicos por ubicación (Brief 30p).
  */
-export function useCounts({ isOwner }) {
+export function useCounts({ isOwner, canCount }) {
+  const allowCounts = canCount !== undefined ? canCount : Boolean(isOwner);
   const [counts, setCounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -14,7 +15,7 @@ export function useCounts({ isOwner }) {
   const [statusFilter, setStatusFilter] = useState('');
 
   const loadCounts = useCallback(async (pageToLoad = 1, append = false) => {
-    if (!isOwner) return;
+    if (!allowCounts) return;
     setLoading(true);
     setError(null);
 
@@ -40,13 +41,13 @@ export function useCounts({ isOwner }) {
     } else {
       setError(res.error || 'Error al cargar conteos.');
     }
-  }, [isOwner, locationFilter, statusFilter]);
+  }, [allowCounts, locationFilter, statusFilter]);
 
   useEffect(() => {
-    if (isOwner) {
+    if (allowCounts) {
       loadCounts(1, false);
     }
-  }, [isOwner, loadCounts]);
+  }, [allowCounts, loadCounts]);
 
   const handleCreateCount = async (location, notes) => {
     setError(null);
@@ -56,7 +57,7 @@ export function useCounts({ isOwner }) {
       setCounts(prev => [created, ...prev]);
       return { ok: true, data: created };
     }
-    return { ok: false, error: res.error || res.data?.message || 'Error al crear conteo.' };
+    return { ok: false, error: res.error || 'Error al iniciar conteo.' };
   };
 
   const handleCancelCount = async (countId) => {

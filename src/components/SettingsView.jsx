@@ -7,6 +7,8 @@ import {
 import { getUser, logout, isAuthenticated } from '../services/auth';
 import { checkNodeStatus } from '../services/aiEngine';
 import { getPreferences, updatePreferences } from '../services/notificationsClient';
+import { can, ABILITIES } from '../services/permissions';
+import TeamSection from './settings/TeamSection';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -280,6 +282,9 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
           </div>
         )}
       </div>
+
+      {/* SECCIÓN EQUIPO (Brief 30p: solo con team.manage) */}
+      {can(currentUser, ABILITIES.TEAM_MANAGE) && <TeamSection />}
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>

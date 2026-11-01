@@ -121,6 +121,7 @@ export default function AssistantChat({ user }) {
       )}
 
       <SuggestionChips
+        user={user}
         role={userRole}
         disabled={loading}
         onSelectChip={(prompt) => handleSend(prompt)}

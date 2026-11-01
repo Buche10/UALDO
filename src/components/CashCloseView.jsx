@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { listCloses, isValidDate } from '../services/cashCloseClient';
 import { getUser } from '../services/auth';
+import { can, ABILITIES } from '../services/permissions';
 import CashCloseList from './cashclose/CashCloseList';
 import CashCloseDetail from './cashclose/CashCloseDetail';
 import CashCloseManualForm from './cashclose/CashCloseManualForm';
@@ -9,7 +10,7 @@ import CashConfigView from './cashconfig/CashConfigView';
 
 export default function CashCloseView({ onBack, fechaInicial = null }) {
   const [currentUser] = useState(() => getUser());
-  const isOwner = Boolean(currentUser?.capabilities?.is_owner);
+  const canReview = can(currentUser, ABILITIES.CASH_REVIEW);
 
   const initialFechaSafe = isValidDate(fechaInicial) ? fechaInicial : null;
   const [selectedFecha, setSelectedFecha] = useState(initialFechaSafe);
@@ -22,7 +23,7 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
   const [forbiddenError, setForbiddenError] = useState(false);
 
   const fetchCloses = useCallback(async () => {
-    if (!isOwner) return;
+    if (!canReview) return;
     setLoading(true);
     setError(null);
     setForbiddenError(false);
@@ -39,13 +40,13 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
         setError(res.error || 'Error al cargar los cierres.');
       }
     }
-  }, [isOwner]);
+  }, [canReview]);
 
   useEffect(() => {
-    if (isOwner) {
+    if (canReview) {
       fetchCloses();
     }
-  }, [isOwner, fetchCloses]);
+  }, [canReview, fetchCloses]);
 
   useEffect(() => {
     if (isValidDate(fechaInicial)) {
@@ -53,7 +54,7 @@ export default function CashCloseView({ onBack, fechaInicial = null }) {
     }
   }, [fechaInicial]);
 
-  if (!isOwner || forbiddenError) {
+  if (!canReview || forbiddenError) {
     return (
       <div className="glass-card" style={{ padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
         <ShieldAlert size={32} color="var(--warning)" />

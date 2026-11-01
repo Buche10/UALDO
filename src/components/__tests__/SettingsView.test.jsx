@@ -159,4 +159,38 @@ describe('SettingsView component notifications preferences', () => {
     // Confirmar que no hay ningun campo editable de Google Sheets
     expect(screen.queryByPlaceholderText(/https:\/\/script\.google\.com/i)).not.toBeInTheDocument();
   });
+
+  describe('Sección Equipo (Brief 30p)', () => {
+    it('muestra la sección Equipo solo si el usuario tiene permiso team.manage', async () => {
+      vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 1,
+        capabilities: { abilities: ['team.manage'] },
+      });
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { preferences: [] },
+      });
+
+      render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
+
+      expect(screen.getByRole('heading', { name: 'Equipo', level: 3 })).toBeInTheDocument();
+    });
+
+    it('oculta la sección Equipo si el usuario no tiene permiso team.manage', async () => {
+      vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 2,
+        capabilities: { abilities: ['settings.manage', 'inventory.view'] },
+      });
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        data: { preferences: [] },
+      });
+
+      render(<SettingsView settings={dummySettings} onSaveSettings={vi.fn()} onClearAllData={vi.fn()} />);
+
+      expect(screen.queryByRole('heading', { name: 'Equipo', level: 3 })).not.toBeInTheDocument();
+    });
+  });
 });

@@ -20,15 +20,17 @@ function RequestsTabs({ tab, onSelect }) {
   );
 }
 
-/** Título, pestañas del dueño y aviso de la última acción. */
-function RequestsHeader({ isOwner, tab, notice, onSelectTab }) {
+/** Título, pestañas del resolutor (supply.decide) y aviso de la última acción. */
+function RequestsHeader({ canDecide, isOwner, tab, notice, onSelectTab }) {
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+
   return (
     <>
       <h2 className="section-title" style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <ClipboardList size={18} color="var(--accent)" />
-        <span>{isOwner ? 'Pedidos internos' : 'Mis pedidos'}</span>
+        <ClipboardList size={18} color="var(--accent)" aria-hidden="true" />
+        <span>{hasDecide ? 'Pedidos internos' : 'Mis pedidos'}</span>
       </h2>
-      {isOwner && <RequestsTabs tab={tab} onSelect={onSelectTab} />}
+      {hasDecide && <RequestsTabs tab={tab} onSelect={onSelectTab} />}
       <div role="status" aria-live="polite">
         {notice && <div style={{ padding: '10px 14px', background: 'var(--success-soft)', color: 'var(--success)', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>{notice}</div>}
       </div>
@@ -37,18 +39,15 @@ function RequestsHeader({ isOwner, tab, notice, onSelectTab }) {
 }
 
 /**
- * Pedidos internos (Brief 22p). Cualquier miembro pide y sigue sus pedidos;
- * el dueño ve todos, decide y tiene la lista de compras.
- *
- * `openRequest` ({ id, nav }) llega de un aviso: cada navegación nueva abre y
- * recarga ese pedido, aunque sea el mismo que ya estaba abierto. Al usarlo se
- * avisa con `onOpenConsumed` para que la app no lo vuelva a abrir después.
+ * Pedidos internos (Brief 22p / 30p). Cualquier miembro pide y sigue sus pedidos;
+ * quien posee supply.decide ve todos, decide y tiene la lista de compras.
  */
-export default function SupplyRequestsView({ isOwner, userId, openRequest = null, onOpenConsumed }) {
+export default function SupplyRequestsView({ canDecide, isOwner, userId, openRequest = null, onOpenConsumed }) {
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
   const [tab, setTab] = useState('requests');
   const [screen, setScreen] = useState('list');
   const [detail, setDetail] = useState({ id: null, version: 0 });
-  const [status, setStatus] = useState(isOwner ? 'pending' : '');
+  const [status, setStatus] = useState(hasDecide ? 'pending' : '');
   const [notice, setNotice] = useState(null);
   const list = useSupplyRequests(status);
 
@@ -79,17 +78,41 @@ export default function SupplyRequestsView({ isOwner, userId, openRequest = null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <RequestsHeader isOwner={isOwner} tab={tab} notice={notice} onSelectTab={(id) => { setTab(id); setNotice(null); }} />
+      <RequestsHeader canDecide={hasDecide} isOwner={hasDecide} tab={tab} notice={notice} onSelectTab={(id) => { setTab(id); setNotice(null); }} />
 
       {/* Pedidos queda montado (oculto) en la otra pestaña: un pedido a medias conserva lo escrito y su client_uuid. */}
       <div role="tabpanel" hidden={tab !== 'requests'}>
         {screen === 'new' && <SupplyRequestForm onBack={backToList} onCreated={(created, idempotent) => { syncList(created); showDetail(created?.id, idempotent ? 'Ya estaba enviado.' : 'Pedido enviado. El dueño recibe el aviso en la app.'); }} />}
-        {screen === 'detail' && detail.id && <SupplyRequestDetail key={`${detail.id}-${detail.version}`} requestId={detail.id} isOwner={isOwner} userId={userId} onBack={backToList} onSynced={(updated, message) => { syncList(updated); setNotice(message || null); }} />}
-        {screen === 'list' && <SupplyRequestList list={list} status={status} onStatusChange={setStatus} isOwner={isOwner} onOpen={(r) => showDetail(r.id, null)} onNew={() => { setNotice(null); setScreen('new'); }} />}
+        {screen === 'detail' && detail.id && (
+          <SupplyRequestDetail
+            key={`${detail.id}-${detail.version}`}
+            requestId={detail.id}
+            canDecide={hasDecide}
+            isOwner={hasDecide}
+            userId={userId}
+            onBack={backToList}
+            onSynced={(updated, message) => { syncList(updated); setNotice(message || null); }}
+          />
+        )}
+        {screen === 'list' && (
+          <SupplyRequestList
+            list={list}
+            status={status}
+            onStatusChange={setStatus}
+            canDecide={hasDecide}
+            isOwner={hasDecide}
+            onOpen={(r) => showDetail(r.id, null)}
+            onNew={() => { setNotice(null); setScreen('new'); }}
+          />
+        )}
       </div>
-      {tab === 'shopping' && isOwner && (
+      {tab === 'shopping' && hasDecide && (
         <div role="tabpanel">
-          <ShoppingListPanel onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }} isOwner={isOwner} />
+          <ShoppingListPanel
+            onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }}
+            canDecide={hasDecide}
+            isOwner={hasDecide}
+          />
         </div>
       )}
     </div>

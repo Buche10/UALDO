@@ -1,7 +1,7 @@
 import { formatQuantity } from '../../services/quantityFormat';
 
 /**
- * Textos y formato de los pedidos internos (Brief 22p / 26p). Solo formatea lo que
+ * Textos y formato de los pedidos internos (Brief 22p / 26p / 30p). Solo formatea lo que
  * manda el motor.
  */
 
@@ -77,9 +77,10 @@ export function itemsCount(request) {
   return count === 1 ? '1 insumo' : `${count} insumos`;
 }
 
-/** Acciones posibles según el rol y el estado, como en el motor. */
-export function availableActions(request, { isOwner, userId }) {
-  if (isOwner) {
+/** Acciones posibles según permisos y estado, como en el motor (Brief 30p). */
+export function availableActions(request, { canDecide, isOwner, userId }) {
+  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+  if (hasDecide) {
     if (request.status === 'pending') return ['approve', 'reject', 'cancel'];
     if (request.status === 'approved') return ['purchased', 'cancel'];
     if (request.status === 'purchased') return ['received'];

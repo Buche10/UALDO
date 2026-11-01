@@ -63,7 +63,7 @@ function CostSummary({ run }) {
  * Detalle de una producción con las cifras del motor (Brief 21p). Los costos
  * solo llegan para el dueño; anular también es solo del dueño.
  */
-export default function ProductionRunDetail({ run, isOwner, onBack, onVoided }) {
+export default function ProductionRunDetail({ run, canSeeCosts, canVoid, isOwner, onBack, onVoided }) {
   const [showVoid, setShowVoid] = useState(false);
   const voidTriggerRef = useRef(null);
   const headingRef = useRef(null);
@@ -77,7 +77,9 @@ export default function ProductionRunDetail({ run, isOwner, onBack, onVoided }) 
   const lowYield = run.yield_difference_pct !== null && run.yield_difference_pct !== undefined && Number(run.yield_difference_pct) < 0;
   const inputs = (run.lines || []).filter((line) => line.direction === 'input');
   const outputs = (run.lines || []).filter((line) => line.direction === 'output');
-  const showCost = isOwner && run.cost_status !== undefined;
+  const allowCosts = canSeeCosts !== undefined ? canSeeCosts : Boolean(isOwner);
+  const allowVoid = canVoid !== undefined ? canVoid : Boolean(isOwner);
+  const showCost = allowCosts && run.cost_status !== undefined;
   const voided = run.status === 'voided';
 
   return (
@@ -114,7 +116,7 @@ export default function ProductionRunDetail({ run, isOwner, onBack, onVoided }) 
       <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '4px 0 0 0', color: 'var(--text-main)' }}>Salidas</h4>
       {outputs.map((line) => <LineRow key={line.id} line={line} showCost={showCost} />)}
 
-      {isOwner && !voided && (
+      {allowVoid && !voided && (
         <button ref={voidTriggerRef} type="button" onClick={() => { clearError(); setShowVoid(true); }} style={{ padding: '10px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'var(--surface-strong)', color: 'var(--error)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
           <Ban size={14} />
           <span>Anular</span>

@@ -113,12 +113,14 @@ export const request = async (path, options = {}) => {
     if (response.status === 401) {
       clearAuthSession();
       if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('ualdo:unauthorized'));
+        window.dispatchEvent(new CustomEvent('ualdo:unauthorized', {
+          detail: { message: 'Tu cargo cambió. Inicia sesión otra vez.' }
+        }));
       }
       return {
         ok: false,
         status: 401,
-        error: 'Sesión expirada o no autorizada. Por favor inicia sesión de nuevo.'
+        error: 'Tu cargo cambió. Inicia sesión otra vez.'
       };
     }
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Mail, LogIn, Building, AlertCircle, Loader2 } from 'lucide-react';
 import { login } from '../services/auth';
 
-export default function LoginView({ onLoginSuccess }) {
+export default function LoginView({ onLoginSuccess, notice = null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ export default function LoginView({ onLoginSuccess }) {
           </p>
         </div>
 
-        {error && (
+        {(error || notice) && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -73,7 +73,7 @@ export default function LoginView({ onLoginSuccess }) {
             textAlign: 'left'
           }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{error}</span>
+            <span>{error || notice}</span>
           </div>
         )}
 

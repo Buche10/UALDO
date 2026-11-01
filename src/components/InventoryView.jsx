@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { getUser } from '../services/auth';
+import { can, canAny, ABILITIES } from '../services/permissions';
 import { useInventoryList } from '../hooks/useInventoryList';
 import InventoryList from './inventory/InventoryList';
 import InventorySearchToolbar from './inventory/InventorySearchToolbar';
@@ -40,8 +41,17 @@ export default function InventoryView({ initialSubView = null }) {
   const [showProductionView, setShowProductionView] = useState(false);
   const [showPurchasesView, setShowPurchasesView] = useState(false);
   const currentUser = getUser();
-  const isOwner = Boolean(currentUser?.capabilities?.is_owner || currentUser?.role === 'owner');
-  const [showRunfoodRecipes, setShowRunfoodRecipes] = useState(initialSubView === 'runfood-recetas' && isOwner);
+  const canManageSettings = can(currentUser, ABILITIES.SETTINGS_MANAGE);
+  const canManagePurchases = can(currentUser, ABILITIES.PURCHASES_MANAGE);
+  const canCount = canAny(currentUser, [
+    ABILITIES.INVENTORY_COUNT_WAREHOUSE,
+    ABILITIES.INVENTORY_COUNT_KITCHEN,
+    ABILITIES.INVENTORY_COUNT_LOUNGE,
+  ]);
+  const canSeeCosts = can(currentUser, ABILITIES.INVENTORY_COSTS);
+  const canVoidProduction = can(currentUser, ABILITIES.INVENTORY_ADJUST) || canManageSettings;
+
+  const [showRunfoodRecipes, setShowRunfoodRecipes] = useState(initialSubView === 'runfood-recetas' && canManageSettings);
   const [selectedItemForMovement, setSelectedItemForMovement] = useState(null);
   const [selectedItemForTransfer, setSelectedItemForTransfer] = useState(null);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState(null);
@@ -83,18 +93,24 @@ export default function InventoryView({ initialSubView = null }) {
   };
 
   if (showProductionView) {
-    return <ProductionView isOwner={isOwner} onBack={() => { setShowProductionView(false); reload(); }} />;
+    return (
+      <ProductionView
+        canSeeCosts={canSeeCosts}
+        canVoid={canVoidProduction}
+        onBack={() => { setShowProductionView(false); reload(); }}
+      />
+    );
   }
 
-  if (showPurchasesView && isOwner) {
+  if (showPurchasesView && canManagePurchases) {
     return <PurchasesView onBack={() => { setShowPurchasesView(false); reload(); }} />;
   }
 
-  if (showCountsView && isOwner) {
-    return <CountsView isOwner={isOwner} onBack={() => { setShowCountsView(false); reload(); }} />;
+  if (showCountsView && canCount) {
+    return <CountsView canCount={canCount} onBack={() => { setShowCountsView(false); reload(); }} />;
   }
 
-  if (showRunfoodRecipes && isOwner) {
+  if (showRunfoodRecipes && canManageSettings) {
     return <RunfoodRecipesView onBack={() => { setShowRunfoodRecipes(false); reload(); }} />;
   }
 
@@ -119,7 +135,9 @@ export default function InventoryView({ initialSubView = null }) {
         </div>
 
         <InventoryHeaderActions
-          isOwner={isOwner}
+          canManageSettings={canManageSettings}
+          canManagePurchases={canManagePurchases}
+          canCount={canCount}
           onProduction={() => setShowProductionView(true)}
           onPurchases={() => setShowPurchasesView(true)}
           onCounts={() => setShowCountsView(true)}

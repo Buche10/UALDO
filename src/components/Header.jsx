@@ -1,5 +1,7 @@
 import React from 'react';
 import { RefreshCw, Bell } from 'lucide-react';
+import { getUser } from '../services/auth';
+import { roleLabel } from '../services/permissions';
 
 export default function Header({
   nodeStatus,
@@ -8,6 +10,7 @@ export default function Header({
   unreadCount = 0,
   onOpenNotifications,
   isAuthenticated = false,
+  user = null,
 }) {
   const getTabTitle = () => {
     switch (activeTab) {
@@ -20,6 +23,8 @@ export default function Header({
   };
 
   const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
+  const currentUser = user || (isAuthenticated ? getUser() : null);
+  const label = currentUser ? roleLabel(currentUser) : null;
 
   return (
     <header className="app-header">
@@ -32,6 +37,18 @@ export default function Header({
         />
         <div>
           <div className="brand-sub">{getTabTitle()}</div>
+          {isAuthenticated && currentUser?.name && (
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, marginTop: '2px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-main)' }}>
+                {currentUser.name}
+              </span>
+              {label && (
+                <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: 500 }}>
+                  {label}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -55,7 +72,7 @@ export default function Header({
               color: 'var(--text-main)',
             }}
           >
-            <Bell size={18} color="var(--accent)" />
+            <Bell size={18} color="var(--accent)" aria-hidden="true" />
             {unreadCount > 0 && (
               <span
                 style={{
@@ -92,7 +109,7 @@ export default function Header({
           <span>
             {nodeStatus.online ? `${nodeStatus.latency}ms` : 'Desconectado'}
           </span>
-          <RefreshCw size={12} className={nodeStatus.checking ? 'spin' : ''} style={{ color: 'var(--text-muted)' }} />
+          <RefreshCw size={12} className={nodeStatus.checking ? 'spin' : ''} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
         </div>
       </div>
     </header>
