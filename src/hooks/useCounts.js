@@ -4,8 +4,7 @@ import { listCounts, createCount, cancelCount } from '../services/inventoryCount
 /**
  * Hook para listar y gestionar conteos físicos por ubicación (Brief 30p).
  */
-export function useCounts({ isOwner, canCount }) {
-  const allowCounts = canCount !== undefined ? canCount : Boolean(isOwner);
+export function useCounts({ canCount = false } = {}) {
   const [counts, setCounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +14,7 @@ export function useCounts({ isOwner, canCount }) {
   const [statusFilter, setStatusFilter] = useState('');
 
   const loadCounts = useCallback(async (pageToLoad = 1, append = false) => {
-    if (!allowCounts) return;
+    if (!canCount) return;
     setLoading(true);
     setError(null);
 
@@ -41,13 +40,13 @@ export function useCounts({ isOwner, canCount }) {
     } else {
       setError(res.error || 'Error al cargar conteos.');
     }
-  }, [allowCounts, locationFilter, statusFilter]);
+  }, [canCount, locationFilter, statusFilter]);
 
   useEffect(() => {
-    if (allowCounts) {
+    if (canCount) {
       loadCounts(1, false);
     }
-  }, [allowCounts, loadCounts]);
+  }, [canCount, loadCounts]);
 
   const handleCreateCount = async (location, notes) => {
     setError(null);

@@ -84,7 +84,7 @@ export default function TeamSection() {
           style={{
             padding: '10px 12px',
             borderRadius: '10px',
-            background: 'rgba(244, 63, 94, 0.1)',
+            background: 'var(--error-soft)',
             border: '1px solid var(--error)',
             color: 'var(--error)',
             fontSize: '12px',

@@ -34,7 +34,7 @@ export default function ModuleCard({ module, onClick }) {
           width: '38px',
           height: '38px',
           borderRadius: '12px',
-          background: 'rgba(0, 115, 127, 0.2)',
+          background: 'var(--primary-soft)',
           border: '1px solid var(--border-glass)',
           display: 'flex',
           alignItems: 'center',

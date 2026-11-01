@@ -84,7 +84,38 @@ Se eliminó la dependencia exclusiva de la bandera binaria `is_owner` en toda la
 ---
 
 ## 5. Pruebas y Validación
-- **Tests unitarios y de componentes**: 821 pasados de 821 (112 suites de test ejecutadas sin errores).
+- **Tests unitarios y de componentes**: 819 pasados de 819 (112 suites de test ejecutadas sin errores).
 - **Linter**: 0 errores, 47 advertencias estándar idénticas a la línea base.
 - **Build de producción**: Vite compiló exitosamente (`dist/`) sin errores.
 - **Reglas de estilo y seguridad**: Cero emojis, uso estricto de variables CSS, componentes bajo 200 líneas y diseño de botones pastilla (`border-radius: 9999px`).
+
+---
+
+## 6. Correcciones de Auditoría (Brief 30p_fix)
+
+### Tabla de Cambios por Archivo y Línea
+
+| Archivo:Línea | Hallazgo / Requisito | Cambio Realizado | Justificación Técnica |
+|---|---|---|---|
+| `src/styles/main.css:48` | HIGH 2 (Colores fijos) | Se agregó `--primary-soft: rgba(0, 115, 127, 0.2);` dentro de `:root`. | Evita duplicación de color primario translúcido en CSS inline. |
+| `src/components/modules/ModuleCard.jsx:37` | HIGH 2 (Colores fijos) | Reemplazo de `rgba(0, 115, 127, 0.2)` por `var(--primary-soft)`. | Cumple regla de cero valores de color fijos (hex/rgba). |
+| `src/components/Header.jsx:64,83` | HIGH 2 (Colores fijos) | Reemplazo de `rgba(32, 45, 47, 0.75)` por `var(--bg-card)` y `#ffffff` por `var(--on-primary)`. | Utiliza variables del sistema de diseño para cabecera e insignia de rol. |
+| `src/components/settings/TeamMemberRow.jsx:55,58,85,102` | HIGH 2 (Colores fijos) | Reemplazo de colores hexadecimales y rgba por `var(--surface-soft)`, `var(--primary-soft)` y `var(--error-soft)`. | Estandariza estilos de filas de equipo y confirmación destructiva. |
+| `src/components/settings/TeamSection.jsx:87` | HIGH 2 (Colores fijos) | Reemplazo de `rgba(244, 63, 94, 0.1)` por `var(--error-soft)`. | Estandariza contenedor de alerta de error en sección de equipo. |
+| `src/components/inventory/counts/CountsView.jsx:12` | HIGH 1 (isOwner fuera de permissions) | Firma `export default function CountsView({ onBack, canCount = false })`, invocando `useCounts({ canCount })`. | Elimina fallback a `isOwner`. El componente solo recibe permisos concretos por defecto en `false`. |
+| `src/hooks/useCounts.js:8` | HIGH 1 (isOwner fuera de permissions) | Firma `export function useCounts({ canCount = false } = {})`. | Elimina argumento `isOwner` y fallback `isAllowed`. |
+| `src/components/inventory/InventoryHeaderActions.jsx:30-40` | HIGH 1 (isOwner fuera de permissions) | Props `canManageSettings = false`, `canManagePurchases = false`, `canCount = false`. Se eliminó prop `isOwner` y fallbacks `canX !== undefined ? canX : isOwner`. | Subcomponente de acciones de cabecera solo recibe permisos concretos booleanos. |
+| `src/components/inventory/production/ProductionView.jsx:13-16,53-54` | HIGH 1 (isOwner fuera de permissions) | Props `canSeeCosts = false`, `canVoid = false`. Se eliminó prop `isOwner` y paso de `isOwner` al detalle. | Desacople estricto de roles en módulo de producción. |
+| `src/components/inventory/production/ProductionRunDetail.jsx:14-16,77-78` | HIGH 1 (isOwner fuera de permissions) | Props `canSeeCosts = false`, `canVoid = false`. Se eliminó fallback `canSeeCosts !== undefined ? canSeeCosts : isOwner`. | Solo el permiso concreto controla la visibilidad de costos unitarios y anulación. |
+| `src/components/supplyRequests/requestUi.js:82` | HIGH 1 (isOwner fuera de permissions) | `availableActions(request, { canDecide = false, userId } = {})`. Se eliminó lectura de `isOwner`. | Acciones de aprobar/rechazar pedidos se basan únicamente en `canDecide`. |
+| `src/components/supplyRequests/SupplyRequestsView.jsx:42-45,77,87,99,110` | HIGH 1 (isOwner fuera de permissions) | Prop `canDecide = false`. Se eliminó prop `isOwner` y fallbacks a `isOwner`. | Lista y acciones de pedidos dependen exclusivamente de `canDecide`. |
+| `src/components/supplyRequests/SupplyRequestDetail.jsx:26-30` | HIGH 1 (isOwner fuera de permissions) | Prop `canDecide = false`. Se eliminó prop `isOwner` y fallbacks. | Detalle de pedido aprueba/rechaza condicionado a `canDecide`. |
+| `src/components/supplyRequests/SupplyRequestList.jsx:14,35` | HIGH 1 (isOwner fuera de permissions) | Prop `canDecide = false`. Mensaje de lista vacía condicionado a `canDecide`. | Elimina fallback a `isOwner`. |
+| `src/components/supplyRequests/ShoppingListPanel.jsx:21,57` | HIGH 1 (isOwner fuera de permissions) | Prop `canDecide = false`. Panel de ajustes de recordatorio condicionado a `canDecide`. | Desacopla configuración de recordatorios de compras. |
+| `src/components/assistant/SuggestionChips.jsx:16-24` | HIGH 1 (role === 'owner') | Se eliminó prop `role`. Se evalúa `const hasDecide = user ? can(user, ABILITIES.SUPPLY_DECIDE) : false;`. | Chips de sugerencias del asistente evalúan la habilidad `supply.decide` en lugar de una comparación rígida de string con 'owner'. |
+| `src/components/assistant/AssistantChat.jsx:10,131` | HIGH 1 (role === 'owner') | Se removió extracción de `userRole` y paso de `role` a `<SuggestionChips />`. | Simplificación de props del asistente. |
+| `src/services/apiClient.js:116-123` | MEDIUM 3 (401 genérico) | Se exporta constante única `UNAUTHORIZED_SESSION_MESSAGE = 'Tu sesión terminó o tu cargo cambió. Inicia sesión otra vez.'`. | Mensaje neutral ante cualquier 401 que no asume exclusivamente cambio de cargo cuando expira la sesión. |
+| `src/App.jsx:14,242` | MEDIUM 3 (401 genérico) | Importa `UNAUTHORIZED_SESSION_MESSAGE` de `apiClient.js` como fallback en `handleUnauthorized`. | Fuente única de verdad para el mensaje de desautenticación. |
+| `src/components/EcosystemView.jsx:104,115` | LOW 4 y LOW 5 | Se eliminó prop `onBack` en `<CashCloseView />` y en `<SupplyRequestsView />`. | `EcosystemView` ya provee el botón unificado "Volver a módulos"; pasar `onBack` a `CashCloseView` provocaba un doble botón de retorno. `SupplyRequestsView` no utilizaba dicha prop. |
+| `tests (múltiples archivos)` | Tests unitarios | Actualizadas suites en `CountsView.test.jsx`, `ProductionRunDetail.test.jsx`, `ProductionView.test.jsx`, `SupplyReminderSettings.test.jsx`, `SupplyRequestAuditoriaFixes.test.jsx`, `SupplyRequestEdgeCases.test.jsx`, `SupplyRequestReviewFixes.test.jsx`, `SupplyRequestsView.test.jsx`, `useCounts.test.js`, `SuggestionChips.test.jsx` y `App.test.jsx`. | Reemplazan `isOwner` por props de permisos concretos (`canCount`, `canDecide`, `canVoid`, `canSeeCosts`) y prueban `SuggestionChips` con `supply.decide`. |
+

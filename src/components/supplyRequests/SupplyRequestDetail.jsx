@@ -71,8 +71,7 @@ function ActionButtons({ actions, triggers, onOpen }) {
   );
 }
 
-function RequestBody({ request, canDecide, isOwner, userId, onBack, onUpdated, onStale }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+function RequestBody({ request, canDecide = false, userId, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
   const [note, setNote] = useState('');
   const [itemQuantities, setItemQuantities] = useState({});
@@ -129,7 +128,7 @@ function RequestBody({ request, canDecide, isOwner, userId, onBack, onUpdated, o
       <RequestSummary request={request} headingRef={headingRef} />
       <div aria-live="polite">{actions.error && !dialog && <div style={styles.errorBox}>{actions.error}</div>}</div>
       <RequestItems items={request.items} />
-      <ActionButtons actions={availableActions(request, { canDecide: hasDecide, isOwner: hasDecide, userId })} triggers={triggers} onOpen={open} />
+      <ActionButtons actions={availableActions(request, { canDecide, userId })} triggers={triggers} onOpen={open} />
       <ConfirmDialog
         isOpen={Boolean(dialog)} title={config?.title} message={config?.message} confirmLabel={config?.confirmLabel}
         busy={Boolean(actions.busy)} error={dialog === 'approve' && undefinedItems.length > 0 ? null : actions.error} onClose={() => setDialog(null)} onConfirm={handleConfirm}
@@ -168,9 +167,8 @@ function LoadError({ error, retryable, onBack, onRetry }) {
   );
 }
 
-export default function SupplyRequestDetail({ requestId, canDecide, isOwner, userId, onBack, onSynced }) {
+export default function SupplyRequestDetail({ requestId, canDecide = false, userId, onBack, onSynced }) {
   const { request, setRequest, loading, error, retryable, reload } = useSupplyRequestDetail(requestId);
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
 
   const handleUpdated = (updated, notice) => {
     if (updated) setRequest(updated);
@@ -186,7 +184,7 @@ export default function SupplyRequestDetail({ requestId, canDecide, isOwner, use
   return (
     <>
       <div aria-live="polite">{error && <div style={{ ...styles.errorBox, marginBottom: '10px' }}>No se pudo cargar el estado actual: {error}</div>}</div>
-      <RequestBody request={request} canDecide={hasDecide} isOwner={hasDecide} userId={userId} onBack={onBack} onUpdated={handleUpdated} onStale={handleStale} />
+      <RequestBody request={request} canDecide={canDecide} userId={userId} onBack={onBack} onUpdated={handleUpdated} onStale={handleStale} />
     </>
   );
 }

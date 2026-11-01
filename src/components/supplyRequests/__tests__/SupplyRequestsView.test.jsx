@@ -19,7 +19,7 @@ describe('SupplyRequestsView for staff', () => {
 
   it('creates a request with a catalog item and a free text item', async () => {
     const create = vi.spyOn(client, 'createRequest').mockResolvedValue({ ok: true, status: 201, data: { data: pendingRequest } });
-    render(<SupplyRequestsView isOwner={false} userId={12} />);
+    render(<SupplyRequestsView canDecide={false} userId={12} />);
     expect(screen.getByText('Mis pedidos')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Lista de compras' })).not.toBeInTheDocument();
     await waitFor(() => expect(client.listRequests).toHaveBeenCalledWith({ status: '', page: 1 }));
@@ -55,7 +55,7 @@ describe('SupplyRequestsView for staff', () => {
 
   it('shows 422 errors next to the item and the search states', async () => {
     vi.spyOn(client, 'createRequest').mockResolvedValue({ ok: false, status: 422, data: { message: 'Revisa los datos del pedido.', errors: { 'items.0.unit': ['Indica la unidad (hasta 20 caracteres).'] } } });
-    render(<SupplyRequestsView isOwner={false} userId={12} />);
+    render(<SupplyRequestsView canDecide={false} userId={12} />);
     fireEvent.click(await screen.findByText('Nuevo pedido'));
 
     inventoryClient.listInventory.mockResolvedValueOnce({ ok: false, status: 0 });
@@ -75,7 +75,7 @@ describe('SupplyRequestsView for staff', () => {
 
   it('the requester cancels a pending request but cannot decide it', async () => {
     vi.spyOn(client, 'cancelRequest').mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'cancelled' } } });
-    render(<SupplyRequestsView isOwner={false} userId={12} />);
+    render(<SupplyRequestsView canDecide={false} userId={12} />);
     fireEvent.click(await screen.findByText('Rosa, 2 insumos'));
     await screen.findByText('Pedido de Rosa');
     expect(screen.getByText('Aceite Vegetal')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('SupplyRequestsView for staff', () => {
   });
 
   it('another member sees no actions on a request that is not theirs', async () => {
-    render(<SupplyRequestsView isOwner={false} userId={99} />);
+    render(<SupplyRequestsView canDecide={false} userId={99} />);
     fireEvent.click(await screen.findByText('Rosa, 2 insumos'));
     await screen.findByText('Pedido de Rosa');
     expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('SupplyRequestsView for staff', () => {
     const evil = { ...pendingRequest, note: xss, requester: { id: 12, name: xss }, items: [{ ...pendingRequest.items[0], name: xss }] };
     client.listRequests.mockResolvedValue(pageOf([evil]));
     client.getRequest.mockResolvedValue({ ok: true, data: { data: evil } });
-    const { container } = render(<SupplyRequestsView isOwner={false} userId={12} />);
+    const { container } = render(<SupplyRequestsView canDecide={false} userId={12} />);
     // La lista muestra solo el primer nombre del solicitante.
     fireEvent.click(await screen.findByText(/, 1 insumo$/));
     await waitFor(() => expect(screen.getAllByText((text) => text.includes(xss)).length).toBeGreaterThan(1));
@@ -117,7 +117,7 @@ describe('SupplyRequestsView for the owner', () => {
   });
 
   async function openPending() {
-    render(<SupplyRequestsView isOwner userId={1} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} />);
     await waitFor(() => expect(client.listRequests).toHaveBeenCalledWith({ status: 'pending', page: 1 }));
     fireEvent.click(await screen.findByText('Rosa, 2 insumos'));
     await screen.findByText('Pedido de Rosa');
@@ -194,7 +194,7 @@ describe('SupplyRequestsView for the owner', () => {
         }
       }
     });
-    render(<SupplyRequestsView isOwner userId={1} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} />);
     expect(screen.getByText('Pedidos internos')).toBeInTheDocument();
     fireEvent.click(await screen.findByText('Nuevo pedido'));
     fireEvent.change(screen.getByLabelText('Nota para el dueño (opcional)'), { target: { value: 'Reposición' } });
@@ -210,7 +210,7 @@ describe('SupplyRequestsView for the owner', () => {
   });
 
   it('opens the request of a notification', async () => {
-    render(<SupplyRequestsView isOwner userId={1} openRequest={{ id: 101, nav: 1 }} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} openRequest={{ id: 101, nav: 1 }} />);
     await screen.findByText('Pedido de Rosa');
     expect(client.getRequest).toHaveBeenCalledWith(101);
   });

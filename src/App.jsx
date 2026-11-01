@@ -12,6 +12,7 @@ import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
 import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
+import { UNAUTHORIZED_SESSION_MESSAGE } from './services/apiClient';
 import { useUnreadCount } from './hooks/useUnreadCount';
 
 export default function App() {
@@ -73,7 +74,7 @@ export default function App() {
     const handleUnauthorized = (event) => {
       setAuthenticated(false);
       setUser(null);
-      setSessionNotice(event?.detail?.message || 'Tu cargo cambió. Inicia sesión otra vez.');
+      setSessionNotice(event?.detail?.message || UNAUTHORIZED_SESSION_MESSAGE);
     };
 
     window.addEventListener('ualdo:unauthorized', handleUnauthorized);

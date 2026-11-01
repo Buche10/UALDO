@@ -78,9 +78,8 @@ export function itemsCount(request) {
 }
 
 /** Acciones posibles según permisos y estado, como en el motor (Brief 30p). */
-export function availableActions(request, { canDecide, isOwner, userId }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
-  if (hasDecide) {
+export function availableActions(request, { canDecide = false, userId } = {}) {
+  if (canDecide) {
     if (request.status === 'pending') return ['approve', 'reject', 'cancel'];
     if (request.status === 'approved') return ['purchased', 'cancel'];
     if (request.status === 'purchased') return ['received'];

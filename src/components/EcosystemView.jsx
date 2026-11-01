@@ -94,7 +94,7 @@ export default function EcosystemView({
   } else if (currentSubTab === 'ventas') {
     content = <SalesView onBack={() => handleSubTabChange('overview')} />;
   } else if (currentSubTab === 'cashclose') {
-    content = <CashCloseView onBack={() => handleSubTabChange('overview')} fechaInicial={negociosParams?.fecha} />;
+    content = <CashCloseView fechaInicial={negociosParams?.fecha} />;
   } else if (currentSubTab === 'inventory') {
     content = <InventoryView initialSubView={negociosParams?.subView} onBack={() => handleSubTabChange('overview')} />;
   } else if (currentSubTab === 'pedidos') {
@@ -106,7 +106,6 @@ export default function EcosystemView({
         userId={user?.id}
         openRequest={openRequest}
         onOpenConsumed={onParamsConsumed}
-        onBack={() => handleSubTabChange('overview')}
       />
     );
   }

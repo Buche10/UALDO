@@ -11,7 +11,7 @@ describe('ProductionRunDetail', () => {
   });
 
   it('shows the engine metrics and warns a lower yield, without costs or void for staff', () => {
-    render(<ProductionRunDetail run={recordedRun} isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={recordedRun} canSeeCosts={false} canVoid={false} onBack={vi.fn()} />);
 
     expect(screen.getByText('60 %')).toBeInTheDocument();
     expect(screen.getByText('70 %')).toBeInTheDocument();
@@ -24,7 +24,7 @@ describe('ProductionRunDetail', () => {
 
   it('shows null metrics as "Sin dato" and a positive difference with sign', () => {
     const run = { ...recordedRun, real_yield_pct: 72.5, yield_difference_pct: 2.5, unaccounted_weight: null, unaccounted_pct: null, main_output_weight: null };
-    render(<ProductionRunDetail run={run} isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={run} canSeeCosts={false} canVoid={false} onBack={vi.fn()} />);
     expect(screen.getByText('+2,5 %')).not.toHaveStyle({ color: 'var(--warning)' });
     // Un solo "Sin dato" para el peso sin explicar, nunca "Sin dato (Sin dato)".
     expect(screen.queryByText('Sin dato (Sin dato)')).not.toBeInTheDocument();
@@ -33,7 +33,7 @@ describe('ProductionRunDetail', () => {
 
   it('hides the expected amount of a line when the engine did not compute it', () => {
     const run = { ...recordedRun, lines: [{ ...recordedRun.lines[1], expected_quantity: null }] };
-    render(<ProductionRunDetail run={run} isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={run} canSeeCosts={false} canVoid={false} onBack={vi.fn()} />);
     expect(screen.queryByText(/Esperado:/)).not.toBeInTheDocument();
   });
 
@@ -41,7 +41,7 @@ describe('ProductionRunDetail', () => {
     vi.spyOn(productionClient, 'voidRun').mockResolvedValue({ ok: true, data: { data: { ...recordedRun, status: 'voided' } } });
     function Harness() {
       const [run, setRun] = React.useState(recordedRun);
-      return <ProductionRunDetail run={run} isOwner onBack={vi.fn()} onVoided={setRun} />;
+      return <ProductionRunDetail run={run} canVoid={true} onBack={vi.fn()} onVoided={setRun} />;
     }
     render(<Harness />);
     fireEvent.click(screen.getByText('Anular').closest('button'));
@@ -53,7 +53,7 @@ describe('ProductionRunDetail', () => {
   });
 
   it('keeps Tab inside the void dialog', () => {
-    render(<ProductionRunDetail run={recordedRun} isOwner onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={recordedRun} canVoid={true} onBack={vi.fn()} />);
     fireEvent.click(screen.getByText('Anular').closest('button'));
     fireEvent.change(screen.getByLabelText('Motivo'), { target: { value: 'Error' } });
 
@@ -68,12 +68,12 @@ describe('ProductionRunDetail', () => {
   });
 
   it('shows costs to the owner and warns when they are incomplete', () => {
-    const { rerender } = render(<ProductionRunDetail run={{ ...recordedRun, ...ownerCosts }} isOwner onBack={vi.fn()} />);
+    const { rerender } = render(<ProductionRunDetail run={{ ...recordedRun, ...ownerCosts }} canSeeCosts={true} onBack={vi.fn()} />);
     expect(screen.getByText('Costo de las entradas')).toBeInTheDocument();
     expect(screen.getByText(/80,00/)).toBeInTheDocument();
     expect(screen.queryByText(/Costo incompleto/)).not.toBeInTheDocument();
 
-    rerender(<ProductionRunDetail run={{ ...recordedRun, cost_status: 'incomplete', input_cost: null }} isOwner onBack={vi.fn()} />);
+    rerender(<ProductionRunDetail run={{ ...recordedRun, cost_status: 'incomplete', input_cost: null }} canSeeCosts={true} onBack={vi.fn()} />);
     expect(screen.getByText(/Costo incompleto/)).toBeInTheDocument();
   });
 
@@ -82,7 +82,7 @@ describe('ProductionRunDetail', () => {
     const spy = vi.spyOn(productionClient, 'voidRun')
       .mockResolvedValueOnce({ ok: false, status: 409, data: { message: "Stock insuficiente para 'Lomo Fino Unidad' en Cocina." } })
       .mockResolvedValueOnce({ ok: true, data: { data: { ...recordedRun, status: 'voided', void_reason: 'Se registró dos veces' } } });
-    render(<ProductionRunDetail run={recordedRun} isOwner onBack={vi.fn()} onVoided={onVoided} />);
+    render(<ProductionRunDetail run={recordedRun} canVoid={true} onBack={vi.fn()} onVoided={onVoided} />);
 
     fireEvent.click(screen.getByText('Anular'));
     const dialog = screen.getByRole('dialog');
@@ -101,7 +101,7 @@ describe('ProductionRunDetail', () => {
   });
 
   it('closes the void dialog with Escape and returns the focus', () => {
-    render(<ProductionRunDetail run={recordedRun} isOwner onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={recordedRun} canVoid={true} onBack={vi.fn()} />);
     const trigger = screen.getByText('Anular').closest('button');
     fireEvent.click(trigger);
     expect(screen.getByLabelText('Motivo')).toHaveFocus();
@@ -111,7 +111,7 @@ describe('ProductionRunDetail', () => {
   });
 
   it('a voided run shows its reason and no void button', () => {
-    render(<ProductionRunDetail run={{ ...recordedRun, status: 'voided', void_reason: 'Error de pesaje' }} isOwner onBack={vi.fn()} />);
+    render(<ProductionRunDetail run={{ ...recordedRun, status: 'voided', void_reason: 'Error de pesaje' }} canVoid={true} onBack={vi.fn()} />);
     expect(screen.getByText('Motivo de la anulación: Error de pesaje')).toBeInTheDocument();
     expect(screen.queryByText('Anular')).not.toBeInTheDocument();
   });
@@ -119,7 +119,7 @@ describe('ProductionRunDetail', () => {
   it('shows names and notes as plain text', () => {
     const xss = '<img src=x onerror=alert(1)>';
     const { container } = render(
-      <ProductionRunDetail run={{ ...recordedRun, template_name: xss, notes: xss, lines: [{ ...recordedRun.lines[0], item_name: xss }] }} isOwner={false} onBack={vi.fn()} />
+      <ProductionRunDetail run={{ ...recordedRun, template_name: xss, notes: xss, lines: [{ ...recordedRun.lines[0], item_name: xss }] }} canSeeCosts={false} canVoid={false} onBack={vi.fn()} />
     );
     expect(screen.getAllByText((text) => text.includes(xss)).length).toBeGreaterThan(0);
     expect(container.querySelector('img')).toBeNull();

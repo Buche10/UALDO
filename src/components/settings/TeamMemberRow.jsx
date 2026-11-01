@@ -52,10 +52,10 @@ export default function TeamMemberRow({ member, onRoleUpdated }) {
   const pendingLabel = pendingRole ? (ROLE_LABELS[pendingRole] || pendingRole) : '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'rgba(32, 45, 47, 0.45)', border: '1px solid var(--border-glass)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(0, 115, 127, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
             <UserCheck size={18} aria-hidden="true" />
           </div>
           <div>
@@ -82,7 +82,7 @@ export default function TeamMemberRow({ member, onRoleUpdated }) {
       </div>
 
       {pendingRole && (
-        <div role="region" aria-label={`Confirmar cambio de cargo para ${member.name}`} style={{ marginTop: '4px', padding: '10px 12px', borderRadius: '10px', background: 'rgba(0, 115, 127, 0.15)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div role="region" aria-label={`Confirmar cambio de cargo para ${member.name}`} style={{ marginTop: '4px', padding: '10px 12px', borderRadius: '10px', background: 'var(--primary-soft)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-main)' }}>
             {member.name} pasará a {pendingLabel}. Tendrá que volver a iniciar sesión.
           </p>
@@ -99,7 +99,7 @@ export default function TeamMemberRow({ member, onRoleUpdated }) {
       )}
 
       {rowError && (
-        <div role="alert" style={{ fontSize: '12px', color: 'var(--error)', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid var(--error)', padding: '6px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div role="alert" style={{ fontSize: '12px', color: 'var(--error)', background: 'var(--error-soft)', border: '1px solid var(--error)', padding: '6px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <ShieldAlert size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
           <span>{rowError}</span>
         </div>

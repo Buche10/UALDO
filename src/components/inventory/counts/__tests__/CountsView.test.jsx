@@ -17,7 +17,7 @@ describe('CountsView component', () => {
     });
 
     const onBack = vi.fn();
-    render(<CountsView isOwner={true} onBack={onBack} />);
+    render(<CountsView canCount={true} onBack={onBack} />);
 
     expect(screen.getByText('Conteos Físicos por Ubicación')).toBeInTheDocument();
     expect(screen.getByText('Volver al inventario')).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('CountsView component', () => {
       data: { items: [], meta: { last_page: 1 } },
     });
 
-    render(<CountsView isOwner={true} onBack={vi.fn()} />);
+    render(<CountsView canCount={true} onBack={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Reapertura semana 1')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('CountsView component', () => {
       data: { data: [], meta: { current_page: 1, last_page: 1 } },
     });
 
-    render(<CountsView isOwner={true} onBack={vi.fn()} />);
+    render(<CountsView canCount={true} onBack={vi.fn()} />);
 
     const newBtn = screen.getByRole('button', { name: /Nuevo Conteo/i });
     fireEvent.click(newBtn);
@@ -95,7 +95,7 @@ describe('CountsView component', () => {
       error: 'Error de red al consultar conteos',
     });
 
-    render(<CountsView isOwner={true} onBack={vi.fn()} />);
+    render(<CountsView canCount={true} onBack={vi.fn()} />);
 
     expect(await screen.findByText('Error de red al consultar conteos')).toBeInTheDocument();
 

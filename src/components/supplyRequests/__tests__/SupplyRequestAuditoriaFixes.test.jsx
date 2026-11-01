@@ -26,7 +26,7 @@ describe('SupplyRequestDetail - Cantidades al aprobar (Brief 28p, punto 28)', ()
     const decideSpy = vi.spyOn(client, 'decideRequest').mockResolvedValue({ ok: true });
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: requestWithUndefinedItems } });
 
-    render(<SupplyRequestDetail requestId={201} isOwner={true} userId={1} onBack={vi.fn()} />);
+    render(<SupplyRequestDetail requestId={201} canDecide={true} userId={1} onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/Harina de trigo/)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
@@ -58,7 +58,7 @@ describe('SupplyRequestDetail - Cantidades al aprobar (Brief 28p, punto 28)', ()
     const decideSpy = vi.spyOn(client, 'decideRequest').mockResolvedValue({ ok: true, data: { data: { ...requestWithUndefinedItems, status: 'approved' } } });
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: requestWithUndefinedItems } });
 
-    render(<SupplyRequestDetail requestId={201} isOwner={true} userId={1} onBack={vi.fn()} />);
+    render(<SupplyRequestDetail requestId={201} canDecide={true} userId={1} onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/Harina de trigo/)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
@@ -84,7 +84,7 @@ describe('SupplyRequestDetail - Cantidades al aprobar (Brief 28p, punto 28)', ()
       },
     });
 
-    render(<SupplyRequestDetail requestId={201} isOwner={true} userId={1} onBack={vi.fn()} />);
+    render(<SupplyRequestDetail requestId={201} canDecide={true} userId={1} onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/Harina de trigo/)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));

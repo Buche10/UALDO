@@ -14,11 +14,8 @@ const STAFF_SUGGESTIONS = [
   { label: 'Buscar un insumo', prompt: 'Buscar existencias de un insumo', icon: Search },
 ];
 
-export default function SuggestionChips({ user, role, onSelectChip, disabled = false }) {
-  const hasDecide = user
-    ? can(user, ABILITIES.SUPPLY_DECIDE)
-    : role === 'owner';
-
+export default function SuggestionChips({ user, onSelectChip, disabled = false }) {
+  const hasDecide = user ? can(user, ABILITIES.SUPPLY_DECIDE) : false;
   const suggestions = hasDecide ? DECIDER_SUGGESTIONS : STAFF_SUGGESTIONS;
 
   return (

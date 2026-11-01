@@ -30,22 +30,22 @@ describe('SupplyRequestList', () => {
   it('shows the error with retry, the empty messages and the loading states', () => {
     const reload = vi.fn();
     const props = { status: '', onStatusChange: vi.fn(), onOpen: vi.fn(), onNew: vi.fn() };
-    const { rerender } = render(<SupplyRequestList list={listOf({ error: 'Error 500', reload })} isOwner {...props} />);
+    const { rerender } = render(<SupplyRequestList list={listOf({ error: 'Error 500', reload })} canDecide={true} {...props} />);
     fireEvent.click(screen.getByText('Reintentar'));
     expect(reload).toHaveBeenCalled();
 
-    rerender(<SupplyRequestList list={listOf()} isOwner {...props} />);
+    rerender(<SupplyRequestList list={listOf()} canDecide={true} {...props} />);
     expect(screen.getByText('No hay pedidos con este filtro.')).toBeInTheDocument();
-    rerender(<SupplyRequestList list={listOf()} isOwner={false} {...props} />);
+    rerender(<SupplyRequestList list={listOf()} canDecide={false} {...props} />);
     expect(screen.getByText('Todavía no tienes pedidos con este filtro.')).toBeInTheDocument();
-    rerender(<SupplyRequestList list={listOf({ loading: true })} isOwner {...props} />);
+    rerender(<SupplyRequestList list={listOf({ loading: true })} canDecide={true} {...props} />);
     expect(screen.getByText('Cargando pedidos...')).toBeInTheDocument();
 
     const loadMore = vi.fn();
-    rerender(<SupplyRequestList list={listOf({ items: [{ ...pendingRequest, priority: 'normal' }], loading: true, hasMore: true, loadMore })} isOwner {...props} />);
+    rerender(<SupplyRequestList list={listOf({ items: [{ ...pendingRequest, priority: 'normal' }], loading: true, hasMore: true, loadMore })} canDecide={true} {...props} />);
     expect(screen.queryByText('Urgente')).not.toBeInTheDocument();
     expect(screen.getByText('Cargando más...')).toBeInTheDocument();
-    rerender(<SupplyRequestList list={listOf({ items: [pendingRequest], hasMore: true, loadMore })} isOwner {...props} />);
+    rerender(<SupplyRequestList list={listOf({ items: [pendingRequest], hasMore: true, loadMore })} canDecide={true} {...props} />);
     fireEvent.click(screen.getByText('Cargar más'));
     expect(loadMore).toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'approved' } });
@@ -93,18 +93,18 @@ describe('ShoppingListPanel and SupplyRequestDetail errors', () => {
       .mockResolvedValueOnce({ ok: true, data: { data: { ...pendingRequest, priority: 'normal', note: null } } });
 
     // 403 y 404 no se arreglan reintentando: no se ofrece "Reintentar".
-    const first = render(<SupplyRequestDetail requestId={101} isOwner={false} userId={12} onBack={onBack} />);
+    const first = render(<SupplyRequestDetail requestId={101} canDecide={false} userId={12} onBack={onBack} />);
     await waitFor(() => expect(screen.getByText('Solo el dueño o quien hizo el pedido pueden verlo.')).toBeInTheDocument());
     expect(screen.queryByText('Reintentar')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Volver a pedidos'));
     expect(onBack).toHaveBeenCalled();
     first.unmount();
-    const second = render(<SupplyRequestDetail requestId={101} isOwner={false} userId={12} onBack={onBack} />);
+    const second = render(<SupplyRequestDetail requestId={101} canDecide={false} userId={12} onBack={onBack} />);
     await waitFor(() => expect(screen.getByText('El pedido no existe en este negocio.')).toBeInTheDocument());
     expect(screen.queryByText('Reintentar')).not.toBeInTheDocument();
     second.unmount();
 
-    render(<SupplyRequestDetail requestId={101} isOwner={false} userId={12} onBack={onBack} />);
+    render(<SupplyRequestDetail requestId={101} canDecide={false} userId={12} onBack={onBack} />);
     await waitFor(() => expect(screen.getByText('Sin conexión')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Reintentar'));
     await screen.findByText('Pedido de Rosa');
@@ -124,7 +124,7 @@ describe('SupplyRequestDetail dates (engine check)', () => {
       received_at: '2026-10-11T12:40:00+00:00',
     };
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: received } });
-    render(<SupplyRequestDetail requestId={101} isOwner userId={1} onBack={vi.fn()} />);
+    render(<SupplyRequestDetail requestId={101} canDecide={true} userId={1} onBack={vi.fn()} />);
     await screen.findByText('Pedido de Rosa');
 
     expect(screen.getByText('Pedido').nextSibling).toHaveTextContent(formatDateTime(received.created_at));
@@ -136,7 +136,7 @@ describe('SupplyRequestDetail dates (engine check)', () => {
 
   it('leaves out the dates the request does not have yet', async () => {
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: pendingRequest } });
-    render(<SupplyRequestDetail requestId={101} isOwner userId={1} onBack={vi.fn()} />);
+    render(<SupplyRequestDetail requestId={101} canDecide={true} userId={1} onBack={vi.fn()} />);
     await screen.findByText('Pedido de Rosa');
     expect(screen.getByText('Pedido')).toBeInTheDocument();
     ['Decisión', 'Comprado', 'Recibido'].forEach((label) => expect(screen.queryByText(label)).not.toBeInTheDocument());

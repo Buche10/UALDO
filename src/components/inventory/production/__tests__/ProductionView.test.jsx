@@ -18,7 +18,7 @@ describe('ProductionView', () => {
 
   it('a member picks a template, sees the engine plan, records and sees the result', async () => {
     const record = vi.spyOn(productionClient, 'recordRun').mockResolvedValue({ ok: true, status: 201, data: { status: 'created', data: recordedRun } });
-    render(<ProductionView isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionView onBack={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText('Todavía no hay producciones registradas.')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Nuevo porcionado'));
@@ -43,7 +43,7 @@ describe('ProductionView', () => {
   });
 
   it('a sum-scaled template explains that the expected amounts come at the end', async () => {
-    render(<ProductionView isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('Nuevo porcionado')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Nuevo porcionado'));
     await waitFor(() => expect(screen.getByText('Carne Hamburguesas')).toBeInTheDocument());
@@ -57,7 +57,7 @@ describe('ProductionView', () => {
 
   it('shows the 409 of the engine on the form', async () => {
     vi.spyOn(productionClient, 'recordRun').mockResolvedValue({ ok: false, status: 409, data: { message: "Stock insuficiente para 'Lomo Fino Kg' en Cocina." } });
-    render(<ProductionView isOwner={false} onBack={vi.fn()} />);
+    render(<ProductionView onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText('Nuevo porcionado')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Nuevo porcionado'));
     await waitFor(() => expect(screen.getByText('Lomo porcionado')).toBeInTheDocument());
@@ -77,7 +77,7 @@ describe('ProductionView', () => {
       .mockResolvedValueOnce({ ok: true, data: { data: [recordedRun], meta: { current_page: 1, last_page: 2 } } })
       .mockResolvedValueOnce({ ok: true, data: { data: [{ ...recordedRun, id: 40, status: 'voided' }], meta: { current_page: 2, last_page: 2 } } });
     const onBack = vi.fn();
-    render(<ProductionView isOwner={false} onBack={onBack} />);
+    render(<ProductionView onBack={onBack} />);
 
     await waitFor(() => expect(screen.getByText('Rendimiento 60 %')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Cargar más'));

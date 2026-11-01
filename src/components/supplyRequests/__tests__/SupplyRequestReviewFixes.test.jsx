@@ -22,13 +22,13 @@ describe('Brief 22p review fixes', () => {
 
   it('M1: the same notification tapped again reopens and reloads the request', async () => {
     const onOpenConsumed = vi.fn();
-    const { rerender } = render(<SupplyRequestsView isOwner={false} userId={12} openRequest={{ id: 101, nav: 1 }} onOpenConsumed={onOpenConsumed} />);
+    const { rerender } = render(<SupplyRequestsView canDecide={false} userId={12} openRequest={{ id: 101, nav: 1 }} onOpenConsumed={onOpenConsumed} />);
     await screen.findByText('Pedido de Rosa');
     expect(onOpenConsumed).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByText('Volver a pedidos'));
 
     client.getRequest.mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'rejected', decision_note: 'Hay stock' } } });
-    rerender(<SupplyRequestsView isOwner={false} userId={12} openRequest={{ id: 101, nav: 2 }} onOpenConsumed={onOpenConsumed} />);
+    rerender(<SupplyRequestsView canDecide={false} userId={12} openRequest={{ id: 101, nav: 2 }} onOpenConsumed={onOpenConsumed} />);
     await screen.findByText('Respuesta del dueño: Hay stock');
     expect(client.getRequest).toHaveBeenCalledTimes(2);
     expect(onOpenConsumed).toHaveBeenCalledTimes(2);
@@ -36,10 +36,10 @@ describe('Brief 22p review fixes', () => {
   });
 
   it('M1: a notification for the request already open reloads it', async () => {
-    const { rerender } = render(<SupplyRequestsView isOwner={false} userId={12} openRequest={{ id: 101, nav: 1 }} />);
+    const { rerender } = render(<SupplyRequestsView canDecide={false} userId={12} openRequest={{ id: 101, nav: 1 }} />);
     await screen.findByText('Pedido de Rosa');
     client.getRequest.mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'rejected' } } });
-    rerender(<SupplyRequestsView isOwner={false} userId={12} openRequest={{ id: 101, nav: 2 }} />);
+    rerender(<SupplyRequestsView canDecide={false} userId={12} openRequest={{ id: 101, nav: 2 }} />);
     await waitFor(() => expect(screen.getByText(/Rechazado/)).toBeInTheDocument());
   });
 
@@ -56,7 +56,7 @@ describe('Brief 22p review fixes', () => {
       .mockResolvedValueOnce({ ok: false, status: 0, isNetworkError: true })
       .mockResolvedValueOnce({ ok: true, status: 200, data: { data: pendingRequest } });
     vi.spyOn(client, 'getShoppingList').mockResolvedValue({ ok: true, data: { data: [] } });
-    render(<SupplyRequestsView isOwner userId={1} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} />);
     fireEvent.click(await screen.findByText('Nuevo pedido'));
     fireEvent.click(screen.getByText('Agregar en texto libre'));
     fireEvent.change(screen.getByLabelText('Qué necesitas'), { target: { value: 'Esponjas' } });
@@ -73,7 +73,7 @@ describe('Brief 22p review fixes', () => {
 
   it('L1 and L2: after a 409 the focus goes to the heading, and a failed reload is reported', async () => {
     vi.spyOn(client, 'decideRequest').mockResolvedValue({ ok: false, status: 409, data: { message: 'El pedido ya no está pendiente.' } });
-    render(<SupplyRequestsView isOwner userId={1} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} />);
     fireEvent.click(await screen.findByText('Rosa, 2 insumos'));
     await screen.findByText('Pedido de Rosa');
 
@@ -88,7 +88,7 @@ describe('Brief 22p review fixes', () => {
   it('the owner cancels an approved request', async () => {
     const cancel = vi.spyOn(client, 'cancelRequest').mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'cancelled' } } });
     client.getRequest.mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'approved' } } });
-    render(<SupplyRequestsView isOwner userId={1} openRequest={{ id: 101, nav: 1 }} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} openRequest={{ id: 101, nav: 1 }} />);
     await screen.findByText('Pedido de Rosa');
     expect(screen.getByRole('button', { name: 'Marcar comprado' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -98,7 +98,7 @@ describe('Brief 22p review fixes', () => {
   });
 
   it('typing the reason never moves the focus to the button behind the dialog', async () => {
-    render(<SupplyRequestsView isOwner userId={1} openRequest={{ id: 101, nav: 1 }} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} openRequest={{ id: 101, nav: 1 }} />);
     await screen.findByText('Pedido de Rosa');
     const trigger = screen.getByRole('button', { name: 'Rechazar' });
     const onFocus = vi.fn();
@@ -120,7 +120,7 @@ describe('Brief 22p review fixes', () => {
     let resolve;
     const spy = vi.spyOn(client, 'markPurchased').mockImplementation(() => new Promise((r) => { resolve = r; }));
     client.getRequest.mockResolvedValue({ ok: true, data: { data: { ...pendingRequest, status: 'approved' } } });
-    render(<SupplyRequestsView isOwner userId={1} openRequest={{ id: 101, nav: 1 }} />);
+    render(<SupplyRequestsView canDecide={true} userId={1} openRequest={{ id: 101, nav: 1 }} />);
     await screen.findByText('Pedido de Rosa');
     fireEvent.click(screen.getByRole('button', { name: 'Marcar comprado' }));
     const confirm = dialog().getByRole('button', { name: 'Marcar comprado' });

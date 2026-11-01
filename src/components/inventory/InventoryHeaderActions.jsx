@@ -20,21 +20,15 @@ const secondaryButton = {
  * Filtra cada acción según los permisos concretos del usuario (Brief 30p).
  */
 export default function InventoryHeaderActions({
-  canManageSettings,
-  canManagePurchases,
-  canCount,
-  isOwner,
+  canManageSettings = false,
+  canManagePurchases = false,
+  canCount = false,
   onProduction,
   onPurchases,
   onCounts,
   onRunfoodRecipes,
   onCreate,
 }) {
-  const allowRecipes = canManageSettings !== undefined ? canManageSettings : Boolean(isOwner);
-  const allowPurchases = canManagePurchases !== undefined ? canManagePurchases : Boolean(isOwner);
-  const allowCounts = canCount !== undefined ? canCount : Boolean(isOwner);
-  const allowCreate = canManageSettings !== undefined ? canManageSettings : Boolean(isOwner);
-
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <button type="button" className="glass-card-interactive" onClick={onProduction} style={secondaryButton}>
@@ -42,28 +36,28 @@ export default function InventoryHeaderActions({
         <span>Producción</span>
       </button>
 
-      {allowRecipes && (
+      {canManageSettings && (
         <button type="button" className="glass-card-interactive" onClick={onRunfoodRecipes} style={secondaryButton}>
           <ChefHat size={16} aria-hidden="true" />
           <span>Recetas de RunFood</span>
         </button>
       )}
 
-      {allowPurchases && (
+      {canManagePurchases && (
         <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
           <ShoppingCart size={16} aria-hidden="true" />
           <span>Compras</span>
         </button>
       )}
 
-      {allowCounts && (
+      {canCount && (
         <button type="button" className="glass-card-interactive" onClick={onCounts} style={secondaryButton}>
           <ClipboardList size={16} aria-hidden="true" />
           <span>Conteos</span>
         </button>
       )}
 
-      {allowCreate && (
+      {canManageSettings && (
         <button
           type="button"
           className="btn-primary"

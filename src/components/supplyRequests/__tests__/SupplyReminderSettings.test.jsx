@@ -146,7 +146,7 @@ describe('SupplyReminderSettings (Brief 28p, punto 31)', () => {
     });
     const settingsSpy = vi.spyOn(client, 'getSupplySettings');
 
-    render(<ShoppingListPanel isOwner={false} />);
+    render(<ShoppingListPanel canDecide={false} />);
 
     await waitFor(() => {
       expect(screen.queryByText('Cargando la información de compras...')).not.toBeInTheDocument();

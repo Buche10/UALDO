@@ -61,7 +61,7 @@ export default function Header({
             aria-label={unreadCount > 0 ? `Avisos, ${badgeText} sin leer` : 'Avisos, sin novedades'}
             style={{
               position: 'relative',
-              background: 'rgba(32, 45, 47, 0.75)',
+              background: 'var(--bg-card)',
               border: '1px solid var(--border-glass)',
               borderRadius: '9999px',
               padding: '8px',
@@ -80,7 +80,7 @@ export default function Header({
                   top: '-4px',
                   right: '-4px',
                   background: 'var(--error)',
-                  color: '#ffffff',
+                  color: 'var(--on-primary)',
                   fontSize: '10px',
                   fontWeight: 700,
                   minWidth: '18px',

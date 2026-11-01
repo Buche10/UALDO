@@ -195,7 +195,7 @@ describe('App component login flow and notifications integration', () => {
     });
   });
 
-  it('vuelve al login con aviso "Tu cargo cambió. Inicia sesión otra vez." ante evento ualdo:unauthorized', async () => {
+  it('vuelve al login con aviso neutro ante evento ualdo:unauthorized', async () => {
     vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
     vi.spyOn(auth, 'getUser').mockReturnValue({
       id: 1,
@@ -215,13 +215,13 @@ describe('App component login flow and notifications integration', () => {
       expect(screen.queryByText(/Iniciando UALDO Mobile/i)).not.toBeInTheDocument();
     });
 
-    // Simular evento emitido por apiClient ante un 401 por revocación de tokens
+    // Simular evento emitido por apiClient ante un 401
     window.dispatchEvent(new CustomEvent('ualdo:unauthorized', {
-      detail: { message: 'Tu cargo cambió. Inicia sesión otra vez.' }
+      detail: { message: apiClient.UNAUTHORIZED_SESSION_MESSAGE }
     }));
 
     await waitFor(() => {
-      expect(screen.getByText('Tu cargo cambió. Inicia sesión otra vez.')).toBeInTheDocument();
+      expect(screen.getByText(apiClient.UNAUTHORIZED_SESSION_MESSAGE)).toBeInTheDocument();
       expect(screen.getByText(/Iniciar Sesión/i)).toBeInTheDocument();
     });
   });

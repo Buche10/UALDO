@@ -6,8 +6,7 @@ import { formatDateTime, itemsCount, requesterName, statusLabel, STATUS_FILTERS 
 /**
  * Pedidos internos (Brief 22p / 30p): quien decide ve todos; el resto, los suyos.
  */
-export default function SupplyRequestList({ list, status, onStatusChange, onOpen, onNew, canDecide, isOwner }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+export default function SupplyRequestList({ list, status, onStatusChange, onOpen, onNew, canDecide = false }) {
   const { items, loading, error, hasMore, loadMore, reload } = list;
 
   return (
@@ -37,7 +36,7 @@ export default function SupplyRequestList({ list, status, onStatusChange, onOpen
       {loading && items.length === 0 ? (
         <div style={styles.muted}>Cargando pedidos...</div>
       ) : items.length === 0 && !error ? (
-        <div style={styles.muted}>{hasDecide ? 'No hay pedidos con este filtro.' : 'Todavía no tienes pedidos con este filtro.'}</div>
+        <div style={styles.muted}>{canDecide ? 'No hay pedidos con este filtro.' : 'Todavía no tienes pedidos con este filtro.'}</div>
       ) : (
         items.map((request) => (
           <button key={request.id} type="button" onClick={() => onOpen(request)} className="glass-card-interactive" style={{ ...styles.card, textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: '10px', color: 'var(--text-main)' }}>

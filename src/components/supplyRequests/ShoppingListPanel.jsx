@@ -10,8 +10,7 @@ import SupplyReminderSettings from './SupplyReminderSettings';
  * Panel de compras consolidado para el dueño (Brief 22p / 26p).
  * Muestra lo reportado por aprobar, lo aprobado para compra y los insumos bajo mínimo.
  */
-export default function ShoppingListPanel({ onViewRequest, canDecide, isOwner = false }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+export default function ShoppingListPanel({ onViewRequest, canDecide = false }) {
   const { overview, loading, error, reload } = usePurchasingOverview();
 
   const isEmpty = !overview.aprobado.length && !overview.por_aprobar.length && !overview.bajo_minimo.length;
@@ -64,7 +63,7 @@ export default function ShoppingListPanel({ onViewRequest, canDecide, isOwner = 
       />
 
       {/* Ajuste de aviso de faltantes (solo para el dueño) */}
-      {hasDecide && <SupplyReminderSettings />}
+      {canDecide && <SupplyReminderSettings />}
     </div>
   );
 }

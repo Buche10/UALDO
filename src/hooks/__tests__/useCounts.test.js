@@ -8,14 +8,14 @@ describe('useCounts hook', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not load counts if user is not owner and calling reload/loadMore does nothing (killing mutation)', async () => {
+  it('does not load counts if user does not have canCount and calling reload/loadMore does nothing', async () => {
     const spy = vi.spyOn(inventoryCountsClient, 'listCounts');
-    const { result } = renderHook(() => useCounts({ isOwner: false }));
+    const { result } = renderHook(() => useCounts({ canCount: false }));
 
     expect(result.current.counts).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
 
-    // Calling reload or loadMore must be guarded by if (!isOwner) return;
+    // Calling reload or loadMore must be guarded by if (!canCount) return;
     await act(async () => {
       await result.current.reload();
       await result.current.loadMore();
@@ -40,7 +40,7 @@ describe('useCounts hook', () => {
       data: mockData,
     });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     // Wait for the async load
     await act(async () => {
@@ -60,7 +60,7 @@ describe('useCounts hook', () => {
       error: 'Error al conectar',
     });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     await act(async () => {
       await Promise.resolve();
@@ -82,7 +82,7 @@ describe('useCounts hook', () => {
       data: { data: newCount },
     });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     await act(async () => {
       await Promise.resolve();
@@ -110,7 +110,7 @@ describe('useCounts hook', () => {
       ok: true,
     });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     await act(async () => {
       await Promise.resolve();
@@ -140,7 +140,7 @@ describe('useCounts hook', () => {
       .mockResolvedValueOnce({ ok: true, data: page1Data })
       .mockResolvedValueOnce({ ok: true, data: page2Data });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     await act(async () => {
       await Promise.resolve();
@@ -177,7 +177,7 @@ describe('useCounts hook', () => {
       error: 'No se puede cancelar',
     });
 
-    const { result } = renderHook(() => useCounts({ isOwner: true }));
+    const { result } = renderHook(() => useCounts({ canCount: true }));
 
     await act(async () => {
       await Promise.resolve();

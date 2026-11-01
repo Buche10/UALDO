@@ -21,16 +21,14 @@ function RequestsTabs({ tab, onSelect }) {
 }
 
 /** Título, pestañas del resolutor (supply.decide) y aviso de la última acción. */
-function RequestsHeader({ canDecide, isOwner, tab, notice, onSelectTab }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
-
+function RequestsHeader({ canDecide = false, tab, notice, onSelectTab }) {
   return (
     <>
       <h2 className="section-title" style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <ClipboardList size={18} color="var(--accent)" aria-hidden="true" />
-        <span>{hasDecide ? 'Pedidos internos' : 'Mis pedidos'}</span>
+        <span>{canDecide ? 'Pedidos internos' : 'Mis pedidos'}</span>
       </h2>
-      {hasDecide && <RequestsTabs tab={tab} onSelect={onSelectTab} />}
+      {canDecide && <RequestsTabs tab={tab} onSelect={onSelectTab} />}
       <div role="status" aria-live="polite">
         {notice && <div style={{ padding: '10px 14px', background: 'var(--success-soft)', color: 'var(--success)', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>{notice}</div>}
       </div>
@@ -42,12 +40,11 @@ function RequestsHeader({ canDecide, isOwner, tab, notice, onSelectTab }) {
  * Pedidos internos (Brief 22p / 30p). Cualquier miembro pide y sigue sus pedidos;
  * quien posee supply.decide ve todos, decide y tiene la lista de compras.
  */
-export default function SupplyRequestsView({ canDecide, isOwner, userId, openRequest = null, onOpenConsumed }) {
-  const hasDecide = canDecide !== undefined ? canDecide : Boolean(isOwner);
+export default function SupplyRequestsView({ canDecide = false, userId, openRequest = null, onOpenConsumed }) {
   const [tab, setTab] = useState('requests');
   const [screen, setScreen] = useState('list');
   const [detail, setDetail] = useState({ id: null, version: 0 });
-  const [status, setStatus] = useState(hasDecide ? 'pending' : '');
+  const [status, setStatus] = useState(canDecide ? 'pending' : '');
   const [notice, setNotice] = useState(null);
   const list = useSupplyRequests(status);
 
@@ -78,7 +75,7 @@ export default function SupplyRequestsView({ canDecide, isOwner, userId, openReq
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <RequestsHeader canDecide={hasDecide} isOwner={hasDecide} tab={tab} notice={notice} onSelectTab={(id) => { setTab(id); setNotice(null); }} />
+      <RequestsHeader canDecide={canDecide} tab={tab} notice={notice} onSelectTab={(id) => { setTab(id); setNotice(null); }} />
 
       {/* Pedidos queda montado (oculto) en la otra pestaña: un pedido a medias conserva lo escrito y su client_uuid. */}
       <div role="tabpanel" hidden={tab !== 'requests'}>
@@ -87,8 +84,7 @@ export default function SupplyRequestsView({ canDecide, isOwner, userId, openReq
           <SupplyRequestDetail
             key={`${detail.id}-${detail.version}`}
             requestId={detail.id}
-            canDecide={hasDecide}
-            isOwner={hasDecide}
+            canDecide={canDecide}
             userId={userId}
             onBack={backToList}
             onSynced={(updated, message) => { syncList(updated); setNotice(message || null); }}
@@ -99,19 +95,17 @@ export default function SupplyRequestsView({ canDecide, isOwner, userId, openReq
             list={list}
             status={status}
             onStatusChange={setStatus}
-            canDecide={hasDecide}
-            isOwner={hasDecide}
+            canDecide={canDecide}
             onOpen={(r) => showDetail(r.id, null)}
             onNew={() => { setNotice(null); setScreen('new'); }}
           />
         )}
       </div>
-      {tab === 'shopping' && hasDecide && (
+      {tab === 'shopping' && canDecide && (
         <div role="tabpanel">
           <ShoppingListPanel
             onViewRequest={(id) => { setTab('requests'); showDetail(id, null); }}
-            canDecide={hasDecide}
-            isOwner={hasDecide}
+            canDecide={canDecide}
           />
         </div>
       )}

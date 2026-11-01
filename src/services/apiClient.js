@@ -1,5 +1,7 @@
 import { getSettings } from './storage';
 
+export const UNAUTHORIZED_SESSION_MESSAGE = 'Tu sesión terminó o tu cargo cambió. Inicia sesión otra vez.';
+
 export const getAuthToken = () => {
   try {
     return localStorage.getItem('ualdo_token');
@@ -114,13 +116,13 @@ export const request = async (path, options = {}) => {
       clearAuthSession();
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('ualdo:unauthorized', {
-          detail: { message: 'Tu cargo cambió. Inicia sesión otra vez.' }
+          detail: { message: UNAUTHORIZED_SESSION_MESSAGE }
         }));
       }
       return {
         ok: false,
         status: 401,
-        error: 'Tu cargo cambió. Inicia sesión otra vez.'
+        error: UNAUTHORIZED_SESSION_MESSAGE
       };
     }
 
