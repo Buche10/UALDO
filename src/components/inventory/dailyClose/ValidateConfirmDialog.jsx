@@ -33,6 +33,7 @@ export default function ValidateConfirmDialog({
           borderRadius: '16px',
           background: 'var(--bg-card)',
           border: '1px solid var(--border-glass)',
+          boxShadow: 'var(--shadow-dialog)',
         }}
       >
         <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', color: 'var(--text-main)' }}>

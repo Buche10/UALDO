@@ -5,6 +5,7 @@ import { can, ABILITIES } from '../../../services/permissions';
 import { getDailyCloseSummary, createDailyClose, getCount } from '../../../services/inventoryCountsClient';
 import { canCountLocation, canValidateLocation } from './dailyClosePermissions';
 import { getTodayStr, getYesterdayStr } from './dailyCloseDates';
+import DailyCloseHeader from './DailyCloseHeader';
 import DailyCloseCard from './DailyCloseCard';
 import DifferencesList from './DifferencesList';
 import CountSheet from '../counts/CountSheet';
@@ -22,8 +23,10 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
   const [activeCountId, setActiveCountId] = useState(null);
   const [activeCountDetail, setActiveCountDetail] = useState(null);
   const [viewMode, setViewMode] = useState('summary');
+  const [sheetOrigin, setSheetOrigin] = useState('summary');
 
   const canSeeCosts = can(currentUser, ABILITIES.INVENTORY_COSTS);
+  const canAdjust = can(currentUser, ABILITIES.INVENTORY_ADJUST);
 
   const loadSummary = useCallback(async (dateToLoad) => {
     setLoading(true);
@@ -47,6 +50,7 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
     setActiveCountId(null);
     setActiveCountDetail(null);
     setViewMode('summary');
+    setSheetOrigin('summary');
   };
 
   const handleStartCount = async (location) => {
@@ -60,6 +64,7 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
       : (res.status === 409 ? (res.data?.existing_count_id || res.data?.id) : null);
 
     if (countId) {
+      setSheetOrigin('summary');
       setActiveCountId(countId);
       setViewMode('sheet');
     } else {
@@ -82,16 +87,31 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
     }
   };
 
+  const handleBackFromSheet = async () => {
+    if (sheetOrigin === 'differences' && activeCountId) {
+      setLoading(true);
+      const res = await getCount(activeCountId);
+      setLoading(false);
+      if (res.ok) {
+        setActiveCountDetail(res.data?.data || res.data);
+      }
+      setViewMode('differences');
+      setSheetOrigin('summary');
+      loadSummary(selectedDate);
+      return;
+    }
+    setViewMode('summary');
+    setActiveCountId(null);
+    loadSummary(selectedDate);
+  };
+
   if (viewMode === 'sheet' && activeCountId) {
     return (
       <CountSheet
         countId={activeCountId}
         isDailyClose={true}
-        onBack={() => {
-          setViewMode('summary');
-          setActiveCountId(null);
-          loadSummary(selectedDate);
-        }}
+        backLabel={sheetOrigin === 'differences' ? 'Volver a diferencias' : undefined}
+        onBack={handleBackFromSheet}
         onSubmitSuccess={(updatedData) => {
           loadSummary(selectedDate);
           if (updatedData && updatedData.status === 'submitted') {
@@ -110,7 +130,7 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
     return (
       <DifferencesList
         count={activeCountDetail}
-        canValidate={canValidateLocation(currentUser, activeCountDetail.location)}
+        canValidate={canValidateLocation(currentUser, activeCountDetail.location, activeCountDetail.status)}
         onBack={() => {
           setViewMode('summary');
           setActiveCountId(null);
@@ -121,7 +141,10 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
           setActiveCountDetail(updated);
           loadSummary(selectedDate);
         }}
-        onOpenEditSheet={() => setViewMode('sheet')}
+        onOpenEditSheet={() => {
+          setSheetOrigin('differences');
+          setViewMode('sheet');
+        }}
       />
     );
   }
@@ -130,31 +153,12 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div>
-          <h2 className="section-title" style={{ margin: 0 }}>Cierre del día</h2>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-            Conteo físico por área y conciliación con el sistema.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '6px', background: 'var(--chip-bg)', padding: '4px', borderRadius: '9999px', border: '1px solid var(--border-glass)' }}>
-          <button
-            type="button"
-            onClick={() => handleDateChange(today)}
-            style={{ padding: '6px 14px', borderRadius: '9999px', border: 'none', background: selectedDate === today ? 'var(--primary)' : 'transparent', color: selectedDate === today ? 'var(--on-primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Hoy
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDateChange(yesterday)}
-            style={{ padding: '6px 14px', borderRadius: '9999px', border: 'none', background: selectedDate === yesterday ? 'var(--primary)' : 'transparent', color: selectedDate === yesterday ? 'var(--on-primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Ayer
-          </button>
-        </div>
-      </div>
+      <DailyCloseHeader
+        selectedDate={selectedDate}
+        today={today}
+        yesterday={yesterday}
+        onDateChange={handleDateChange}
+      />
 
       {error && (
         <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--error-soft)', border: '1px solid var(--border-error)', color: 'var(--error)', fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -183,10 +187,15 @@ export default function DailyCloseView({ user: propUser, initialDate }) {
               key={loc.location}
               item={loc}
               canCount={canCountLocation(currentUser, loc.location)}
-              canValidate={canValidateLocation(currentUser, loc.location)}
+              canValidate={canValidateLocation(currentUser, loc.location, loc.status)}
+              canAdjust={canAdjust}
               canSeeCosts={canSeeCosts}
               onStartCount={handleStartCount}
-              onOpenCount={(id) => { setActiveCountId(id); setViewMode('sheet'); }}
+              onOpenCount={(id) => {
+                setSheetOrigin('summary');
+                setActiveCountId(id);
+                setViewMode('sheet');
+              }}
               onOpenDifferences={handleOpenDifferences}
             />
           ))}

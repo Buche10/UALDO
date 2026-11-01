@@ -9,6 +9,7 @@ import { isValidLocation } from './inventoryLocations';
 const VALID_COUNT_STATUSES = ['draft', 'submitted', 'validated', 'escalated', 'applied', 'cancelled'];
 
 export const SALES_PENDING_CODE = 'SALES_PENDING';
+export const RUNFOOD_PENDING_CODE = 'RUNFOOD_PENDING';
 
 export const VALID_EXPLANATION_CAUSES = Object.freeze([
   'error_de_conteo',
@@ -284,6 +285,12 @@ export const submitCount = async (countId) => {
 
   if (res.status === 409) {
     const errorMsg = String(res.error || res.data?.message || '');
+    if (errorMsg.includes('RunFood todavía no envió') || errorMsg.includes('todavía no envió')) {
+      return {
+        ...res,
+        code: RUNFOOD_PENDING_CODE,
+      };
+    }
     if (errorMsg.includes('ventas del día') || errorMsg.includes('RunFood')) {
       return {
         ...res,

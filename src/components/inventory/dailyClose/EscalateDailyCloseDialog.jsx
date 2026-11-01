@@ -74,7 +74,7 @@ export default function EscalateDailyCloseDialog({
     >
       <div
         className="glass-card"
-        style={{ width: '100%', maxWidth: '460px', padding: '24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-warning)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+        style={{ width: '100%', maxWidth: '460px', padding: '24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-warning)', boxShadow: 'var(--shadow-dialog)', display: 'flex', flexDirection: 'column', gap: '16px' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--warning)' }}>

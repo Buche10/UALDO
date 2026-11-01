@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertCircle, RefreshCw, X } from 'lucide-react';
-import { submitCount, SALES_PENDING_CODE } from '../../../services/inventoryCountsClient';
+import { submitCount, SALES_PENDING_CODE, RUNFOOD_PENDING_CODE } from '../../../services/inventoryCountsClient';
 
 export default function SubmitDailyCloseDialog({
   isOpen,
@@ -61,7 +61,11 @@ export default function SubmitDailyCloseDialog({
       if (res.code === SALES_PENDING_CODE) {
         setIsSalesPending(true);
         setError('Falta descontar las ventas del día. Intenta de nuevo en unos minutos.');
+      } else if (res.code === RUNFOOD_PENDING_CODE) {
+        setIsSalesPending(false);
+        setError(res.error || res.data?.message || 'RunFood todavía no envió las ventas del día. El cierre se podrá enviar cuando lleguen.');
       } else {
+        setIsSalesPending(false);
         setError(res.error || res.data?.message || 'Error al enviar el cierre diario.');
       }
     }
@@ -79,7 +83,7 @@ export default function SubmitDailyCloseDialog({
       <div
         ref={dialogRef}
         className="glass-card"
-        style={{ width: '100%', maxWidth: '420px', padding: '24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+        style={{ width: '100%', maxWidth: '420px', padding: '24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', boxShadow: 'var(--shadow-dialog)', display: 'flex', flexDirection: 'column', gap: '16px' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 id="submit-dialog-title" style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-main)' }}>

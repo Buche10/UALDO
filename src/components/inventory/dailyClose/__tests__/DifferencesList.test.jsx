@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DifferencesList from '../DifferencesList';
 import * as countsClient from '../../../../services/inventoryCountsClient';
 
-describe('DifferencesList component (Brief 31p)', () => {
+describe('DifferencesList component (Brief 31p / 31p_fix)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -43,7 +43,7 @@ describe('DifferencesList component (Brief 31p)', () => {
         unit: 'kg',
         counted_quantity: 10,
         system_quantity: 10,
-        difference: 0, // Sin diferencia -> no se muestra en la lista
+        difference: 0,
       },
     ],
   };
@@ -62,38 +62,108 @@ describe('DifferencesList component (Brief 31p)', () => {
     expect(screen.queryByText('Sal en grano')).not.toBeInTheDocument();
   });
 
-  it('deshabilita el botón Validar mientras falten explicaciones y lo habilita al completarlas', async () => {
-    render(<DifferencesList count={mockCount} canValidate={true} onBack={vi.fn()} />);
+  it('Validar requiere explicaciones guardadas en el motor y avisa si hay cambios sin guardar (Requerimiento 3)', async () => {
+    const saveSpy = vi.spyOn(countsClient, 'saveExplanations').mockResolvedValue({
+      ok: true,
+      data: {
+        data: {
+          ...mockCount,
+          lines: [
+            {
+              ...mockCount.lines[0],
+              explanation_cause: 'merma_no_registrada',
+              explanation: '',
+            },
+            mockCount.lines[1],
+            mockCount.lines[2],
+          ],
+        },
+      },
+    });
 
-    // Bife de chorizo no tiene causa asignada (falta 1)
+    const updateMock = vi.fn();
+    const { rerender } = render(
+      <DifferencesList
+        count={mockCount}
+        canValidate={true}
+        onBack={vi.fn()}
+        onCountUpdated={updateMock}
+      />
+    );
+
+    // Inicialmente falta 1 explicación en el motor
     const validateBtn = screen.getByRole('button', { name: 'Validar' });
     expect(validateBtn).toBeDisabled();
-    expect(screen.getByText(/Faltan 1 explicaciones para validar/i)).toBeInTheDocument();
+    expect(screen.getByText(/Faltan 1 explicación para validar/i)).toBeInTheDocument();
 
-    // Seleccionamos causa para Bife de chorizo
+    // Seleccionamos causa en el cliente sin guardar todavía
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'merma_no_registrada' } });
 
+    // "Validar" DEBE seguir deshabilitado con aviso de guardar
+    expect(validateBtn).toBeDisabled();
+    expect(screen.getByText('Guarda las explicaciones antes de validar.')).toBeInTheDocument();
+
+    // Guardamos las explicaciones
+    const saveBtn = screen.getByRole('button', { name: /Guardar explicaciones/i });
+    fireEvent.click(saveBtn);
+
     await waitFor(() => {
-      expect(validateBtn).not.toBeDisabled();
-      expect(screen.getByText('Todas las diferencias tienen causa.')).toBeInTheDocument();
+      expect(saveSpy).toHaveBeenCalledWith(15, [
+        { item_id: 1, cause: 'merma_no_registrada', explanation: '' },
+        { item_id: 2, cause: 'error_de_conteo', explanation: '' },
+      ]);
+      expect(updateMock).toHaveBeenCalled();
     });
+
+    // Simulamos que el componente padre pasa el count actualizado devuelto por el motor
+    const updatedCount = {
+      ...mockCount,
+      lines: [
+        {
+          ...mockCount.lines[0],
+          explanation_cause: 'merma_no_registrada',
+          explanation: '',
+        },
+        mockCount.lines[1],
+        mockCount.lines[2],
+      ],
+    };
+
+    rerender(
+      <DifferencesList
+        count={updatedCount}
+        canValidate={true}
+        onBack={vi.fn()}
+        onCountUpdated={updateMock}
+      />
+    );
+
+    // Ahora sí está habilitado para validar
+    expect(validateBtn).not.toBeDisabled();
+    expect(screen.getByText('Todas las diferencias tienen causa.')).toBeInTheDocument();
   });
 
   it('valida con confirmación en dos pasos mostrando el número de diferencias', async () => {
+    const fullyExplainedCount = {
+      ...mockCount,
+      lines: [
+        { ...mockCount.lines[0], explanation_cause: 'merma_no_registrada' },
+        mockCount.lines[1],
+        mockCount.lines[2],
+      ],
+    };
+
     const validateSpy = vi.spyOn(countsClient, 'validateCount').mockResolvedValue({
       ok: true,
       data: { data: { id: 15, status: 'validated' } },
     });
     const backMock = vi.fn();
 
-    render(<DifferencesList count={mockCount} canValidate={true} onBack={backMock} />);
-
-    // Completamos la causa que falta
-    const selects = screen.getAllByRole('combobox');
-    fireEvent.change(selects[0], { target: { value: 'merma_no_registrada' } });
+    render(<DifferencesList count={fullyExplainedCount} canValidate={true} onBack={backMock} />);
 
     const validateBtn = screen.getByRole('button', { name: 'Validar' });
+    expect(validateBtn).not.toBeDisabled();
     fireEvent.click(validateBtn);
 
     // Modal de confirmación
@@ -107,6 +177,29 @@ describe('DifferencesList component (Brief 31p)', () => {
       expect(validateSpy).toHaveBeenCalledWith(15);
       expect(backMock).toHaveBeenCalled();
     });
+  });
+
+  it('en estado validated se muestra en solo lectura (Requerimiento 4)', () => {
+    const validatedCount = {
+      ...mockCount,
+      status: 'validated',
+      lines: [
+        { ...mockCount.lines[0], explanation_cause: 'merma_no_registrada' },
+        mockCount.lines[1],
+      ],
+    };
+
+    render(<DifferencesList count={validatedCount} canValidate={true} onBack={vi.fn()} />);
+
+    // No debe haber botones de guardar, validar ni escalar
+    expect(screen.queryByRole('button', { name: /Guardar explicaciones/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Validar$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Escalar a administración/i })).toBeNull();
+
+    // Las causas se muestran como texto, no como select
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('Merma no registrada')).toBeInTheDocument();
+    expect(screen.getByText('Error de conteo')).toBeInTheDocument();
   });
 
   it('el botón Corregir conteo invoca onOpenEditSheet para volver a la planilla', () => {

@@ -10,6 +10,7 @@ import {
   getDailyCloseSettings,
   updateDailyCloseSettings,
   SALES_PENDING_CODE,
+  RUNFOOD_PENDING_CODE,
   VALID_EXPLANATION_CAUSES,
 } from '../inventoryCountsClient';
 
@@ -89,7 +90,7 @@ describe('inventoryCountsClient daily close methods (Brief 31 / 31p)', () => {
       expect(res.code).toBe(SALES_PENDING_CODE);
     });
 
-    it('asigna code SALES_PENDING ante 409 cuando RunFood todavia no envia ventas', async () => {
+    it('asigna code RUNFOOD_PENDING ante 409 cuando RunFood todavia no envia ventas', async () => {
       vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: false,
         status: 409,
@@ -99,7 +100,7 @@ describe('inventoryCountsClient daily close methods (Brief 31 / 31p)', () => {
       const res = await submitCount(10);
       expect(res.ok).toBe(false);
       expect(res.status).toBe(409);
-      expect(res.code).toBe(SALES_PENDING_CODE);
+      expect(res.code).toBe(RUNFOOD_PENDING_CODE);
     });
   });
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Play, ArrowRight } from 'lucide-react';
 import { formatUsd } from '../../../services/money';
+import DailyCloseCardActions from './DailyCloseCardActions';
 
 function getStatusBadge(status, differencesCount, unexplainedCount) {
   switch (status) {
@@ -27,13 +27,29 @@ export default function DailyCloseCard({
   canCount = false,
   canValidate = false,
   canSeeCosts = false,
+  canAdjust = false,
   onStartCount,
   onOpenCount,
   onOpenDifferences,
 }) {
-  const { location, location_label, count_id, status = 'pending', counted_by, validated_by, self_validated, differences_count = 0, unexplained_count = 0, difference_value_cents } = item;
-  const badge = getStatusBadge(status, differences_count, unexplained_count);
+  const {
+    location,
+    location_label,
+    count_id,
+    status = 'pending',
+    counted_by,
+    validated_by,
+    self_validated,
+    differences_count = 0,
+    unexplained_count = 0,
+    difference_value_cents,
+  } = item;
 
+  const isSubmitted = item.submitted_at !== undefined && item.submitted_at !== null
+    ? Boolean(item.submitted_at)
+    : Number(differences_count || 0) > 0;
+
+  const badge = getStatusBadge(status, differences_count, unexplained_count);
   const countedFirstName = counted_by ? counted_by.split(' ')[0] : null;
   const validatedFirstName = validated_by ? validated_by.split(' ')[0] : null;
 
@@ -110,87 +126,18 @@ export default function DailyCloseCard({
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-        {status === 'pending' && canCount && (
-          <button
-            type="button"
-            onClick={() => onStartCount(location)}
-            className="btn-primary"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Play size={14} />
-            <span>Empezar conteo</span>
-          </button>
-        )}
-
-        {status === 'draft' && canCount && (
-          <button
-            type="button"
-            onClick={() => onOpenCount(count_id)}
-            className="btn-primary"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>Continuar conteo</span>
-            <ArrowRight size={14} />
-          </button>
-        )}
-
-        {(status === 'submitted' || status === 'escalated') && (
-          <button
-            type="button"
-            onClick={() => onOpenDifferences(count_id)}
-            className="btn-primary"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>{canValidate ? 'Revisar diferencias' : 'Ver diferencias'}</span>
-            <ArrowRight size={14} />
-          </button>
-        )}
-
-        {status === 'validated' && (
-          <button
-            type="button"
-            onClick={() => onOpenDifferences(count_id)}
-            className="glass-card-interactive"
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-glass)',
-              background: 'transparent',
-              color: 'var(--text-muted)',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Ver detalle
-          </button>
-        )}
+        <DailyCloseCardActions
+          status={status}
+          isSubmitted={isSubmitted}
+          canCount={canCount}
+          canValidate={canValidate}
+          canAdjust={canAdjust}
+          location={location}
+          countId={count_id}
+          onStartCount={onStartCount}
+          onOpenCount={onOpenCount}
+          onOpenDifferences={onOpenDifferences}
+        />
       </div>
     </div>
   );

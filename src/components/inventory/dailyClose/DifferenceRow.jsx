@@ -23,6 +23,8 @@ export default function DifferenceRow({
     onChange(line.item_id, { cause, explanation: e.target.value });
   };
 
+  const causeLabel = DAILY_CLOSE_CAUSES.find((c) => c.value === cause)?.label || cause || 'Sin causa';
+
   return (
     <div
       className="glass-card"
@@ -61,59 +63,74 @@ export default function DifferenceRow({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label htmlFor={`cause-select-${line.item_id}`} style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-            Causa de la diferencia
-          </label>
-          <select
-            id={`cause-select-${line.item_id}`}
-            value={cause}
-            onChange={handleCauseChange}
-            disabled={disabled}
-            className="form-input"
-            style={{
-              padding: '8px 10px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              background: 'var(--bg-dark)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-glass)',
-            }}
-          >
-            <option value="">Selecciona una causa...</option>
-            {DAILY_CLOSE_CAUSES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+      {disabled ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
+          <div>
+            <span style={{ color: 'var(--text-muted)' }}>Causa: </span>
+            <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>
+              {causeLabel}
+            </strong>
+          </div>
+          {explanation && (
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Explicación: </span>
+              <span style={{ color: 'var(--text-main)' }}>{explanation}</span>
+            </div>
+          )}
         </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label htmlFor={`cause-select-${line.item_id}`} style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              Causa de la diferencia
+            </label>
+            <select
+              id={`cause-select-${line.item_id}`}
+              value={cause}
+              onChange={handleCauseChange}
+              className="form-input"
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                background: 'var(--bg-dark)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-glass)',
+              }}
+            >
+              <option value="">Selecciona una causa...</option>
+              {DAILY_CLOSE_CAUSES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label htmlFor={`explanation-input-${line.item_id}`} style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-            Explicación {cause === 'otro' ? '(obligatoria)' : '(opcional)'}
-          </label>
-          <input
-            id={`explanation-input-${line.item_id}`}
-            type="text"
-            value={explanation}
-            onChange={handleExplanationChange}
-            disabled={disabled}
-            placeholder={cause === 'otro' ? 'Detalla qué ocurrió (requerido)...' : 'Detalle adicional (opcional)...'}
-            maxLength={500}
-            className="glass-input"
-            style={{
-              padding: '8px 10px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              background: 'var(--bg-dark)',
-              color: 'var(--text-main)',
-              border: requiresExplanation ? '1px solid var(--border-warning)' : '1px solid var(--border-glass)',
-            }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label htmlFor={`explanation-input-${line.item_id}`} style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              Explicación {cause === 'otro' ? '(obligatoria)' : '(opcional)'}
+            </label>
+            <input
+              id={`explanation-input-${line.item_id}`}
+              type="text"
+              value={explanation}
+              onChange={handleExplanationChange}
+              placeholder={cause === 'otro' ? 'Detalla qué ocurrió (requerido)...' : 'Detalle adicional (opcional)...'}
+              maxLength={500}
+              className="glass-input"
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                background: 'var(--bg-dark)',
+                color: 'var(--text-main)',
+                border: requiresExplanation ? '1px solid var(--border-warning)' : '1px solid var(--border-glass)',
+              }}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Save, Edit3, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AlertCircle } from 'lucide-react';
+import DifferencesHeader from './DifferencesHeader';
 import DifferenceRow from './DifferenceRow';
 import DifferencesValidatorActions from './DifferencesValidatorActions';
 import EscalateDailyCloseDialog from './EscalateDailyCloseDialog';
@@ -28,19 +29,36 @@ export default function DifferencesList({
   const [statusMessage, setStatusMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
+  useEffect(() => {
+    const next = {};
+    (count?.lines || []).forEach((l) => {
+      next[l.item_id] = { cause: l.explanation_cause || '', explanation: l.explanation || '' };
+    });
+    setExplanationsState(next);
+  }, [count]);
+
   const differenceLines = useMemo(() => {
     return (count?.lines || []).filter(
       (l) => l.difference !== null && Math.abs(Number(l.difference)) > 0.0001
     );
   }, [count?.lines]);
 
-  const unexplainedCount = useMemo(() => {
+  const serverUnexplainedCount = useMemo(() => {
     return differenceLines.filter((l) => {
-      const state = explanationsState[l.item_id];
-      if (!state || !state.cause) return true;
-      if (state.cause === 'otro' && !state.explanation.trim()) return true;
+      const cause = l.explanation_cause;
+      if (!cause) return true;
+      if (cause === 'otro' && (!l.explanation || !l.explanation.trim())) return true;
       return false;
     }).length;
+  }, [differenceLines]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    return differenceLines.some((l) => {
+      const local = explanationsState[l.item_id] || { cause: '', explanation: '' };
+      const serverCause = l.explanation_cause || '';
+      const serverExp = l.explanation || '';
+      return local.cause !== serverCause || local.explanation.trim() !== serverExp.trim();
+    });
   }, [differenceLines, explanationsState]);
 
   const handleRowChange = (itemId, { cause, explanation }) => {
@@ -92,43 +110,20 @@ export default function DifferencesList({
     }
   };
 
+  const isValidated = count.status === 'validated';
+  const canShowValidatorActions = canValidate && (count.status === 'submitted' || count.status === 'escalated');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}
-        >
-          <ArrowLeft size={16} />
-          <span>Volver al cierre</span>
-        </button>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {canValidate && count.status === 'submitted' && onOpenEditSheet && (
-            <button
-              type="button"
-              onClick={onOpenEditSheet}
-              className="glass-card-interactive"
-              style={{ padding: '6px 12px', borderRadius: '9999px', border: '1px solid var(--border-glass)', background: 'var(--surface-strong)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <Edit3 size={14} />
-              <span>Corregir conteo</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={handleSaveExplanations}
-            disabled={saving || differenceLines.length === 0}
-            className="btn-primary"
-            style={{ padding: '6px 14px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <Save size={14} />
-            <span>{saving ? 'Guardando...' : 'Guardar explicaciones'}</span>
-          </button>
-        </div>
-      </div>
+      <DifferencesHeader
+        onBack={onBack}
+        canValidate={canValidate}
+        countStatus={count.status}
+        onOpenEditSheet={onOpenEditSheet}
+        onSaveExplanations={handleSaveExplanations}
+        saving={saving}
+        hasLines={differenceLines.length > 0}
+      />
 
       <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', fontSize: '13px', color: 'var(--accent)', lineHeight: '1.4' }}>
         Una diferencia no es una falta. Cuéntanos qué pasó para corregirlo.
@@ -160,16 +155,18 @@ export default function DifferencesList({
               cause={explanationsState[line.item_id]?.cause || ''}
               explanation={explanationsState[line.item_id]?.explanation || ''}
               onChange={handleRowChange}
-              disabled={count.status === 'validated'}
+              disabled={isValidated}
             />
           ))}
         </div>
       )}
 
-      {canValidate && count.status === 'submitted' && (
+      {canShowValidatorActions && (
         <DifferencesValidatorActions
-          unexplainedCount={unexplainedCount}
+          serverUnexplainedCount={serverUnexplainedCount}
+          hasUnsavedChanges={hasUnsavedChanges}
           validating={validating}
+          canEscalate={count.status === 'submitted'}
           onOpenEscalate={() => setShowEscalateDialog(true)}
           onOpenValidate={() => setShowConfirmValidate(true)}
         />

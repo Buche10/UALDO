@@ -13,9 +13,13 @@ export function canCountLocation(user, location) {
 
 /**
  * Determina si el usuario puede validar el conteo de la ubicación dada.
+ * Si el conteo está escalado, solo quien tiene inventory.adjust puede validarlo.
  */
-export function canValidateLocation(user, location) {
+export function canValidateLocation(user, location, status) {
   if (!user) return false;
+  if (status === 'escalated') {
+    return can(user, ABILITIES.INVENTORY_ADJUST);
+  }
   if (can(user, ABILITIES.INVENTORY_ADJUST)) return true;
   if (location === 'kitchen') return can(user, ABILITIES.INVENTORY_VALIDATE_KITCHEN);
   if (location === 'lounge') return can(user, ABILITIES.INVENTORY_VALIDATE_LOUNGE);
