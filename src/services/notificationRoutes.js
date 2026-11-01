@@ -1,12 +1,13 @@
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
- * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close' si params.subView === 'daily_close').
+ * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close' o 'withdrawals' según params.subView).
  * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
  * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
  * - 'chat': pestaña Asistente.
  * - 'daily_close': pestaña Negocios, subvista Cierre del día (Brief 31p).
+ * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -15,10 +16,12 @@ export const ALLOWED_SCREENS = new Set([
   'cierre_caja',
   'chat',
   'daily_close',
+  'retiros',
+  'withdrawals',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory']);
+const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros']);
 
 /**
  * Valida y filtra los parámetros de una acción de aviso.
@@ -41,7 +44,7 @@ export const sanitizeActionParams = (params) => {
       } else if (DATE_REGEX.test(trimmed)) {
         clean[key] = trimmed;
       } else if (key === 'subView' && ALLOWED_SUBVIEWS.has(trimmed.toLowerCase())) {
-        clean.subView = trimmed.toLowerCase();
+        clean.subView = trimmed.toLowerCase() === 'retiros' ? 'withdrawals' : trimmed.toLowerCase();
       }
     }
   }
@@ -78,12 +81,21 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
 
   switch (screen) {
     case 'inventario': {
-      const subView = cleanParams.subView === 'daily_close' ? 'daily_close' : 'inventory';
+      let subView = 'inventory';
+      if (cleanParams.subView === 'daily_close') {
+        subView = 'daily_close';
+      } else if (cleanParams.subView === 'withdrawals' || cleanParams.subView === 'retiros') {
+        subView = 'withdrawals';
+      }
       return { tab: 'negocios', subView, params: cleanParams };
     }
 
     case 'daily_close':
       return { tab: 'negocios', subView: 'daily_close', params: cleanParams };
+
+    case 'retiros':
+    case 'withdrawals':
+      return { tab: 'negocios', subView: 'withdrawals', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':

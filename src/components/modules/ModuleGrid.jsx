@@ -1,12 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ModuleCard from './ModuleCard';
 import { getVisibleModules } from './moduleRegistry';
+import { can, ABILITIES } from '../../services/permissions';
+import { listWithdrawals } from '../../services/withdrawalsClient';
 
 /**
  * Cuadrícula de módulos de Ualdo Negocios filtrada según los permisos del usuario.
  */
-export default function ModuleGrid({ user, onSelectModule }) {
+export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
   const visibleModules = getVisibleModules(user);
+  const [openWithdrawalsCount, setOpenWithdrawalsCount] = useState(badges.withdrawals || 0);
+
+  useEffect(() => {
+    if (badges.withdrawals !== undefined) {
+      setOpenWithdrawalsCount(badges.withdrawals);
+      return;
+    }
+    if (!can(user, ABILITIES.WITHDRAWALS_DECLARE)) return;
+
+    let mounted = true;
+    listWithdrawals({ status: 'open' })
+      .then((res) => {
+        if (!mounted || !res.ok) return;
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        const myOpen = list.filter(
+          (w) => Number(w.user_id || w.user?.id) === Number(user?.id)
+        );
+        setOpenWithdrawalsCount(myOpen.length);
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, [user, badges.withdrawals]);
 
   if (visibleModules.length === 0) {
     return (
@@ -35,13 +62,21 @@ export default function ModuleGrid({ user, onSelectModule }) {
         gap: '12px',
       }}
     >
-      {visibleModules.map((module) => (
-        <ModuleCard
-          key={module.id}
-          module={module}
-          onClick={() => onSelectModule(module.subView)}
-        />
-      ))}
+      {visibleModules.map((module) => {
+        let badgeValue = null;
+        if (module.id === 'withdrawals') {
+          badgeValue = openWithdrawalsCount;
+        }
+        const moduleWithBadge = badgeValue ? { ...module, badge: badgeValue } : module;
+
+        return (
+          <ModuleCard
+            key={module.id}
+            module={moduleWithBadge}
+            onClick={() => onSelectModule(module.subView)}
+          />
+        );
+      })}
     </div>
   );
 }

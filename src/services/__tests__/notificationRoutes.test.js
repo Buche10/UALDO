@@ -14,7 +14,9 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('cierre_caja')).toBe(true);
       expect(ALLOWED_SCREENS.has('chat')).toBe(true);
       expect(ALLOWED_SCREENS.has('daily_close')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(6);
+      expect(ALLOWED_SCREENS.has('retiros')).toBe(true);
+      expect(ALLOWED_SCREENS.has('withdrawals')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(8);
     });
   });
 
@@ -36,6 +38,8 @@ describe('notificationRoutes security and routing', () => {
     it('allows valid subView in whitelist', () => {
       expect(sanitizeActionParams({ subView: 'daily_close' })).toEqual({ subView: 'daily_close' });
       expect(sanitizeActionParams({ subView: 'inventory' })).toEqual({ subView: 'inventory' });
+      expect(sanitizeActionParams({ subView: 'withdrawals' })).toEqual({ subView: 'withdrawals' });
+      expect(sanitizeActionParams({ subView: 'retiros' })).toEqual({ subView: 'withdrawals' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
@@ -82,6 +86,19 @@ describe('notificationRoutes security and routing', () => {
       expect(route).toEqual({
         tab: 'negocios',
         subView: 'daily_close',
+        params: {},
+      });
+    });
+
+    it('resolves retiros and withdrawals to negocios withdrawals subview (Brief 32p)', () => {
+      expect(resolveNotificationRoute('retiros', { id: 10 })).toEqual({
+        tab: 'negocios',
+        subView: 'withdrawals',
+        params: { id: 10 },
+      });
+      expect(resolveNotificationRoute('withdrawals')).toEqual({
+        tab: 'negocios',
+        subView: 'withdrawals',
         params: {},
       });
     });
