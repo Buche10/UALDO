@@ -1,4 +1,11 @@
-import { Package, ClipboardList, Calculator, TrendingUp, ClipboardCheck } from 'lucide-react';
+import {
+  Package,
+  ClipboardList,
+  Calculator,
+  TrendingUp,
+  ClipboardCheck,
+  ArrowDownRight,
+} from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
 /**
@@ -19,7 +26,7 @@ export const MODULE_REGISTRY = [
   {
     id: 'pedidos',
     label: 'Pedidos',
-    description: 'Pedidos internos del equipo y lista de compras.',
+    description: 'Reporte de faltantes, aprobación y lista de compras.',
     icon: ClipboardList,
     permissions: [ABILITIES.SUPPLY_REQUEST, ABILITIES.SUPPLY_DECIDE],
     subView: 'pedidos',
@@ -58,6 +65,15 @@ export const MODULE_REGISTRY = [
     ],
     subView: 'daily_close',
     roleRequiredLabel: 'jefe de cocina, salón, bodega, administración o dueño',
+  },
+  {
+    id: 'withdrawals',
+    label: 'Retiros de bodega',
+    description: 'Declaración previa y confirmación de uso al terminar.',
+    icon: ArrowDownRight,
+    permissions: [ABILITIES.WITHDRAWALS_DECLARE, ABILITIES.WITHDRAWALS_SUPERVISE],
+    subView: 'withdrawals',
+    roleRequiredLabel: 'personal operativo, jefes de área, administración o dueño',
   },
 ];
 

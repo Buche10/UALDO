@@ -10,6 +10,7 @@ import { getPreferences, updatePreferences } from '../services/notificationsClie
 import { can, ABILITIES } from '../services/permissions';
 import TeamSection from './settings/TeamSection';
 import DailyCloseSettingsForm from './inventory/dailyClose/DailyCloseSettingsForm';
+import WithdrawalSettingsForm from './withdrawals/WithdrawalSettingsForm';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -287,6 +288,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       {/* SECCIÓN EQUIPO (Brief 30p: solo con team.manage) */}
       {can(currentUser, ABILITIES.TEAM_MANAGE) && <TeamSection />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <DailyCloseSettingsForm />}
+      {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <WithdrawalSettingsForm />}
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>

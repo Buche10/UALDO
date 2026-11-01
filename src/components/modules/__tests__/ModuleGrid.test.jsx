@@ -1,13 +1,16 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ModuleGrid from '../ModuleGrid';
 import { ABILITIES, ROLES } from '../../../services/permissions';
+import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('ModuleGrid component (Brief 30p)', () => {
+describe('ModuleGrid component (Brief 30p & 32p_fix)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('un lounge_staff no ve Ventas ni Cierre de caja, pero sí ve Inventario y Pedidos', () => {
-    // Matriz Brief 30: lounge_staff tiene supply.request, inventory.view, inventory.move,
-    // inventory.count.lounge, withdrawals.declare, incidents.report, assets.count.lounge, reservations.view
     const loungeStaffUser = {
       id: 20,
       capabilities: {
@@ -31,7 +34,6 @@ describe('ModuleGrid component (Brief 30p)', () => {
   });
 
   it('un lounge_head ve Cierre de caja (por cash.register), Inventario y Pedidos, pero no Ventas', () => {
-    // Matriz Brief 30: lounge_head tiene cash.register pero no sales.totals ni team.manage
     const loungeHeadUser = {
       id: 21,
       capabilities: {
@@ -53,7 +55,6 @@ describe('ModuleGrid component (Brief 30p)', () => {
   });
 
   it('un admin ve todos los módulos de la portada (Inventario, Pedidos, Cierre y Ventas)', () => {
-    // Matriz Brief 30: admin tiene todos menos team.manage
     const adminUser = {
       id: 2,
       capabilities: {
@@ -106,5 +107,37 @@ describe('ModuleGrid component (Brief 30p)', () => {
 
     render(<ModuleGrid user={restrictedUser} onSelectModule={vi.fn()} />);
     expect(screen.getByText('No tienes módulos disponibles para tu cargo actual.')).toBeInTheDocument();
+  });
+
+  it('dos renders seguidos con el mismo usuario hacen una sola llamada a retiros', async () => {
+    const spy = vi.spyOn(withdrawalsClient, 'listWithdrawals').mockResolvedValue({
+      ok: true,
+      data: [
+        { id: 1, user_id: 10, status: 'open' },
+        { id: 2, user_id: 10, status: 'escalated' },
+      ],
+    });
+
+    const userInstance1 = {
+      id: 10,
+      capabilities: { abilities: [ABILITIES.WITHDRAWALS_DECLARE] },
+    };
+    const userInstance2 = {
+      id: 10,
+      capabilities: { abilities: [ABILITIES.WITHDRAWALS_DECLARE] },
+    };
+
+    const { rerender } = render(<ModuleGrid user={userInstance1} onSelectModule={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(1);
+      // El badge muestra 2 retiros pendientes propios
+      expect(screen.getByText('2')).toBeInTheDocument();
+    });
+
+    // Re-render con un nuevo objeto de usuario pero mismo id y capacidades
+    rerender(<ModuleGrid user={userInstance2} onSelectModule={vi.fn()} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,6 +5,7 @@ import React from 'react';
  */
 export default function ModuleCard({ module, onClick }) {
   const Icon = module.icon;
+  const badge = module.badge;
 
   return (
     <button
@@ -31,19 +32,43 @@ export default function ModuleCard({ module, onClick }) {
     >
       <div
         style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '12px',
-          background: 'var(--primary-soft)',
-          border: '1px solid var(--border-glass)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--accent)',
-          flexShrink: 0,
+          justifyContent: 'space-between',
+          width: '100%',
         }}
       >
-        <Icon size={20} aria-hidden="true" />
+        <div
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
+            background: 'var(--primary-soft)',
+            border: '1px solid var(--border-glass)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent)',
+            flexShrink: 0,
+          }}
+        >
+          <Icon size={20} aria-hidden="true" />
+        </div>
+        {badge != null && badge > 0 ? (
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: 'var(--warning-soft)',
+              border: '1px solid var(--border-warning)',
+              color: 'var(--warning)',
+              fontSize: '11px',
+              fontWeight: 700,
+            }}
+          >
+            {badge}
+          </span>
+        ) : null}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '100%' }}>
