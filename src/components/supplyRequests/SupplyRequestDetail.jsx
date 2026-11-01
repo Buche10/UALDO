@@ -5,6 +5,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import { styles } from '../common/uiStyles';
 import { formatDateTime, quantityWithUnit, requesterName, statusLabel, availableActions } from './requestUi';
 import SupplyRequestQuantityFields, { validateApproveQuantities } from './SupplyRequestQuantityFields';
+import RequestItemFlags from './RequestItemFlags';
 
 export { availableActions };
 
@@ -52,6 +53,7 @@ function RequestItems({ items }) {
     <div key={item.id} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px' }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{item.name || item.free_text_name}{item.inventory_item_id ? '' : ' (texto libre)'}</div>
+        <RequestItemFlags item={item} />
         {item.note && <div style={{ color: 'var(--text-muted)' }}>{item.note}</div>}
       </div>
       <div style={{ fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>{quantityWithUnit(item.quantity, item.unit)}</div>

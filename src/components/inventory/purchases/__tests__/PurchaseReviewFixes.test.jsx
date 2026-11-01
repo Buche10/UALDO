@@ -55,7 +55,8 @@ describe('Brief 20p review fixes', () => {
     purchasesClient.getPurchase.mockResolvedValue({ ok: true, data: { data: { ...draftPurchase, status: 'received' } } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Recibir' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Recibir' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar recepción' }));
     await waitFor(() => expect(screen.queryByText('Editar líneas')).not.toBeInTheDocument());
     expect(screen.getByText(/Recibida\./)).toBeInTheDocument();
   });
@@ -83,7 +84,8 @@ describe('Brief 20p review fixes', () => {
     fireEvent.click(screen.getByText('Carnes del Valle'));
     await screen.findByText('Editar líneas');
     fireEvent.click(screen.getByRole('button', { name: 'Recibir' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Recibir' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirmar recepción' }));
     await waitFor(() => expect(screen.getByText('Compra recibida: el stock y los costos se actualizaron.')).toBeInTheDocument());
 
     fireEvent.click(screen.getByText('Volver a compras'));
@@ -143,16 +145,11 @@ describe('Brief 20p review fixes', () => {
     await openDraft();
     fireEvent.click(screen.getByRole('button', { name: 'Recibir' }));
     const dialog = screen.getByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Recibir' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar recepción' }));
 
-    const processing = within(dialog).getByRole('button', { name: 'Procesando...' });
-    expect(processing).toHaveAttribute('aria-disabled', 'true');
-    expect(processing).not.toBeDisabled();
-    processing.focus();
-    fireEvent.keyDown(document, { key: 'Tab' });
-    expect(within(dialog).getByRole('button', { name: 'Volver' })).toHaveFocus();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Volver' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const processing = within(dialog).getByRole('button', { name: 'Recibiendo...' });
+    expect(processing).toBeDisabled();
     resolveReceive({ ok: true, data: { data: { ...draftPurchase, status: 'received' } } });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });

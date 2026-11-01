@@ -10,6 +10,13 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix)', () => {
     vi.restoreAllMocks();
   });
 
+  it('el contenedor tiene role="toolbar" y la clase assistant-chips-container', () => {
+    render(<SuggestionChips onSelectChip={vi.fn()} />);
+    const toolbar = screen.getByRole('toolbar', { name: /sugerencias rápidas/i });
+    expect(toolbar).toBeInTheDocument();
+    expect(toolbar).toHaveClass('assistant-chips-container');
+  });
+
   it('con supply.decide ve "Qué hay que comprar"', () => {
     const onSelect = vi.fn();
     const deciderUser = {

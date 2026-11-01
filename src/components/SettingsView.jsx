@@ -11,6 +11,7 @@ import { can, ABILITIES } from '../services/permissions';
 import TeamSection from './settings/TeamSection';
 import DailyCloseSettingsForm from './inventory/dailyClose/DailyCloseSettingsForm';
 import WithdrawalSettingsForm from './withdrawals/WithdrawalSettingsForm';
+import PurchasingSettingsForm from './settings/PurchasingSettingsForm';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -289,6 +290,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       {can(currentUser, ABILITIES.TEAM_MANAGE) && <TeamSection />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <DailyCloseSettingsForm />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <WithdrawalSettingsForm />}
+      {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <PurchasingSettingsForm />}
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>

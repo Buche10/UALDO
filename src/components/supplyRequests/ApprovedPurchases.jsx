@@ -2,6 +2,7 @@ import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { styles } from '../common/uiStyles';
 import { quantityWithUnit } from './requestUi';
+import RequestItemFlags from './RequestItemFlags';
 
 /**
  * Bloque de pedidos aprobados pendientes de compra (Brief 26p).
@@ -33,7 +34,8 @@ export default function ApprovedPurchases({ items = [] }) {
                 <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
                   {item.name}{item.has_urgent ? ' (urgente)' : ''}
                 </div>
-                <div style={{ color: 'var(--text-muted)' }}>
+                <RequestItemFlags item={item} />
+                <div style={{ color: 'var(--text-muted)', marginTop: '2px' }}>
                   {item.inventory_item_id
                     ? `Stock ${quantityWithUnit(item.stock, item.unit)}, mínimo ${quantityWithUnit(item.min_stock, item.unit)}.`
                     : 'Fuera del catálogo.'}

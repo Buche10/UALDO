@@ -63,16 +63,7 @@ export default function SuggestionChips({
   }
 
   return (
-    <div
-      role="region"
-      aria-label="Sugerencias rápidas"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '8px',
-        padding: '8px 12px',
-      }}
-    >
+    <div className="assistant-chips-container" role="toolbar" aria-label="Sugerencias rápidas">
       {suggestions.map((sug) => {
         const Icon = sug.icon;
         return (
@@ -82,22 +73,8 @@ export default function SuggestionChips({
             disabled={disabled}
             onClick={() => onSelectChip?.(sug.prompt)}
             className="chip-btn"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-glass)',
-              background: 'var(--surface-soft)',
-              color: 'var(--text-main)',
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              opacity: disabled ? 0.6 : 1,
-            }}
           >
-            <Icon size={14} color="var(--accent)" />
+            <Icon size={16} aria-hidden="true" />
             <span>{sug.label}</span>
           </button>
         );

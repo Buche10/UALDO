@@ -1,24 +1,21 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft, PackageCheck, XCircle, Pencil } from 'lucide-react';
+import { getUser } from '../../../services/auth';
+import { can, ABILITIES } from '../../../services/permissions';
 import { usePurchaseActions, usePurchaseDetail } from '../../../hooks/usePurchaseActions';
 import { useLinesState } from '../../../hooks/usePurchaseForm';
 import { linesFromPurchase } from '../../../hooks/purchaseLines';
 import { formatQuantity } from '../../../services/quantityFormat';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PurchaseLinesEditor from './PurchaseLinesEditor';
+import ReceivePurchaseDialog from './ReceivePurchaseDialog';
+import PurchaseIssuesSection from './PurchaseIssuesSection';
 import { money, purchaseLocation, statusLabel, styles, unitCost } from './purchaseUi';
 
-const DIALOGS = {
-  receive: {
-    title: 'Recibir compra',
-    message: 'Cada línea entra al stock de la ubicación de destino y se actualiza el costo promedio de cada insumo. No se puede deshacer.',
-    confirmLabel: 'Recibir',
-  },
-  cancel: {
-    title: 'Cancelar compra',
-    message: 'El borrador se cancela y no cambia el stock. No se puede deshacer.',
-    confirmLabel: 'Cancelar compra',
-  },
+const CANCEL_DIALOG = {
+  title: 'Cancelar compra',
+  message: 'El borrador se cancela y no cambia el stock. No se puede deshacer.',
+  confirmLabel: 'Cancelar compra',
 };
 
 function LinesEditMode({ purchase, actions, onDone }) {
@@ -35,7 +32,7 @@ function LinesEditMode({ purchase, actions, onDone }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div aria-live="polite">{general && <div style={styles.errorBox}>{general}</div>}</div>
-      <PurchaseLinesEditor lines={state.lines} lineErrors={state.lineErrors} onAddItem={state.onAddItem} onChange={state.onChange} onRemove={state.onRemove} disabled={actions.busy === 'lines'} />
+      <PurchaseLinesEditor lines={state.lines} lineErrors={state.lineErrors} onAddItem={state.onAddItem} onAddOther={state.onAddOther} onChange={state.onChange} onRemove={state.onRemove} disabled={actions.busy === 'lines'} />
       <div style={{ display: 'flex', gap: '10px' }}>
         <button type="button" onClick={onDone} style={{ ...styles.secondary, flex: 1 }}>Descartar cambios</button>
         <button type="button" onClick={save} disabled={actions.busy === 'lines'} className="btn-primary" style={{ flex: 1, padding: '10px', borderRadius: '9999px', fontWeight: 600 }}>
@@ -50,8 +47,17 @@ function LinesView({ purchase }) {
   return (purchase.lines || []).map((line) => (
     <div key={line.id} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px' }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{line.item_name || `Insumo ${line.item_id}`}</div>
-        <div style={{ color: 'var(--text-muted)' }}>{formatQuantity(line.quantity)} {line.unit} a {unitCost(line.unit_cost)} c/u</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{line.item_name || `Insumo ${line.item_id}`}</span>
+          {line.is_other && (
+            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', color: 'var(--accent)', fontWeight: 600 }}>
+              Otras compras
+            </span>
+          )}
+        </div>
+        <div style={{ color: 'var(--text-muted)' }}>
+          {formatQuantity(line.quantity)} {line.unit} {!line.is_other && line.unit_cost ? `a ${unitCost(line.unit_cost)} c/u` : ''}
+        </div>
         {line.note && <div style={{ color: 'var(--text-muted)' }}>{line.note}</div>}
       </div>
       <div style={{ fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>{money(line.line_total)}</div>
@@ -59,16 +65,17 @@ function LinesView({ purchase }) {
   ));
 }
 
-/**
- * Cuerpo del detalle con las cifras del motor (Brief 20p). En borrador:
- * editar líneas, recibir y cancelar, cada una con confirmación propia.
- */
 function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
   const [editing, setEditing] = useState(false);
   const receiveRef = useRef(null);
   const cancelRef = useRef(null);
   const headingRef = useRef(null);
+
+  const currentUser = getUser();
+  const canReceive = !currentUser || can(currentUser, ABILITIES.PURCHASES_RECEIVE);
+  const canManage = !currentUser || can(currentUser, ABILITIES.PURCHASES_MANAGE);
+
   const actions = usePurchaseActions({
     purchaseId: purchase.id,
     onStale,
@@ -78,8 +85,7 @@ function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
     },
   });
   const isDraft = purchase.status === 'draft';
-
-  const open = (name) => { actions.clearError(); setDialog(name); };
+  const hasIssues = purchase.status === 'received_with_issues';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -97,6 +103,8 @@ function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
 
       <div aria-live="polite">{actions.error && !dialog && <div style={styles.errorBox}>{actions.error}</div>}</div>
 
+      {hasIssues && <PurchaseIssuesSection purchase={purchase} onReload={onStale} />}
+
       {editing ? (
         <LinesEditMode purchase={purchase} actions={actions} onDone={() => setEditing(false)} />
       ) : (
@@ -105,31 +113,41 @@ function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
 
       {isDraft && !editing && (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button type="button" onClick={() => setEditing(true)} style={{ ...styles.secondary, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Pencil size={14} /><span>Editar líneas</span></button>
-          <button ref={cancelRef} type="button" onClick={() => open('cancel')} style={{ ...styles.secondary, flex: 1, color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><XCircle size={14} /><span>Cancelar</span></button>
-          <button ref={receiveRef} type="button" onClick={() => open('receive')} className="btn-primary" style={{ flex: 1, padding: '10px', borderRadius: '9999px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><PackageCheck size={14} /><span>Recibir</span></button>
+          {canManage && (
+            <button type="button" onClick={() => setEditing(true)} style={{ ...styles.secondary, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Pencil size={14} /><span>Editar líneas</span></button>
+          )}
+          {canManage && (
+            <button ref={cancelRef} type="button" onClick={() => { actions.clearError(); setDialog('cancel'); }} style={{ ...styles.secondary, flex: 1, color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><XCircle size={14} /><span>Cancelar</span></button>
+          )}
+          {canReceive && (
+            <button ref={receiveRef} type="button" onClick={() => { actions.clearError(); setDialog('receive'); }} className="btn-primary" style={{ flex: 1, padding: '10px', borderRadius: '9999px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><PackageCheck size={14} /><span>Recibir</span></button>
+          )}
         </div>
       )}
 
-      <ConfirmDialog
-        isOpen={Boolean(dialog)}
-        {...(dialog ? DIALOGS[dialog] : {})}
+      <ReceivePurchaseDialog
+        isOpen={dialog === 'receive'}
+        purchase={purchase}
         busy={Boolean(actions.busy)}
         error={actions.error}
         onClose={() => setDialog(null)}
-        onConfirm={() => (dialog === 'receive' ? actions.receive() : actions.cancel())}
-        triggerRef={dialog === 'receive' ? receiveRef : cancelRef}
+        onConfirm={(lines) => actions.receive(lines)}
+      />
+
+      <ConfirmDialog
+        isOpen={dialog === 'cancel'}
+        {...CANCEL_DIALOG}
+        busy={Boolean(actions.busy)}
+        error={actions.error}
+        onClose={() => setDialog(null)}
+        onConfirm={() => actions.cancel()}
+        triggerRef={cancelRef}
         fallbackFocusRef={headingRef}
       />
     </div>
   );
 }
 
-/**
- * Detalle de una compra (Brief 20p). La lista del motor no trae las líneas,
- * así que el detalle se pide siempre al motor: sin eso, "Editar líneas"
- * empezaría vacío y al guardar borraría las líneas anteriores.
- */
 export default function PurchaseDetail({ purchaseId, onBack, onSynced }) {
   const { purchase, setPurchase, loading, error, reload } = usePurchaseDetail(purchaseId);
 
@@ -138,7 +156,6 @@ export default function PurchaseDetail({ purchaseId, onBack, onSynced }) {
     if (onSynced) onSynced(updated, action);
   };
 
-  // Tras un 409 el motor tiene otro estado: se recarga y se avisa a la lista.
   const handleStale = async () => {
     const fresh = await reload();
     if (fresh && onSynced) onSynced(fresh, null);

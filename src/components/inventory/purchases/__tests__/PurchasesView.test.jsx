@@ -73,16 +73,16 @@ describe('PurchasesView', () => {
     await screen.findByText('Editar líneas');
 
     fireEvent.click(screen.getByRole('button', { name: 'Recibir' }));
-    expect(screen.getByText(/entra al stock de la ubicación de destino/)).toBeInTheDocument();
-    expect(dialogButton('Volver')).toHaveFocus();
-    fireEvent.click(dialogButton('Recibir'));
+    expect(screen.getByText('Recepción contra factura')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByRole('button', { name: 'Confirmar recepción' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar recepción' }));
     await waitFor(() => expect(within(screen.getByRole('dialog')).getByText('La compra ya no se puede modificar.')).toBeInTheDocument());
 
-    fireEvent.click(dialogButton('Recibir'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar recepción' }));
     await waitFor(() => expect(screen.getByText('Compra recibida: el stock y los costos se actualizaron.')).toBeInTheDocument());
-    expect(receive).toHaveBeenCalledWith(9);
+    expect(receive).toHaveBeenCalledWith(9, expect.any(Array));
     expect(screen.queryByRole('button', { name: 'Recibir' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Carnes del Valle' })).toHaveFocus();
   });
 
   it('cancels with confirmation, closes with Escape and keeps Tab inside', async () => {

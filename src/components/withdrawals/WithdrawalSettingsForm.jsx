@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Save, CheckCircle2, AlertCircle, Clock, RefreshCw } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { getWithdrawalSettings, updateWithdrawalSettings } from '../../services/withdrawalsClient';
 import WithdrawalSettingsQuietHours from './WithdrawalSettingsQuietHours';
 import WithdrawalSettingsIntervals from './WithdrawalSettingsIntervals';
+import WithdrawalSettingsLoadError from './WithdrawalSettingsLoadError';
+import WithdrawalSettingsActions from './WithdrawalSettingsActions';
 
 export default function WithdrawalSettingsForm() {
   const [loading, setLoading] = useState(true);
@@ -92,63 +94,7 @@ export default function WithdrawalSettingsForm() {
   }
 
   if (loadError && !loaded) {
-    return (
-      <div
-        className="glass-card"
-        style={{
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          borderRadius: '14px',
-          border: '1px solid var(--border-glass)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={18} color="var(--accent)" />
-          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-            Recordatorios de retiros de bodega
-          </h4>
-        </div>
-        <div
-          role="alert"
-          style={{
-            padding: '8px 10px',
-            borderRadius: '8px',
-            background: 'var(--error-soft)',
-            color: 'var(--error)',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <AlertCircle size={14} />
-          <span>{loadError}</span>
-        </div>
-        <button
-          type="button"
-          onClick={loadSettings}
-          className="btn-secondary"
-          style={{
-            alignSelf: 'flex-start',
-            padding: '6px 14px',
-            borderRadius: '9999px',
-            border: '1px solid var(--border-glass)',
-            background: 'var(--surface-soft)',
-            color: 'var(--text-main)',
-            fontSize: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <RefreshCw size={14} />
-          <span>Reintentar</span>
-        </button>
-      </div>
-    );
+    return <WithdrawalSettingsLoadError loadError={loadError} onRetry={loadSettings} />;
   }
 
   return (
@@ -170,44 +116,6 @@ export default function WithdrawalSettingsForm() {
           Recordatorios de retiros de bodega
         </h4>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          style={{
-            padding: '8px 10px',
-            borderRadius: '8px',
-            background: 'var(--error-soft)',
-            color: 'var(--error)',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <AlertCircle size={14} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div
-          role="status"
-          style={{
-            padding: '8px 10px',
-            borderRadius: '8px',
-            background: 'var(--success-soft)',
-            color: 'var(--success)',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <CheckCircle2 size={14} />
-          <span>Configuración de retiros guardada.</span>
-        </div>
-      )}
 
       <WithdrawalSettingsIntervals
         afterMinutes={form.reminder_after_minutes}
@@ -240,29 +148,12 @@ export default function WithdrawalSettingsForm() {
         disabled={saving}
       />
 
-      <button
-        type="submit"
-        disabled={saving || !loaded}
-        className="btn-primary"
-        style={{
-          alignSelf: 'flex-end',
-          marginTop: '6px',
-          padding: '8px 16px',
-          borderRadius: '9999px',
-          background: 'var(--primary)',
-          color: 'var(--on-primary)',
-          border: 'none',
-          fontSize: '12px',
-          fontWeight: 600,
-          cursor: saving || !loaded ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
-      >
-        <Save size={14} />
-        <span>{saving ? 'Guardando...' : 'Guardar ajustes'}</span>
-      </button>
+      <WithdrawalSettingsActions
+        saving={saving}
+        loaded={loaded}
+        error={error}
+        success={success}
+      />
     </form>
   );
 }

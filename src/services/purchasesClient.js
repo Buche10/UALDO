@@ -3,9 +3,8 @@ import { isValidLocation } from './inventoryLocations';
 import { normalizeAmount } from './money';
 
 /**
- * Cliente de proveedores, compras y valor del inventario (Brief 20p).
- * Contrato: UaldoBusiness/docs/API-purchases.md. Todo es del dueño; el motor
- * responde 403 al personal. Montos y cantidades viajan como texto validado.
+ * Cliente de proveedores, compras y valor del inventario (Brief 20p / Brief 33p).
+ * Contrato: UaldoBusiness/docs/API-purchases.md. Montos y cantidades viajan como texto validado.
  */
 
 const QUANTITY_FORMAT = /^\d{1,7}(\.\d{1,3})?$/;
@@ -13,7 +12,7 @@ const DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;
 const TAX_ID_FORMAT = /^(\d{10}|\d{13})$/;
 const PHONE_FORMAT = /^[0-9+()\s-]{6,30}$/;
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PURCHASE_STATUSES = ['draft', 'received', 'cancelled'];
+export const PURCHASE_STATUSES = ['draft', 'received', 'received_with_issues', 'cancelled'];
 const MAX_LINES = 200;
 
 const invalid = (status, error, errors) => ({ ok: false, status, error, isNetworkError: false, ...(errors ? { data: { errors } } : {}) });
@@ -29,6 +28,13 @@ export function normalizePurchaseQuantity(raw) {
   if (raw === null || raw === undefined) return null;
   const value = String(raw).trim().replace(/,/g, '.');
   return QUANTITY_FORMAT.test(value) && Number(value) > 0 ? value : null;
+}
+
+/** Cantidad con punto decimal, mayor o igual que 0 y hasta 3 decimales, o null. */
+export function normalizeReceiptQuantity(raw) {
+  if (raw === null || raw === undefined) return null;
+  const value = String(raw).trim().replace(/,/g, '.');
+  return QUANTITY_FORMAT.test(value) && Number(value) >= 0 ? value : null;
 }
 
 /** AAAA-MM-DD y una fecha que existe (rechaza 2026-13-45 o 2026-02-30). */
@@ -56,7 +62,6 @@ export const listSuppliers = async ({ search = '', includeInactive = false, page
   return request(qs ? `/suppliers?${qs}` : '/suppliers');
 };
 
-/** Valida y arma el cuerpo de un proveedor. En la edición, los campos son opcionales. */
 export function buildSupplierBody(data, { partial = false } = {}) {
   const errors = {};
   const body = {};
@@ -116,10 +121,6 @@ export const getPurchase = async (purchaseId) => {
   return request(`/purchases/${id}`);
 };
 
-/**
- * Valida las líneas: insumo, cantidad mayor que 0 y total pagado. Devuelve
- * los errores con las mismas claves que el motor (`lines.N.campo`).
- */
 export function buildPurchaseLines(lines) {
   const errors = {};
   if (!Array.isArray(lines) || lines.length === 0) return { lines: [], errors: { lines: ['Agrega al menos una línea.'] } };
@@ -127,6 +128,20 @@ export function buildPurchaseLines(lines) {
 
   const seen = new Set();
   const normalized = lines.map((line, index) => {
+    if (line?.is_other) {
+      const freeTextName = trimmed(line?.free_text_name || line?.name);
+      const unit = trimmed(line?.unit) || 'unidad';
+      const quantity = normalizePurchaseQuantity(line?.quantity);
+      const lineTotal = normalizeAmount(line?.line_total);
+      const note = trimmed(line?.note);
+      if (!freeTextName) errors[`lines.${index}.free_text_name`] = ['El nombre es obligatorio en otras compras.'];
+      if (!unit) errors[`lines.${index}.unit`] = ['Indica la unidad.'];
+      if (!quantity) errors[`lines.${index}.quantity`] = ['La cantidad debe ser mayor que 0, con 3 decimales como máximo.'];
+      if (lineTotal === null) errors[`lines.${index}.line_total`] = ['El total debe tener 2 decimales como máximo.'];
+      if (!note) errors[`lines.${index}.note`] = ['El motivo es obligatorio en otras compras.'];
+      return { is_other: true, free_text_name: freeTextName, name: freeTextName, unit, quantity, line_total: lineTotal, note };
+    }
+
     const itemId = parseId(line?.item_id);
     const quantity = normalizePurchaseQuantity(line?.quantity);
     const lineTotal = normalizeAmount(line?.line_total);
@@ -170,15 +185,108 @@ export const replacePurchaseLines = async (purchaseId, lines) => {
   return request(`/purchases/${id}/lines`, { method: 'PUT', body: { lines: built.lines } });
 };
 
-const purchaseAction = (action) => async (purchaseId) => {
+export const receivePurchase = async (purchaseId, lines) => {
   const id = parseId(purchaseId);
   if (!id) return invalid(400, 'Identificador de compra inválido.');
-  return request(`/purchases/${id}/${action}`, { method: 'POST' });
+  const options = { method: 'POST' };
+  if (Array.isArray(lines)) {
+    const errors = {};
+    const normalizedLines = lines.map((l, index) => {
+      const lineId = parseId(l?.line_id ?? l?.id);
+      const qty = normalizeReceiptQuantity(l?.received_quantity ?? l?.quantity);
+      if (!lineId) errors[`lines.${index}.line_id`] = ['Identificador de línea inválido.'];
+      if (qty === null) errors[`lines.${index}.received_quantity`] = ['La cantidad recibida debe ser mayor o igual a 0.'];
+      return { line_id: lineId, received_quantity: qty };
+    });
+    if (Object.keys(errors).length > 0) return invalid(422, 'Revisa las cantidades recibidas.', errors);
+    options.body = { lines: normalizedLines };
+  }
+  return request(`/purchases/${id}/receive`, options);
 };
 
-export const receivePurchase = purchaseAction('receive');
-export const cancelPurchase = purchaseAction('cancel');
+export const cancelPurchase = async (purchaseId) => {
+  const id = parseId(purchaseId);
+  if (!id) return invalid(400, 'Identificador de compra inválido.');
+  return request(`/purchases/${id}/cancel`, { method: 'POST' });
+};
 
-// Valor del inventario
+export const resolveLine = async (purchaseId, lineId, { resolution, note, corrected_quantity } = {}) => {
+  const pId = parseId(purchaseId);
+  const lId = parseId(lineId);
+  if (!pId || !lId) return invalid(400, 'Identificador inválido.');
+  const validResolutions = ['proveedor_completa', 'nota_de_credito', 'error_de_pesaje', 'aceptado'];
+  const res = trimmed(resolution);
+  if (!validResolutions.includes(res)) return invalid(422, 'Resolución no válida.', { resolution: ['Resolución no válida.'] });
+  const cleanNote = trimmed(note);
+  if (!cleanNote) return invalid(422, 'El motivo de la resolución es obligatorio.', { note: ['El motivo es obligatorio.'] });
+
+  const body = { resolution: res, note: cleanNote };
+  if (res === 'error_de_pesaje') {
+    const qty = normalizeReceiptQuantity(corrected_quantity);
+    if (qty === null) return invalid(422, 'Indica la cantidad corregida.', { corrected_quantity: ['Indica la cantidad corregida.'] });
+    body.corrected_quantity = qty;
+  }
+  return request(`/purchases/${pId}/lines/${lId}/resolve`, { method: 'POST', body });
+};
+
+export const receiveExtra = async (purchaseId, lineId, quantity) => {
+  const pId = parseId(purchaseId);
+  const lId = parseId(lineId);
+  if (!pId || !lId) return invalid(400, 'Identificador inválido.');
+  const qty = normalizePurchaseQuantity(quantity);
+  if (!qty) return invalid(422, 'La cantidad debe ser mayor que 0.', { extra_quantity: ['La cantidad debe ser mayor que 0.'] });
+  return request(`/purchases/${pId}/lines/${lId}/receive-extra`, { method: 'POST', body: { extra_quantity: qty } });
+};
+
+export const listOtherPurchases = async ({ from, to, page = 1 } = {}) => {
+  const params = new URLSearchParams();
+  if (DATE_FORMAT.test(trimmed(from))) params.set('from', trimmed(from));
+  if (DATE_FORMAT.test(trimmed(to))) params.set('to', trimmed(to));
+  pageParams(params, page);
+  const qs = params.toString();
+  return request(qs ? `/purchases/other?${qs}` : '/purchases/other');
+};
+
+export const getReconciliation = async (date) => {
+  const cleanDate = trimmed(date);
+  const params = new URLSearchParams();
+  if (DATE_FORMAT.test(cleanDate)) params.set('date', cleanDate);
+  const qs = params.toString();
+  return request(qs ? `/purchases/reconciliation?${qs}` : '/purchases/reconciliation');
+};
+
+export const getPurchasingSettings = async () => request('/purchasing/settings');
+
+export const updatePurchasingSettings = async (data = {}) => request('/purchasing/settings', { method: 'PUT', body: data });
+
+export const updatePurchaseParams = async (itemId, params = {}) => {
+  const id = parseId(itemId);
+  if (!id) return invalid(400, 'Identificador de insumo inválido.');
+  const body = {};
+  const errors = {};
+  if (params.base_quantity !== undefined && params.base_quantity !== null && params.base_quantity !== '') {
+    const val = normalizePurchaseQuantity(params.base_quantity);
+    if (!val) errors.base_quantity = ['La cantidad base debe ser mayor que 0.'];
+    else body.base_quantity = val;
+  } else if (params.base_quantity === null || params.base_quantity === '') {
+    body.base_quantity = null;
+  }
+  if (params.min_stock !== undefined && params.min_stock !== null && params.min_stock !== '') {
+    const val = normalizeReceiptQuantity(params.min_stock);
+    if (val === null) errors.min_stock = ['El stock mínimo debe ser mayor o igual a 0.'];
+    else body.min_stock = val;
+  } else if (params.min_stock === null || params.min_stock === '') {
+    body.min_stock = null;
+  }
+  if (params.reorder_point !== undefined && params.reorder_point !== null && params.reorder_point !== '') {
+    const val = normalizeReceiptQuantity(params.reorder_point);
+    if (val === null) errors.reorder_point = ['El punto de reorden debe ser mayor o igual a 0.'];
+    else body.reorder_point = val;
+  } else if (params.reorder_point === null || params.reorder_point === '') {
+    body.reorder_point = null;
+  }
+  if (Object.keys(errors).length > 0) return invalid(422, 'Revisa los parámetros.', errors);
+  return request(`/inventory/${id}/purchase-params`, { method: 'PUT', body });
+};
 
 export const getValuation = async () => request('/inventory/valuation');
