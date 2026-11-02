@@ -1,10 +1,13 @@
+import { can, ABILITIES } from './permissions';
+import { getStoredUser } from './apiClient';
+
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
  * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime' o 'incidents' según params.subView).
  * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
- * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
+ * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView) o Declaración (Brief 35p).
  * - 'chat': pestaña Asistente.
  * - 'daily_close': pestaña Negocios, subvista Cierre del día (Brief 31p).
  * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
@@ -65,9 +68,11 @@ export const sanitizeActionParams = (params) => {
  * Devuelve null si la pantalla no está en la lista blanca o si no se debe navegar.
  *
  * @param {Object} action { screen, params }
+ * @param {Object} explicitParams
+ * @param {Object|null} userContext
  * @returns {{ tab: string, subView?: string, params?: Object } | null}
  */
-export const resolveNotificationRoute = (action, explicitParams = {}) => {
+export const resolveNotificationRoute = (action, explicitParams = {}, userContext = null) => {
   if (!action) {
     return null;
   }
@@ -122,8 +127,12 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
     case 'pedidos':
       return { tab: 'negocios', subView: 'pedidos', params: cleanParams };
 
-    case 'cierre_caja':
-      return { tab: 'negocios', subView: 'cashclose', params: cleanParams };
+    case 'cierre_caja': {
+      const activeUser = userContext || getStoredUser();
+      const isHeadOnly = can(activeUser, ABILITIES.CASH_REGISTER) && !can(activeUser, ABILITIES.CASH_REVIEW);
+      const subView = isHeadOnly ? 'cash_declaration' : 'cashclose';
+      return { tab: 'negocios', subView, params: cleanParams };
+    }
 
     case 'chat':
       return { tab: 'asistente', params: cleanParams };

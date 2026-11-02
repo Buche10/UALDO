@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart, ArrowDownRight, Clock, AlertTriangle } from 'lucide-react';
+import {
+  PackagePlus,
+  ClipboardList,
+  Search,
+  CheckCircle2,
+  ShoppingCart,
+  ArrowDownRight,
+  Clock,
+  AlertTriangle,
+  Calculator,
+} from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
@@ -26,6 +36,7 @@ export default function SuggestionChips({
   const hasDecide = user ? can(user, ABILITIES.SUPPLY_DECIDE) : false;
   const canDeclareWithdrawal = user ? can(user, ABILITIES.WITHDRAWALS_DECLARE) : false;
   const canRegisterOvertime = user ? canAny(user, [ABILITIES.OVERTIME_REGISTER_KITCHEN, ABILITIES.OVERTIME_REGISTER_LOUNGE]) : false;
+  const canDeclareCashClose = user ? can(user, ABILITIES.CASH_REGISTER) && !can(user, ABILITIES.CASH_REVIEW) : false;
   const userId = user?.id;
 
   useEffect(() => {
@@ -68,6 +79,14 @@ export default function SuggestionChips({
       label: 'Registrar horas extra',
       prompt: 'Quiero registrar horas extra',
       icon: Clock,
+    });
+  }
+
+  if (canDeclareCashClose) {
+    suggestions.push({
+      label: 'Hacer el cierre de caja',
+      prompt: 'Quiero declarar el cierre de caja de hoy',
+      icon: Calculator,
     });
   }
 

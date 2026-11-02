@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CreditCard, Layers, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, CreditCard, Layers, ShieldAlert, Clock } from 'lucide-react';
 import { getUser } from '../../services/auth';
 import { can, ABILITIES } from '../../services/permissions';
 import PaymentMappingsPanel from './PaymentMappingsPanel';
 import CommissionRatesPanel from './CommissionRatesPanel';
+import CashCloseSettingsForm from './CashCloseSettingsForm';
 
 export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
-  const [activeTab, setActiveTab] = useState(initialTab === 'commissions' ? 'commissions' : 'mappings');
+  const [activeTab, setActiveTab] = useState(
+    ['commissions', 'declaration'].includes(initialTab) ? initialTab : 'mappings'
+  );
   const [currentUser] = useState(() => getUser());
   const canManageSettings = can(currentUser, ABILITIES.SETTINGS_MANAGE);
 
@@ -30,8 +33,6 @@ export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
     );
   }
 
-
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -46,7 +47,7 @@ export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: '13px'
+            fontSize: '13px',
           }}
         >
           <ArrowLeft size={16} />
@@ -54,7 +55,7 @@ export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px', flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setActiveTab('mappings')}
@@ -69,7 +70,7 @@ export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
             color: activeTab === 'mappings' ? 'var(--accent)' : 'var(--text-muted)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
           }}
         >
           <Layers size={14} />
@@ -89,19 +90,37 @@ export default function CashConfigView({ onBack, initialTab = 'mappings' }) {
             color: activeTab === 'commissions' ? 'var(--accent)' : 'var(--text-muted)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
           }}
         >
           <CreditCard size={14} />
           <span>Comisiones</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('declaration')}
+          style={{
+            padding: '8px 14px',
+            borderRadius: '9999px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: activeTab === 'declaration' ? '1px solid var(--accent)' : '1px solid var(--border-glass)',
+            background: activeTab === 'declaration' ? 'var(--chip-bg)' : 'transparent',
+            color: activeTab === 'declaration' ? 'var(--accent)' : 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <Clock size={14} />
+          <span>Cierre del jefe</span>
+        </button>
       </div>
 
-      {activeTab === 'mappings' ? (
-        <PaymentMappingsPanel />
-      ) : (
-        <CommissionRatesPanel />
-      )}
+      {activeTab === 'mappings' && <PaymentMappingsPanel />}
+      {activeTab === 'commissions' && <CommissionRatesPanel />}
+      {activeTab === 'declaration' && <CashCloseSettingsForm />}
     </div>
   );
 }

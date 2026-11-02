@@ -11,7 +11,8 @@ describe('CashCloseList component', () => {
       auto_cerrado: true,
       ventas_del_dia: 500.0,
       diferencia_efectivo: 0.0,
-      discrepancias: []
+      discrepancias: [],
+      declared_by: 'Carlos',
     },
     {
       fecha: '2026-10-05',
@@ -20,8 +21,11 @@ describe('CashCloseList component', () => {
       diferencia_efectivo: -12.4,
       discrepancias: [
         { tipo: 'diferencia_efectivo', motivo: 'Diferencia de efectivo' },
-        { tipo: 'sin_conteo_efectivo', motivo: 'Sin conteo' }
-      ]
+        { tipo: 'sin_conteo_efectivo', motivo: 'Sin conteo' },
+      ],
+      declared_by: 'Mateo',
+      difference_cause: 'error_de_conteo',
+      difference_explanation: 'Billetes pegados al contar rápido.',
     },
     {
       fecha: '2026-10-03',
@@ -29,8 +33,8 @@ describe('CashCloseList component', () => {
       auto_cerrado: false,
       ventas_del_dia: 400.0,
       diferencia_efectivo: 2.0,
-      discrepancias: []
-    }
+      discrepancias: [],
+    },
   ];
 
   it('ordena los dias en revision primero y muestra el numero de motivos', () => {
@@ -41,6 +45,15 @@ describe('CashCloseList component', () => {
     expect(dates[0]).toHaveTextContent('2026-10-05');
     expect(screen.getByText('2 motivos')).toBeInTheDocument();
     expect(screen.getByText('En revisión')).toBeInTheDocument();
+  });
+
+  it('muestra Declarado por, causa y explicación en cierres en revisión (Brief 35p)', () => {
+    render(<CashCloseList closes={mockCloses} onSelectFecha={() => {}} />);
+
+    expect(screen.getByText('Mateo')).toBeInTheDocument();
+    expect(screen.getByText('Error de conteo')).toBeInTheDocument();
+    expect(screen.getByText('Billetes pegados al contar rápido.')).toBeInTheDocument();
+    expect(screen.getByText('Carlos')).toBeInTheDocument();
   });
 
   it('filtra correctamente con "Solo en revisión"', () => {
