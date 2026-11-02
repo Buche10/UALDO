@@ -190,6 +190,28 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 35p / 36p / 37p)', 
     });
   });
 
+  describe('accesos rápidos de reservas (Brief 39p)', () => {
+    it('con reservations.view ve "Reservas de hoy" y envía la pregunta', () => {
+      const onSelect = vi.fn();
+      const user = {
+        id: 30,
+        capabilities: { abilities: [ABILITIES.RESERVATIONS_VIEW] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={onSelect} />);
+
+      const chip = screen.getByRole('button', { name: /reservas de hoy/i });
+      expect(chip).toBeInTheDocument();
+      fireEvent.click(chip);
+      expect(onSelect).toHaveBeenCalledWith('¿Qué reservas hay hoy?');
+    });
+
+    it('sin reservations.view no muestra el acceso', () => {
+      const user = { id: 31, capabilities: { abilities: [ABILITIES.INVENTORY_VIEW] } };
+      render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: /reservas de hoy/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe('accesos rápidos de incidencias (Brief 37p)', () => {
     it('muestra "Reportar un problema" para todos y envía "Quiero reportar un problema"', () => {
       const onSelect = vi.fn();

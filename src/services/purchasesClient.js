@@ -115,6 +115,13 @@ export const listPurchases = async ({ status, supplierId, from, to, page = 1 } =
   return request(qs ? `/purchases?${qs}` : '/purchases');
 };
 
+export const listPurchasesToReceive = async ({ page = 1 } = {}) => {
+  const params = new URLSearchParams();
+  pageParams(params, page);
+  const qs = params.toString();
+  return request(qs ? `/purchases/to-receive?${qs}` : '/purchases/to-receive');
+};
+
 export const getPurchase = async (purchaseId) => {
   const id = parseId(purchaseId);
   if (!id) return invalid(400, 'Identificador de compra inválido.');

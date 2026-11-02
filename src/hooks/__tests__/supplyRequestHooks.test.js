@@ -142,6 +142,6 @@ describe('useSupplyRequestDetail and useSupplyRequestActions', () => {
       .mockResolvedValueOnce({ ok: false, status: 500, error: 'Error al consultar compras.' });
     const { result } = renderHook(() => usePurchasingOverview());
     await waitFor(() => expect(result.current.error).toBe('Error al consultar compras.'));
-    expect(result.current.overview).toEqual({ aprobado: [], por_aprobar: [], bajo_minimo: [] });
+    expect(result.current.overview).toEqual({ aprobado: [], por_aprobar: [], bajo_minimo: [], comprometido_por_reservas: [] });
   });
 });

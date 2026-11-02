@@ -95,7 +95,7 @@ export function useSupplyRequestActions({ requestId, onUpdated, onStale }) {
 
 /** Vista consolidada de compras del dueño: aprobado, por_aprobar y bajo_minimo (Brief 26p). */
 export function usePurchasingOverview() {
-  const [overview, setOverview] = useState({ aprobado: [], por_aprobar: [], bajo_minimo: [] });
+  const [overview, setOverview] = useState({ aprobado: [], por_aprobar: [], bajo_minimo: [], comprometido_por_reservas: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -112,7 +112,8 @@ export function usePurchasingOverview() {
     setOverview({
       aprobado: Array.isArray(data.aprobado) ? data.aprobado : [],
       por_aprobar: Array.isArray(data.por_aprobar) ? data.por_aprobar : [],
-      bajo_minimo: Array.isArray(data.bajo_minimo) ? data.bajo_minimo : []
+      bajo_minimo: Array.isArray(data.bajo_minimo) ? data.bajo_minimo : [],
+      comprometido_por_reservas: Array.isArray(data.comprometido_por_reservas) ? data.comprometido_por_reservas : []
     });
   }, []);
 

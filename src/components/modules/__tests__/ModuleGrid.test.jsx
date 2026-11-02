@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ModuleGrid from '../ModuleGrid';
 import { ABILITIES, ROLES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
+import * as reservationsClient from '../../../services/reservationsClient';
 
 describe('ModuleGrid component (Brief 30p & 32p_fix & 35p & 36p)', () => {
   beforeEach(() => {
@@ -122,6 +123,26 @@ describe('ModuleGrid component (Brief 30p & 32p_fix & 35p & 36p)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Cierre del día:/i }));
     expect(onSelect).toHaveBeenCalledWith('daily_close');
+  });
+
+  it('un salón con reservations.view ve la tarjeta Reservas con las reservas de hoy (Brief 39p)', async () => {
+    vi.spyOn(reservationsClient, 'listReservations').mockResolvedValue({
+      ok: true,
+      data: { data: [], meta: { current_page: 1, last_page: 1, total: 3 } },
+    });
+    const user = {
+      id: 40,
+      capabilities: { role: ROLES.LOUNGE_STAFF, abilities: [ABILITIES.RESERVATIONS_VIEW] },
+    };
+    const onSelect = vi.fn();
+
+    render(<ModuleGrid user={user} onSelectModule={onSelect} />);
+
+    const card = screen.getByRole('button', { name: /Reservas:/i });
+    expect(card).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('3')).toBeInTheDocument());
+    fireEvent.click(card);
+    expect(onSelect).toHaveBeenCalledWith('reservations');
   });
 
   it('muestra mensaje informativo si el usuario no tiene módulos habilitados', () => {

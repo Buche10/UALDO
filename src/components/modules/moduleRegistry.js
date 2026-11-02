@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   Clock,
   AlertTriangle,
+  CalendarDays,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -24,6 +25,15 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.INVENTORY_VIEW],
     subView: 'inventory',
     roleRequiredLabel: 'personal de cocina, salón, administración o dueño',
+  },
+  {
+    id: 'reservations',
+    label: 'Reservas',
+    description: 'Agenda del salón, platos y stock comprometido.',
+    icon: CalendarDays,
+    permissions: [ABILITIES.RESERVATIONS_VIEW],
+    subView: 'reservations',
+    roleRequiredLabel: 'salón, administración o dueño',
   },
   {
     id: 'pedidos',

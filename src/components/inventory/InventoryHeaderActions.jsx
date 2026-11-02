@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ClipboardList, Scissors, ShoppingCart, ChefHat } from 'lucide-react';
+import { Plus, ClipboardList, Scissors, ShoppingCart, ChefHat, PackageCheck } from 'lucide-react';
 
 const secondaryButton = {
   padding: '8px 12px',
@@ -22,9 +22,11 @@ const secondaryButton = {
 export default function InventoryHeaderActions({
   canManageSettings = false,
   canManagePurchases = false,
+  canReceivePurchases = false,
   canCount = false,
   onProduction,
   onPurchases,
+  onReceivePurchases,
   onCounts,
   onRunfoodRecipes,
   onCreate,
@@ -47,6 +49,13 @@ export default function InventoryHeaderActions({
         <button type="button" className="glass-card-interactive" onClick={onPurchases} style={secondaryButton}>
           <ShoppingCart size={16} aria-hidden="true" />
           <span>Compras</span>
+        </button>
+      )}
+
+      {canReceivePurchases && (
+        <button type="button" className="glass-card-interactive" onClick={onReceivePurchases} style={secondaryButton}>
+          <PackageCheck size={16} aria-hidden="true" />
+          <span>Compras por recibir</span>
         </button>
       )}
 

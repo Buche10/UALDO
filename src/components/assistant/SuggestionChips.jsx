@@ -9,6 +9,7 @@ import {
   Clock,
   AlertTriangle,
   Calculator,
+  CalendarDays,
 } from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
@@ -37,6 +38,7 @@ export default function SuggestionChips({
   const canDeclareWithdrawal = user ? can(user, ABILITIES.WITHDRAWALS_DECLARE) : false;
   const canRegisterOvertime = user ? canAny(user, [ABILITIES.OVERTIME_REGISTER_KITCHEN, ABILITIES.OVERTIME_REGISTER_LOUNGE]) : false;
   const canDeclareCashClose = user ? can(user, ABILITIES.CASH_REGISTER) && !can(user, ABILITIES.CASH_REVIEW) : false;
+  const canSeeReservations = user ? can(user, ABILITIES.RESERVATIONS_VIEW) : false;
   const userId = user?.id;
 
   useEffect(() => {
@@ -87,6 +89,14 @@ export default function SuggestionChips({
       label: 'Hacer el cierre de caja',
       prompt: 'Quiero declarar el cierre de caja de hoy',
       icon: Calculator,
+    });
+  }
+
+  if (canSeeReservations) {
+    suggestions.push({
+      label: 'Reservas de hoy',
+      prompt: '¿Qué reservas hay hoy?',
+      icon: CalendarDays,
     });
   }
 

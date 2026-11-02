@@ -26,7 +26,8 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('horas_extra')).toBe(true);
       expect(ALLOWED_SCREENS.has('incidencia')).toBe(true);
       expect(ALLOWED_SCREENS.has('incidencias')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(12);
+      expect(ALLOWED_SCREENS.has('reserva')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(13);
     });
   });
 
@@ -189,6 +190,19 @@ describe('notificationRoutes security and routing', () => {
         tab: 'negocios',
         subView: 'pedidos',
         params: { id: 101 },
+      });
+    });
+
+    it('resolves reserva with id to the detail and without id to the agenda (Brief 39p)', () => {
+      expect(resolveNotificationRoute('reserva', { id: 77 })).toEqual({
+        tab: 'negocios',
+        subView: 'reservations',
+        params: { id: 77 },
+      });
+      expect(resolveNotificationRoute('reserva')).toEqual({
+        tab: 'negocios',
+        subView: 'reservations',
+        params: {},
       });
     });
 

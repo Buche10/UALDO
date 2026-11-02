@@ -12,6 +12,7 @@ import TransferModal from './inventory/TransferModal';
 import CountsView from './inventory/counts/CountsView';
 import ProductionView from './inventory/production/ProductionView';
 import PurchasesView from './inventory/purchases/PurchasesView';
+import PurchasesToReceiveView from './inventory/purchases/PurchasesToReceiveView';
 import RunfoodRecipesView from './runfood/RunfoodRecipesView';
 import InventoryHeaderActions from './inventory/InventoryHeaderActions';
 
@@ -40,9 +41,11 @@ export default function InventoryView({ initialSubView = null }) {
   const [showCountsView, setShowCountsView] = useState(false);
   const [showProductionView, setShowProductionView] = useState(false);
   const [showPurchasesView, setShowPurchasesView] = useState(false);
+  const [showPurchasesToReceive, setShowPurchasesToReceive] = useState(false);
   const currentUser = getUser();
   const canManageSettings = can(currentUser, ABILITIES.SETTINGS_MANAGE);
   const canManagePurchases = can(currentUser, ABILITIES.PURCHASES_MANAGE);
+  const canReceivePurchases = can(currentUser, ABILITIES.PURCHASES_RECEIVE) && !canManagePurchases;
   const canCount = canAny(currentUser, [
     ABILITIES.INVENTORY_COUNT_WAREHOUSE,
     ABILITIES.INVENTORY_COUNT_KITCHEN,
@@ -106,6 +109,10 @@ export default function InventoryView({ initialSubView = null }) {
     return <PurchasesView onBack={() => { setShowPurchasesView(false); reload(); }} />;
   }
 
+  if (showPurchasesToReceive && canReceivePurchases) {
+    return <PurchasesToReceiveView canSeeCosts={canSeeCosts} onBack={() => { setShowPurchasesToReceive(false); reload(); }} />;
+  }
+
   if (showCountsView && canCount) {
     return <CountsView canCount={canCount} onBack={() => { setShowCountsView(false); reload(); }} />;
   }
@@ -137,9 +144,11 @@ export default function InventoryView({ initialSubView = null }) {
         <InventoryHeaderActions
           canManageSettings={canManageSettings}
           canManagePurchases={canManagePurchases}
+          canReceivePurchases={canReceivePurchases}
           canCount={canCount}
           onProduction={() => setShowProductionView(true)}
           onPurchases={() => setShowPurchasesView(true)}
+          onReceivePurchases={() => setShowPurchasesToReceive(true)}
           onCounts={() => setShowCountsView(true)}
           onRunfoodRecipes={() => setShowRunfoodRecipes(true)}
           onCreate={() => setShowCreateModal(true)}
