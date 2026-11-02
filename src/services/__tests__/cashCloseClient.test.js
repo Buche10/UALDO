@@ -2,13 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as apiClient from '../apiClient';
 import {
   isValidDate,
+  isValidDeclarationDate,
+  DIFFERENCE_CAUSES,
+  DIFFERENCE_CAUSE_LABELS,
   listCloses,
   getClose,
   reviewClose,
   setNetosReales,
   reopenClose,
   createManualClose,
-  reevaluateClose
+  reevaluateClose,
+  getDeclaration,
+  submitDeclaration,
+  getCashCloseSettings,
+  updateCashCloseSettings,
 } from '../cashCloseClient';
 
 describe('cashCloseClient', () => {
@@ -28,6 +35,36 @@ describe('cashCloseClient', () => {
       expect(isValidDate('invalid-date')).toBe(false);
       expect(isValidDate('2026/10/05')).toBe(false);
       expect(isValidDate(null)).toBe(false);
+    });
+  });
+
+  describe('isValidDeclarationDate', () => {
+    it('admite hoy, ayer, today, yesterday y fechas validas YYYY-MM-DD', () => {
+      expect(isValidDeclarationDate('hoy')).toBe(true);
+      expect(isValidDeclarationDate('Ayer')).toBe(true);
+      expect(isValidDeclarationDate('today')).toBe(true);
+      expect(isValidDeclarationDate('yesterday')).toBe(true);
+      expect(isValidDeclarationDate('2026-11-02')).toBe(true);
+    });
+
+    it('rechaza alias no permitidos o fechas invalidas', () => {
+      expect(isValidDeclarationDate('manana')).toBe(false);
+      expect(isValidDeclarationDate('2026-02-30')).toBe(false);
+      expect(isValidDeclarationDate('')).toBe(false);
+      expect(isValidDeclarationDate(null)).toBe(false);
+    });
+  });
+
+  describe('DIFFERENCE_CAUSES', () => {
+    it('contiene la lista cerrada del Brief 35 y sus etiquetas', () => {
+      expect(DIFFERENCE_CAUSES).toContain('error_de_conteo');
+      expect(DIFFERENCE_CAUSES).toContain('vuelto_mal_dado');
+      expect(DIFFERENCE_CAUSES).toContain('pago_no_registrado_en_runfood');
+      expect(DIFFERENCE_CAUSES).toContain('propina_mezclada');
+      expect(DIFFERENCE_CAUSES).toContain('faltante_sin_explicar');
+      expect(DIFFERENCE_CAUSES).toContain('otro');
+      expect(DIFFERENCE_CAUSES.length).toBe(6);
+      expect(DIFFERENCE_CAUSE_LABELS.otro).toBe('Otro');
     });
   });
 
@@ -214,6 +251,185 @@ describe('cashCloseClient', () => {
       expect(res.ok).toBe(true);
       expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/2026-10-05/reevaluar', {
         method: 'POST'
+      });
+    });
+  });
+
+  describe('getDeclaration (Brief 35p)', () => {
+    it('rechaza fechas invalidas sin llamar al motor', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await getDeclaration('2026-02-31');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('consulta la declaracion con fecha valida o alias hoy/ayer', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { data: { fecha: '2026-11-02', estado: 'borrador' } },
+      });
+
+      const res = await getDeclaration('hoy');
+      expect(res.ok).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/hoy/declaracion');
+    });
+  });
+
+  describe('submitDeclaration (Brief 35p)', () => {
+    it('rechaza fecha invalida sin llamar al motor', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await submitDeclaration('bad-date', { efectivo_contado: '150.00' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza efectivo contado vacio o invalido', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await submitDeclaration('hoy', { efectivo_contado: 'invalido' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza medios con monto invalido o medio no string', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await submitDeclaration('hoy', {
+        efectivo_contado: '100.00',
+        medios: [{ medio: 'credito', monto: 'abc' }],
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza diferencia_cause fuera de la lista cerrada', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await submitDeclaration('hoy', {
+        efectivo_contado: '100.00',
+        difference_cause: 'causa_inventada',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('rechaza explicacion con HTML o mas de 500 caracteres', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await submitDeclaration('hoy', {
+        efectivo_contado: '100.00',
+        difference_explanation: '<script>alert(1)</script>',
+      });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('envia los datos normalizados y devuelve ok en caso de exito', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { message: 'Cierre registrado y cerrado' },
+      });
+
+      const res = await submitDeclaration('hoy', {
+        efectivo_contado: '150,50',
+        medios: [{ medio: 'credito', monto: '486,37' }],
+        difference_cause: 'error_de_conteo',
+        difference_explanation: 'Se conto mal el billete de 20.',
+      });
+
+      expect(res.ok).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/hoy/declaracion', {
+        method: 'PUT',
+        body: {
+          efectivo_contado: '150.50',
+          medios: [{ medio: 'credito', monto: '486.37' }],
+          difference_cause: 'error_de_conteo',
+          difference_explanation: 'Se conto mal el billete de 20.',
+        },
+      });
+    });
+
+    it('devuelve resultado estructurado de recuento ante respuesta 409 con code recount', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: false,
+        status: 409,
+        data: {
+          code: 'recount',
+          message: 'Hay una diferencia de USD 10.00 en efectivo. Vuelve a contar antes de seguir.',
+          medio: 'efectivo',
+          diferencia: 1000,
+        },
+      });
+
+      const res = await submitDeclaration('hoy', { efectivo_contado: '140.00' });
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(409);
+      expect(res.isRecount).toBe(true);
+      expect(res.recount).toBe(true);
+      expect(res.medio).toBe('efectivo');
+      expect(res.diferencia).toBe(1000);
+      expect(res.message).toContain('Vuelve a contar antes de seguir');
+    });
+  });
+
+  describe('getCashCloseSettings y updateCashCloseSettings (Brief 35p)', () => {
+    it('getCashCloseSettings consulta /restaurant/cash-close/settings', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { head_declaration: true, reminder_time: '23:00', escalation_time: '11:00' },
+      });
+
+      const res = await getCashCloseSettings();
+      expect(res.ok).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/settings');
+    });
+
+    it('updateCashCloseSettings rechaza payload invalido sin campos', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const res = await updateCashCloseSettings({});
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('updateCashCloseSettings valida booleanos y formato de horas <= 23:45', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request');
+      const resBadBool = await updateCashCloseSettings({ head_declaration: 'true' });
+      expect(resBadBool.ok).toBe(false);
+
+      const resBadTime = await updateCashCloseSettings({ reminder_time: '25:00' });
+      expect(resBadTime.ok).toBe(false);
+
+      const resOverLimit = await updateCashCloseSettings({ reminder_time: '23:50' });
+      expect(resOverLimit.ok).toBe(false);
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it('updateCashCloseSettings envia PUT con los ajustes normalizados', async () => {
+      const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { head_declaration: true, reminder_time: '23:15', escalation_time: '11:30' },
+      });
+
+      const res = await updateCashCloseSettings({
+        head_declaration: true,
+        reminder_time: '23:15',
+        escalation_time: '11:30',
+      });
+      expect(res.ok).toBe(true);
+      expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/settings', {
+        method: 'PUT',
+        body: {
+          head_declaration: true,
+          reminder_time: '23:15',
+          escalation_time: '11:30',
+        },
       });
     });
   });

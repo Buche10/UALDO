@@ -1,11 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   ALLOWED_SCREENS,
   sanitizeActionParams,
   resolveNotificationRoute,
 } from '../notificationRoutes';
+import { ABILITIES } from '../permissions';
+import * as apiClient from '../apiClient';
 
 describe('notificationRoutes security and routing', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('ALLOWED_SCREENS whitelist', () => {
     it('contains strictly the permitted screens', () => {
       expect(ALLOWED_SCREENS.has('inventario')).toBe(true);
@@ -158,12 +164,43 @@ describe('notificationRoutes security and routing', () => {
       });
     });
 
-    it('resolves cierre_caja to negocios tab with cashclose subview', () => {
-      const route = resolveNotificationRoute('cierre_caja', { date: '2026-10-07' });
+    it('resolves cierre_caja to cashclose subview for user with cash.review (owner or admin)', () => {
+      const adminUser = {
+        id: 1,
+        capabilities: { abilities: [ABILITIES.CASH_REVIEW, ABILITIES.CASH_REGISTER] },
+      };
+      const route = resolveNotificationRoute('cierre_caja', { date: '2026-10-07' }, adminUser);
       expect(route).toEqual({
         tab: 'negocios',
         subView: 'cashclose',
         params: { date: '2026-10-07' },
+      });
+    });
+
+    it('resolves cierre_caja to cash_declaration subview for lounge head (cash.register without cash.review) (Brief 35p)', () => {
+      const loungeHeadUser = {
+        id: 5,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER] },
+      };
+      const route = resolveNotificationRoute('cierre_caja', { date: '2026-11-02' }, loungeHeadUser);
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'cash_declaration',
+        params: { date: '2026-11-02' },
+      });
+    });
+
+    it('resolves cierre_caja using stored user if userContext is not passed', () => {
+      vi.spyOn(apiClient, 'getStoredUser').mockReturnValue({
+        id: 5,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER] },
+      });
+
+      const route = resolveNotificationRoute('cierre_caja', { date: '2026-11-02' });
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'cash_declaration',
+        params: { date: '2026-11-02' },
       });
     });
 

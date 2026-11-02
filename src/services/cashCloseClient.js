@@ -1,4 +1,37 @@
 import { request } from './apiClient';
+import { normalizeAmount } from './money';
+
+const DECLARATION_ALIASES = new Set(['hoy', 'ayer', 'today', 'yesterday']);
+
+/**
+ * Valida si la fecha es valida para la declaracion del jefe (hoy, ayer o YYYY-MM-DD).
+ *
+ * @param {string} fecha
+ * @returns {boolean}
+ */
+export function isValidDeclarationDate(fecha) {
+  if (typeof fecha !== 'string') return false;
+  const clean = fecha.trim().toLowerCase();
+  return DECLARATION_ALIASES.has(clean) || isValidDate(clean);
+}
+
+export const DIFFERENCE_CAUSES = Object.freeze([
+  'error_de_conteo',
+  'vuelto_mal_dado',
+  'pago_no_registrado_en_runfood',
+  'propina_mezclada',
+  'faltante_sin_explicar',
+  'otro',
+]);
+
+export const DIFFERENCE_CAUSE_LABELS = Object.freeze({
+  error_de_conteo: 'Error de conteo',
+  vuelto_mal_dado: 'Vuelto mal dado',
+  pago_no_registrado_en_runfood: 'Pago no registrado en RunFood',
+  propina_mezclada: 'Propina mezclada',
+  faltante_sin_explicar: 'Faltante sin explicar',
+  otro: 'Otro',
+});
 
 /**
  * Valida si una fecha tiene formato YYYY-MM-DD y corresponde a un dia de calendario real.
@@ -226,5 +259,191 @@ export async function reevaluateClose(fecha) {
 
   return request(`/restaurant/cash-close/${encodeURIComponent(fecha)}/reevaluar`, {
     method: 'POST'
+  });
+}
+
+/**
+ * Consulta la declaracion del cierre de caja para el jefe de salon.
+ *
+ * @param {string} fecha
+ * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
+ */
+export async function getDeclaration(fecha) {
+  if (!isValidDeclarationDate(fecha)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Fecha invalida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
+    };
+  }
+
+  return request(`/restaurant/cash-close/${encodeURIComponent(fecha)}/declaracion`);
+}
+
+/**
+ * Envia la declaracion del cierre de caja por el jefe de salon.
+ *
+ * @param {string} fecha
+ * @param {Object} data
+ * @returns {Promise<{ok: boolean, status: number, isRecount?: boolean, recount?: boolean, message?: string, data?: any, error?: string}>}
+ */
+export async function submitDeclaration(fecha, data = {}) {
+  if (!isValidDeclarationDate(fecha)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Fecha invalida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
+    };
+  }
+
+  const normalizedCash = normalizeAmount(data?.efectivo_contado);
+  if (normalizedCash === null) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'El monto de efectivo contado es obligatorio y debe ser valido.'
+    };
+  }
+
+  const payload = {
+    efectivo_contado: normalizedCash
+  };
+
+  if (Array.isArray(data?.medios)) {
+    const cleanMedios = [];
+    for (const m of data.medios) {
+      const normalizedMonto = normalizeAmount(m?.monto);
+      if (!m || typeof m.medio !== 'string' || normalizedMonto === null) {
+        return {
+          ok: false,
+          status: 400,
+          error: 'Cada medio de pago debe incluir un identificador y un monto valido.'
+        };
+      }
+      cleanMedios.push({ medio: m.medio, monto: normalizedMonto });
+    }
+    payload.medios = cleanMedios;
+  }
+
+  if (data?.difference_cause) {
+    if (!DIFFERENCE_CAUSES.includes(data.difference_cause)) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Causa de diferencia invalida.'
+      };
+    }
+    payload.difference_cause = data.difference_cause;
+  }
+
+  if (data?.difference_explanation !== undefined && data?.difference_explanation !== null) {
+    if (
+      typeof data.difference_explanation !== 'string' ||
+      data.difference_explanation.length > 500 ||
+      /<[^>]*>/.test(data.difference_explanation)
+    ) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'La explicacion debe ser texto de hasta 500 caracteres sin etiquetas HTML.'
+      };
+    }
+    if (data.difference_explanation.trim()) {
+      payload.difference_explanation = data.difference_explanation.trim();
+    }
+  }
+
+  const res = await request(`/restaurant/cash-close/${encodeURIComponent(fecha)}/declaracion`, {
+    method: 'PUT',
+    body: payload
+  });
+
+  if (res.status === 409 && (res.data?.code === 'recount' || res.data?.error === 'recount')) {
+    return {
+      ok: false,
+      status: 409,
+      isRecount: true,
+      recount: true,
+      message: res.data?.message || res.error || 'Hay una diferencia en el cierre. Vuelve a contar antes de seguir.',
+      error: res.data?.message || res.error || 'Hay una diferencia en el cierre. Vuelve a contar antes de seguir.',
+      medio: res.data?.medio,
+      diferencia: res.data?.diferencia,
+      data: res.data
+    };
+  }
+
+  return res;
+}
+
+/**
+ * Consulta la configuracion de cierre de caja (jefe de salon, recordatorio y escalamiento).
+ *
+ * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
+ */
+export async function getCashCloseSettings() {
+  return request('/restaurant/cash-close/settings');
+}
+
+/**
+ * Actualiza la configuracion de cierre de caja.
+ *
+ * @param {Object} data
+ * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
+ */
+export async function updateCashCloseSettings(data = {}) {
+  if (!data || typeof data !== 'object') {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Datos de configuracion invalidos.'
+    };
+  }
+
+  const payload = {};
+  if (data.head_declaration !== undefined) {
+    if (typeof data.head_declaration !== 'boolean') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'head_declaration debe ser booleano.'
+      };
+    }
+    payload.head_declaration = data.head_declaration;
+  }
+
+  const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (data.reminder_time !== undefined) {
+    if (typeof data.reminder_time !== 'string' || !timeRegex.test(data.reminder_time) || data.reminder_time > '23:45') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'reminder_time debe tener formato HH:MM y ser como maximo 23:45.'
+      };
+    }
+    payload.reminder_time = data.reminder_time;
+  }
+
+  if (data.escalation_time !== undefined) {
+    if (typeof data.escalation_time !== 'string' || !timeRegex.test(data.escalation_time) || data.escalation_time > '23:45') {
+      return {
+        ok: false,
+        status: 400,
+        error: 'escalation_time debe tener formato HH:MM y ser como maximo 23:45.'
+      };
+    }
+    payload.escalation_time = data.escalation_time;
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'No se enviaron campos de configuracion para actualizar.'
+    };
+  }
+
+  return request('/restaurant/cash-close/settings', {
+    method: 'PUT',
+    body: payload
   });
 }

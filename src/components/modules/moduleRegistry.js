@@ -36,13 +36,23 @@ export const MODULE_REGISTRY = [
     roleRequiredLabel: 'personal de cocina, salón, administración o dueño',
   },
   {
+    id: 'cash_declaration',
+    label: 'Mi cierre de caja',
+    description: 'Declaración del efectivo contado y medios de pago del día.',
+    icon: Calculator,
+    permissions: [ABILITIES.CASH_REGISTER],
+    excludePermissions: [ABILITIES.CASH_REVIEW],
+    subView: 'cash_declaration',
+    roleRequiredLabel: 'jefe de salón',
+  },
+  {
     id: 'cashclose',
     label: 'Cierre de caja',
     description: 'Arqueo de caja, revisión de ventas y diferencias.',
     icon: Calculator,
-    permissions: [ABILITIES.CASH_REVIEW, ABILITIES.CASH_REGISTER],
+    permissions: [ABILITIES.CASH_REVIEW],
     subView: 'cashclose',
-    roleRequiredLabel: 'jefe de salón, administración o dueño',
+    roleRequiredLabel: 'administración o dueño',
   },
   {
     id: 'ventas',
@@ -124,7 +134,12 @@ export const MODULE_REGISTRY = [
  * @returns {Array<object>}
  */
 export function getVisibleModules(user) {
-  return MODULE_REGISTRY.filter((mod) => canAny(user, mod.permissions));
+  return MODULE_REGISTRY.filter((mod) => {
+    if (mod.excludePermissions && canAny(user, mod.excludePermissions)) {
+      return false;
+    }
+    return canAny(user, mod.permissions);
+  });
 }
 
 /**

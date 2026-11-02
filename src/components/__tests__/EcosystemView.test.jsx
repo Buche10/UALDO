@@ -9,7 +9,7 @@ import { ABILITIES, ROLES } from '../../services/permissions';
 
 const pageOf = (data) => ({ ok: true, data: { data, meta: { current_page: 1, last_page: 1 } } });
 
-describe('EcosystemView (Brief 22p / 30p)', () => {
+describe('EcosystemView (Brief 22p / 30p / 35p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(client, 'listRequests').mockResolvedValue(pageOf([pendingRequest]));
@@ -97,10 +97,32 @@ describe('EcosystemView (Brief 22p / 30p)', () => {
       render(<EcosystemView subView="cashclose" onSubViewChange={onSubViewChange} />);
 
       expect(screen.getByText('Acceso restringido')).toBeInTheDocument();
-      expect(screen.getByText(/Esta sección le corresponde a jefe de salón, administración o dueño/i)).toBeInTheDocument();
+      expect(screen.getByText(/Esta sección le corresponde a administración o dueño/i)).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Volver a módulos' }));
       expect(onSubViewChange).toHaveBeenCalledWith('overview');
+    });
+
+    it('shows "Acceso restringido" if lounge_head lands on subView="cashclose" (Brief 35p)', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 25,
+        role: ROLES.LOUNGE_HEAD,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER] },
+      });
+      render(<EcosystemView subView="cashclose" onSubViewChange={vi.fn()} />);
+
+      expect(screen.getByText('Acceso restringido')).toBeInTheDocument();
+      expect(screen.getByText(/Esta sección le corresponde a administración o dueño/i)).toBeInTheDocument();
+    });
+
+    it('renders CashDeclarationView on subView="cash_declaration" for lounge_head (Brief 35p)', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 25,
+        role: ROLES.LOUNGE_HEAD,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER] },
+      });
+      render(<EcosystemView subView="cash_declaration" onSubViewChange={vi.fn()} />);
+      expect(screen.getByText('Mi cierre de caja')).toBeInTheDocument();
     });
 
     it('renders DailyCloseView on subView="daily_close" for authorized user', () => {
@@ -111,9 +133,6 @@ describe('EcosystemView (Brief 22p / 30p)', () => {
       });
       render(<EcosystemView subView="daily_close" onSubViewChange={vi.fn()} />);
       expect(screen.getByText('Cierre del día')).toBeInTheDocument();
-
-
-
     });
   });
 });

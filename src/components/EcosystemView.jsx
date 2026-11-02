@@ -3,6 +3,7 @@ import { Building2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import DobleFiloCard from './DobleFiloCard';
 import InventoryView from './InventoryView';
 import CashCloseView from './CashCloseView';
+import CashDeclarationView from './cashclose/declaration/CashDeclarationView';
 import SupplyRequestsView from './supplyRequests/SupplyRequestsView';
 import SalesView from './sales/SalesView';
 import DailyCloseView from './inventory/dailyClose/DailyCloseView';
@@ -98,6 +99,13 @@ export default function EcosystemView({
     );
   } else if (currentSubTab === 'ventas') {
     content = <SalesView onBack={() => handleSubTabChange('overview')} />;
+  } else if (currentSubTab === 'cash_declaration') {
+    content = (
+      <CashDeclarationView
+        fechaInicial={negociosParams?.fecha || negociosParams?.date}
+        onBack={() => handleSubTabChange('overview')}
+      />
+    );
   } else if (currentSubTab === 'cashclose') {
     content = <CashCloseView fechaInicial={negociosParams?.fecha} />;
   } else if (currentSubTab === 'inventory') {

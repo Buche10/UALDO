@@ -5,7 +5,7 @@ import ModuleGrid from '../ModuleGrid';
 import { ABILITIES, ROLES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('ModuleGrid component (Brief 30p & 32p_fix & 36p & 38p)', () => {
+describe('ModuleGrid component (Brief 30p & 32p_fix & 35p & 36p & 38p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -33,7 +33,7 @@ describe('ModuleGrid component (Brief 30p & 32p_fix & 36p & 38p)', () => {
     expect(screen.queryByText('Cierre de caja')).not.toBeInTheDocument();
   });
 
-  it('un lounge_head ve Cierre de caja (por cash.register), Inventario y Pedidos, pero no Ventas', () => {
+  it('un lounge_head ve "Mi cierre de caja" (por cash.register sin cash.review), pero no la tarjeta completa ni Ventas (Brief 35p)', () => {
     const loungeHeadUser = {
       id: 21,
       capabilities: {
@@ -45,13 +45,18 @@ describe('ModuleGrid component (Brief 30p & 32p_fix & 36p & 38p)', () => {
         ],
       },
     };
+    const onSelect = vi.fn();
 
-    render(<ModuleGrid user={loungeHeadUser} onSelectModule={vi.fn()} />);
+    render(<ModuleGrid user={loungeHeadUser} onSelectModule={onSelect} />);
 
-    expect(screen.getByText('Cierre de caja')).toBeInTheDocument();
     expect(screen.getByText('Inventario')).toBeInTheDocument();
     expect(screen.getByText('Pedidos')).toBeInTheDocument();
+    expect(screen.getByText('Mi cierre de caja')).toBeInTheDocument();
+    expect(screen.queryByText('Cierre de caja')).not.toBeInTheDocument();
     expect(screen.queryByText('Ventas')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Mi cierre de caja:/i }));
+    expect(onSelect).toHaveBeenCalledWith('cash_declaration');
   });
 
   it('un dueño (owner) ve todos los módulos registrados', () => {
@@ -75,6 +80,33 @@ describe('ModuleGrid component (Brief 30p & 32p_fix & 36p & 38p)', () => {
     expect(screen.getByText('Retiros de bodega')).toBeInTheDocument();
     expect(screen.getByText('Horas extra')).toBeInTheDocument();
     expect(screen.getByText('Vajilla y equipos')).toBeInTheDocument();
+    expect(screen.queryByText('Mi cierre de caja')).not.toBeInTheDocument();
+  });
+
+  it('un admin ve todos los módulos de la portada pero no Mi cierre de caja', () => {
+    const adminUser = {
+      id: 2,
+      capabilities: {
+        role: ROLES.ADMIN,
+        abilities: [
+          ABILITIES.INVENTORY_VIEW,
+          ABILITIES.SUPPLY_REQUEST,
+          ABILITIES.CASH_REVIEW,
+          ABILITIES.CASH_REGISTER,
+          ABILITIES.SALES_TOTALS,
+          ABILITIES.SETTINGS_MANAGE,
+          ABILITIES.PURCHASES_MANAGE,
+        ],
+      },
+    };
+
+    render(<ModuleGrid user={adminUser} onSelectModule={vi.fn()} />);
+
+    expect(screen.getByText('Inventario')).toBeInTheDocument();
+    expect(screen.getByText('Pedidos')).toBeInTheDocument();
+    expect(screen.getByText('Cierre de caja')).toBeInTheDocument();
+    expect(screen.getByText('Ventas')).toBeInTheDocument();
+    expect(screen.queryByText('Mi cierre de caja')).not.toBeInTheDocument();
   });
 
   it('un usuario con assets.count.lounge ve la tarjeta Vajilla y equipos', () => {
