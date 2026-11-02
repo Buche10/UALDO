@@ -8,6 +8,7 @@ import {
   Clock,
   AlertTriangle,
   UtensilsCrossed,
+  Tags,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -124,6 +125,16 @@ export const MODULE_REGISTRY = [
     ],
     subView: 'assets',
     roleRequiredLabel: 'personal de cocina, salón, jefes de área, administración o dueño',
+  },
+  {
+    id: 'lots',
+    label: 'Lotes de carne',
+    description: 'Rotación FIFO, saldos por ubicación y trazabilidad de cada lote.',
+    icon: Tags,
+    permissions: [ABILITIES.LOTS_MANAGE, ABILITIES.INVENTORY_VIEW],
+    subView: 'lots',
+    requiresLotItems: true,
+    roleRequiredLabel: 'personal de cocina, administración o dueño',
   },
 ];
 

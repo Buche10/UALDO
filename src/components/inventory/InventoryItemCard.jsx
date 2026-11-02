@@ -3,6 +3,7 @@ import { History, ArrowRightLeft, ShoppingBag } from 'lucide-react';
 import { getUser } from '../../services/auth';
 import { can, ABILITIES } from '../../services/permissions';
 import ItemPurchaseParams from './ItemPurchaseParams';
+import ItemLotSettings from './ItemLotSettings';
 import { STORAGE_MAP, formatCategory, renderLocationBreakdown } from './inventoryCardHelpers';
 
 export default function InventoryItemCard({
@@ -10,10 +11,13 @@ export default function InventoryItemCard({
   onSelectForMovement,
   onSelectForHistory,
   onSelectForTransfer,
+  onItemUpdated,
 }) {
   const [expanded, setExpanded] = useState(false);
   const currentUser = getUser();
   const canManagePurchases = can(currentUser, ABILITIES.PURCHASES_MANAGE);
+  const canManageSettings = can(currentUser, ABILITIES.SETTINGS_MANAGE);
+  const canConfigure = canManagePurchases || canManageSettings;
 
   const categoryLabel = formatCategory(item.category);
   const storageInfo = item.storage_type ? STORAGE_MAP[item.storage_type] : null;
@@ -78,12 +82,12 @@ export default function InventoryItemCard({
         </div>
 
         <div style={{ display: 'flex', gap: '6px' }}>
-          {canManagePurchases && (
+          {canConfigure && (
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              title="Parámetros de compra"
-              aria-label="Parámetros de compra"
+              title="Configuración del insumo"
+              aria-label="Configuración del insumo"
               style={{
                 padding: '8px',
                 borderRadius: '8px',
@@ -159,11 +163,16 @@ export default function InventoryItemCard({
         </div>
       </div>
 
-      {expanded && canManagePurchases && (
-        <ItemPurchaseParams
-          item={item}
-          onSaved={() => {}}
-        />
+      {expanded && canConfigure && (
+        <>
+          {canManagePurchases && (
+            <ItemPurchaseParams
+              item={item}
+              onSaved={() => {}}
+            />
+          )}
+          <ItemLotSettings item={item} onSaved={onItemUpdated} />
+        </>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { request } from './apiClient';
 import { isValidLocation } from './inventoryLocations';
+import { normalizeLotJustification } from './lotSelection';
 
 /**
  * Normaliza y valida una cantidad numérica para movimientos de inventario.
@@ -116,6 +117,21 @@ export const registerMovement = async (itemId, movementData, clientUuid) => {
     payload.location = loc;
   }
 
+  if (movementData.lot_id !== undefined && movementData.lot_id !== null && movementData.lot_id !== '') {
+    const lotId = parseInt(movementData.lot_id, 10);
+    if (isNaN(lotId) || lotId <= 0) {
+      return { ok: false, status: 422, error: 'Identificador de lote inválido.', isNetworkError: false };
+    }
+    payload.lot_id = lotId;
+  }
+  if (movementData.justification !== undefined && movementData.justification !== null && String(movementData.justification).trim() !== '') {
+    const justification = normalizeLotJustification(movementData.justification);
+    if (!justification) {
+      return { ok: false, status: 422, error: 'El motivo para usar otro lote debe tener entre 5 y 300 caracteres.', isNetworkError: false };
+    }
+    payload.justification = justification;
+  }
+
   return request(`/inventory/${parsedId}/movements`, {
     method: 'POST',
     body: payload,
@@ -195,6 +211,21 @@ export const transferStock = async (transferData, clientUuid) => {
 
   if (transferData?.reason && String(transferData.reason).trim()) {
     payload.reason = String(transferData.reason).trim();
+  }
+
+  if (transferData?.lot_id !== undefined && transferData?.lot_id !== null && transferData?.lot_id !== '') {
+    const lotId = parseInt(transferData.lot_id, 10);
+    if (isNaN(lotId) || lotId <= 0) {
+      return { ok: false, status: 422, error: 'Identificador de lote inválido.', isNetworkError: false };
+    }
+    payload.lot_id = lotId;
+  }
+  if (transferData?.justification !== undefined && transferData?.justification !== null && String(transferData.justification).trim() !== '') {
+    const justification = normalizeLotJustification(transferData.justification);
+    if (!justification) {
+      return { ok: false, status: 422, error: 'El motivo para usar otro lote debe tener entre 5 y 300 caracteres.', isNetworkError: false };
+    }
+    payload.justification = justification;
   }
 
   if (clientUuid) {

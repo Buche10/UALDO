@@ -4,6 +4,7 @@ import { generateClientUuid } from './useMovementSubmit';
 import { useProductionPlan } from './useProductionPlan';
 import { basisInput, buildPayload, emptyValues, inputKey, mapServerErrors, validateForm } from './productionForm';
 import { DEFAULT_LOCATION } from '../services/inventoryLocations';
+import { emptyLotSelection, lotSelectionError } from '../services/lotSelection';
 
 /** Clave del error de cada campo del formulario. */
 const FIELD_ERROR_KEYS = { mainOutputWeight: 'main_output_weight', wasteQuantity: 'waste_quantity' };
@@ -22,6 +23,9 @@ export function useProductionRunForm({ template, onRecorded }) {
     mainOutputWeight: '',
     wasteQuantity: '',
     notes: '',
+    ...emptyLotSelection(),
+    lotJustification: '',
+    lotNeedsJustification: false,
   }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -43,12 +47,33 @@ export function useProductionRunForm({ template, onRecorded }) {
   }, []);
 
   const setField = useCallback((field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'location' ? { ...emptyLotSelection(), lotJustification: '', lotNeedsJustification: false } : {}),
+    }));
     const errorKey = FIELD_ERROR_KEYS[field] || field;
     setFieldErrors((prev) => {
       if (!prev[errorKey]) return prev;
       const next = { ...prev };
       delete next[errorKey];
+      return next;
+    });
+  }, []);
+
+  const setLotSelection = useCallback((selection = {}) => {
+    setForm((prev) => ({
+      ...prev,
+      lotId: selection.lotId || '',
+      lotJustification: selection.justification || '',
+      lotNeedsJustification: Boolean(selection.needsJustification),
+      recommendedCode: selection.recommendedCode || null,
+      recommendedLotId: selection.recommendedLotId || null,
+    }));
+    setFieldErrors((prev) => {
+      if (!prev.lot) return prev;
+      const next = { ...prev };
+      delete next.lot;
       return next;
     });
   }, []);
@@ -68,6 +93,12 @@ export function useProductionRunForm({ template, onRecorded }) {
     if (submitting) return;
     setError(null);
     const errors = validateForm(template, form);
+    const lotError = lotSelectionError({
+      lotId: form.lotId,
+      needsJustification: form.lotNeedsJustification,
+      justification: form.lotJustification,
+    });
+    if (lotError) errors.lot = lotError;
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setError('Revisa los datos marcados.');
@@ -91,6 +122,7 @@ export function useProductionRunForm({ template, onRecorded }) {
     form,
     setValue,
     setField,
+    setLotSelection,
     submit,
     submitting,
     error,

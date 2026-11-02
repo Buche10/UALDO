@@ -9,10 +9,12 @@ import {
   Clock,
   AlertTriangle,
   Calculator,
+  Tags,
 } from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
+import { useLotItems } from '../../hooks/useLotItems';
 
 const DECIDER_SUGGESTIONS = [
   { label: 'Pedidos por aprobar', prompt: '¿Hay pedidos pendientes por aprobar?', icon: CheckCircle2 },
@@ -37,6 +39,8 @@ export default function SuggestionChips({
   const canDeclareWithdrawal = user ? can(user, ABILITIES.WITHDRAWALS_DECLARE) : false;
   const canRegisterOvertime = user ? canAny(user, [ABILITIES.OVERTIME_REGISTER_KITCHEN, ABILITIES.OVERTIME_REGISTER_LOUNGE]) : false;
   const canDeclareCashClose = user ? can(user, ABILITIES.CASH_REGISTER) && !can(user, ABILITIES.CASH_REVIEW) : false;
+  const canViewInventory = user ? can(user, ABILITIES.INVENTORY_VIEW) : false;
+  const { hasLotItems } = useLotItems({ enabled: canViewInventory });
   const userId = user?.id;
 
   useEffect(() => {
@@ -87,6 +91,14 @@ export default function SuggestionChips({
       label: 'Hacer el cierre de caja',
       prompt: 'Quiero declarar el cierre de caja de hoy',
       icon: Calculator,
+    });
+  }
+
+  if (hasLotItems) {
+    suggestions.push({
+      label: '¿Qué lote uso?',
+      prompt: '¿Qué lote de carne tengo que usar primero?',
+      icon: Tags,
     });
   }
 

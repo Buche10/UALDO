@@ -15,6 +15,7 @@ export default function InventoryList({
   onSelectForMovement,
   onSelectForHistory,
   onSelectForTransfer,
+  onItemUpdated,
 }) {
   if (activeTab === 'alerts') {
     return <InventoryAlertsList alerts={alerts} />;
@@ -37,6 +38,7 @@ export default function InventoryList({
           onSelectForMovement={onSelectForMovement}
           onSelectForHistory={onSelectForHistory}
           onSelectForTransfer={onSelectForTransfer}
+          onItemUpdated={onItemUpdated}
         />
       ))}
 

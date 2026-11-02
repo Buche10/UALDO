@@ -11,6 +11,7 @@ import WithdrawalsView from './withdrawals/WithdrawalsView';
 import OvertimeView from './overtime/OvertimeView';
 import IncidentsView from './incidents/IncidentsView';
 import AssetsView from './assets/AssetsView';
+import LotsView from './lots/LotsView';
 import ModuleGrid from './modules/ModuleGrid';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
@@ -159,6 +160,14 @@ export default function EcosystemView({
         initialTab={negociosParams?.tab || negociosParams?.initialTab}
         onBack={() => handleSubTabChange('overview')}
         onNavigateToIncident={() => handleSubTabChange('incidents')}
+      />
+    );
+  } else if (currentSubTab === 'lots') {
+    content = (
+      <LotsView
+        canManage={can(user, ABILITIES.LOTS_MANAGE)}
+        canSeeCosts={can(user, ABILITIES.INVENTORY_COSTS)}
+        onBack={() => handleSubTabChange('overview')}
       />
     );
   }

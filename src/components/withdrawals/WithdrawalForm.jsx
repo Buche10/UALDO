@@ -2,11 +2,10 @@ import React, { useState, useRef } from 'react';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createWithdrawal } from '../../services/withdrawalsClient';
 import { generateClientUuid } from '../../hooks/useMovementSubmit';
+import { buildWithdrawalItems } from './withdrawalLotPayload';
 import WithdrawalFormItems from './WithdrawalFormItems';
 import WithdrawalFormLateFields from './WithdrawalFormLateFields';
-
 const PURPOSE_SUGGESTIONS = ['Producción', 'Mise en place', 'Servicio'];
-
 export default function WithdrawalForm({ user, onSuccess, onCancel }) {
   const [items, setItems] = useState([
     { tempId: 'temp_1', item_id: null, name: '', unit: '', quantity: '' },
@@ -54,9 +53,16 @@ export default function WithdrawalForm({ user, onSuccess, onCancel }) {
       return;
     }
 
+    const built = buildWithdrawalItems(items);
+    if (Object.keys(built.lineErrors).length > 0) {
+      setLineErrors(built.lineErrors);
+      setError('Revisa el lote de los insumos marcados.');
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
-      items: items.map((it) => ({ item_id: it.item_id, name: it.name, quantity: it.quantity })),
+      items: built.items,
       to_location: toLocation,
       purpose,
       client_uuid: clientUuidRef.current,

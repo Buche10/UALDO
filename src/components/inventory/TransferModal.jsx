@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRightLeft, X } from 'lucide-react';
 import { useTransferSubmit } from '../../hooks/useTransferSubmit';
-import { INVENTORY_LOCATIONS } from '../../services/inventoryLocations';
 import { formatQuantity } from '../../services/quantityFormat';
+import { emptyLotSelection } from '../../services/lotSelection';
+import TransferFormFields from './TransferFormFields';
 
 export default function TransferModal({ isOpen, item, onClose, onTransferSuccess }) {
   const [from, setFrom] = useState('warehouse');
   const [to, setTo] = useState('kitchen');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
+  const [lotSelection, setLotSelection] = useState(emptyLotSelection);
 
   const {
     submitting,
@@ -26,6 +28,7 @@ export default function TransferModal({ isOpen, item, onClose, onTransferSuccess
       setTo('kitchen');
       setQuantity('');
       setReason('');
+      setLotSelection(emptyLotSelection());
     }
   }, [isOpen, item, initUuid]);
 
@@ -45,7 +48,12 @@ export default function TransferModal({ isOpen, item, onClose, onTransferSuccess
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    submitTransfer({ from, to, quantity, reason });
+    submitTransfer({ from, to, quantity, reason, lotSelection });
+  };
+
+  const handleFromChange = (value) => {
+    setFrom(value);
+    setLotSelection(emptyLotSelection());
   };
 
   return (
@@ -114,89 +122,22 @@ export default function TransferModal({ isOpen, item, onClose, onTransferSuccess
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label htmlFor="transfer-from-select" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                Origen
-              </label>
-              <select
-                id="transfer-from-select"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
-              >
-                {INVENTORY_LOCATIONS.map((loc) => (
-                  <option key={loc.value} value={loc.value}>
-                    {loc.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="transfer-to-select" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                Destino
-              </label>
-              <select
-                id="transfer-to-select"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
-              >
-                {INVENTORY_LOCATIONS.map((loc) => (
-                  <option key={loc.value} value={loc.value}>
-                    {loc.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', fontSize: '12px', color: 'var(--text-muted)' }}>
-            <span>Disponible en el origen: </span>
-            <strong style={{ color: 'var(--accent)' }}>{availableInOrigin} {item.unit || ''}</strong>
-          </div>
-
-          <div>
-            <label htmlFor="transfer-quantity-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-              Cantidad a transferir ({item.unit || 'unidades'})
-            </label>
-            <input
-              id="transfer-quantity-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="Ej: 2.500"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="glass-input"
-              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
-            />
-            {fieldErrors.quantity && (
-              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
-                {Array.isArray(fieldErrors.quantity) ? fieldErrors.quantity.join(', ') : fieldErrors.quantity}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="transfer-reason-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-              Motivo o nota (opcional)
-            </label>
-            <input
-              id="transfer-reason-input"
-              type="text"
-              placeholder="Ej: Reposición de cocina"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="glass-input"
-              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
-            />
-            {fieldErrors.reason && (
-              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
-                {Array.isArray(fieldErrors.reason) ? fieldErrors.reason.join(', ') : fieldErrors.reason}
-              </span>
-            )}
-          </div>
+          <TransferFormFields
+            item={item}
+            from={from}
+            to={to}
+            quantity={quantity}
+            reason={reason}
+            fieldErrors={fieldErrors}
+            availableInOrigin={availableInOrigin}
+            lotSelection={lotSelection}
+            disabled={submitting}
+            onFromChange={handleFromChange}
+            onToChange={setTo}
+            onQuantityChange={setQuantity}
+            onReasonChange={setReason}
+            onLotChange={setLotSelection}
+          />
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
             <button

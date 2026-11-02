@@ -9,6 +9,7 @@ import { formatQuantity } from '../../../services/quantityFormat';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PurchaseLinesEditor from './PurchaseLinesEditor';
 import ReceivePurchaseDialog from './ReceivePurchaseDialog';
+import LotCodesDialog from '../../lots/LotCodesDialog';
 import PurchaseIssuesSection from './PurchaseIssuesSection';
 import { money, purchaseLocation, statusLabel, styles, unitCost } from './purchaseUi';
 
@@ -67,6 +68,7 @@ function LinesView({ purchase }) {
 
 function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
   const [dialog, setDialog] = useState(null);
+  const [lotCodes, setLotCodes] = useState([]);
   const [editing, setEditing] = useState(false);
   const receiveRef = useRef(null);
   const cancelRef = useRef(null);
@@ -80,12 +82,20 @@ function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
     purchaseId: purchase.id,
     onStale,
     onUpdated: (updated, action) => {
-      setDialog(null);
+      if (action !== 'receive') setDialog(null);
       if (onUpdated) onUpdated(updated, action);
     },
   });
   const isDraft = purchase.status === 'draft';
   const hasIssues = purchase.status === 'received_with_issues';
+
+  const handleReceive = async (lines) => {
+    const result = await actions.receive(lines);
+    if (!result.ok) return;
+    const receivedLots = result.data?.lots || result.data?.data?.lots || [];
+    setLotCodes(receivedLots);
+    setDialog(receivedLots.length > 0 ? 'lots' : null);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -131,7 +141,14 @@ function PurchaseDetailBody({ purchase, onBack, onUpdated, onStale }) {
         busy={Boolean(actions.busy)}
         error={actions.error}
         onClose={() => setDialog(null)}
-        onConfirm={(lines) => actions.receive(lines)}
+        onConfirm={handleReceive}
+      />
+
+      <LotCodesDialog
+        isOpen={dialog === 'lots'}
+        purchase={purchase}
+        lots={lotCodes}
+        onDone={() => setDialog(null)}
       />
 
       <ConfirmDialog

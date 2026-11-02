@@ -4,6 +4,7 @@ import { getVisibleModules } from './moduleRegistry';
 import { can, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
+import { useLotItems } from '../../hooks/useLotItems';
 
 /**
  * Cuadrícula de módulos de Ualdo Negocios filtrada según los permisos del usuario.
@@ -11,6 +12,11 @@ import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
   const visibleModules = getVisibleModules(user);
   const [openWithdrawalsCount, setOpenWithdrawalsCount] = useState(badges.withdrawals || 0);
+  const hasLotModule = visibleModules.some((module) => module.requiresLotItems);
+  const { hasLotItems, loading: lotsLoading } = useLotItems({ enabled: hasLotModule });
+  const displayedModules = visibleModules.filter((module) => (
+    !module.requiresLotItems || (!lotsLoading && hasLotItems)
+  ));
 
   const userId = user?.id;
   const canDeclare = can(user, ABILITIES.WITHDRAWALS_DECLARE);
@@ -36,7 +42,7 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
     };
   }, [userId, canDeclare, badges.withdrawals]);
 
-  if (visibleModules.length === 0) {
+  if (displayedModules.length === 0) {
     return (
       <div
         className="glass-card"
@@ -63,7 +69,7 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
         gap: '12px',
       }}
     >
-      {visibleModules.map((module) => {
+      {displayedModules.map((module) => {
         let badgeValue = null;
         if (module.id === 'withdrawals') {
           badgeValue = openWithdrawalsCount;

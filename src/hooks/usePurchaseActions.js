@@ -50,7 +50,7 @@ export function usePurchaseActions({ purchaseId, onUpdated, onStale }) {
     setBusy(null);
     if (res.ok) {
       if (onUpdated) onUpdated(res.data?.data, action);
-      return { ok: true };
+      return { ok: true, data: res.data };
     }
     const fallback = res.status === 409 ? CLOSED_MESSAGE : 'No se pudo completar la acción.';
     setError(res.data?.message || res.error || fallback);

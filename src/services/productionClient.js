@@ -104,6 +104,13 @@ function buildRunBody(payload) {
   if (location) body.location = location;
   if (mainWeight.value !== undefined) body.main_output_weight = mainWeight.value;
   if (waste.value !== undefined) body.waste_quantity = waste.value;
+  if (payload?.inputLotId) {
+    const lotId = parseId(payload.inputLotId);
+    if (!lotId) return { error: 'El lote de entrada no es válido.' };
+    body.input_lot_id = lotId;
+  }
+  const justification = typeof payload?.justification === 'string' ? payload.justification.trim() : '';
+  if (justification) body.justification = justification;
   const notes = typeof payload.notes === 'string' ? payload.notes.trim() : '';
   if (notes) body.notes = notes;
   return { body };

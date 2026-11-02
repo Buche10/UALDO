@@ -12,6 +12,7 @@ import TeamSection from './settings/TeamSection';
 import DailyCloseSettingsForm from './inventory/dailyClose/DailyCloseSettingsForm';
 import WithdrawalSettingsForm from './withdrawals/WithdrawalSettingsForm';
 import PurchasingSettingsForm from './settings/PurchasingSettingsForm';
+import LotSettingsForm from './settings/LotSettingsForm';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -291,6 +292,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <DailyCloseSettingsForm />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <WithdrawalSettingsForm />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <PurchasingSettingsForm />}
+      {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <LotSettingsForm />}
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>
