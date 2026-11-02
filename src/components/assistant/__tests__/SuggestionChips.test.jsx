@@ -5,7 +5,7 @@ import SuggestionChips from '../SuggestionChips';
 import { ABILITIES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p / 37p)', () => {
+describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 35p / 36p / 37p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -150,6 +150,43 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p / 37p)', () => 
       render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
       expect(screen.queryByRole('button', { name: /registrar horas extra/i })).toBeNull();
+    });
+  });
+
+  describe('accesos rápidos de cierre de caja (Brief 35p)', () => {
+    it('para quien tiene cash.register sin cash.review ve "Hacer el cierre de caja" y envía el texto correspondiente', () => {
+      const onSelect = vi.fn();
+      const user = {
+        id: 15,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={onSelect} />);
+
+      const chip = screen.getByRole('button', { name: /hacer el cierre de caja/i });
+      expect(chip).toBeInTheDocument();
+
+      fireEvent.click(chip);
+      expect(onSelect).toHaveBeenCalledWith('Quiero declarar el cierre de caja de hoy');
+    });
+
+    it('para quien tiene cash.review no muestra el chip de declaración del jefe', () => {
+      const user = {
+        id: 1,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER, ABILITIES.CASH_REVIEW] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: /hacer el cierre de caja/i })).toBeNull();
+    });
+
+    it('para personal sin cash.register no muestra el chip de cierre', () => {
+      const user = {
+        id: 20,
+        capabilities: { abilities: [ABILITIES.SUPPLY_REQUEST] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: /hacer el cierre de caja/i })).toBeNull();
     });
   });
 
