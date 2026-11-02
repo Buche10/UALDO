@@ -15,7 +15,7 @@ describe('AssistantChat component', () => {
     localStorage.setItem('ualdo_privacy_ack_2_v1', 'true');
   });
 
-  it('shows staff suggestion chips for staff role and triggers send on click', async () => {
+  it('shows role suggestion chips for staff role and triggers send on click', async () => {
     vi.spyOn(assistantClient, 'sendMessage').mockResolvedValueOnce({
       ok: true,
       reply: 'Abriendo pedidos de insumos...',
@@ -24,12 +24,12 @@ describe('AssistantChat component', () => {
 
     render(<AssistantChat user={staffUser} />);
 
-    const chip = screen.getByText('Reportar faltantes');
+    const chip = screen.getByText('Reportar un problema');
     expect(chip).toBeInTheDocument();
     fireEvent.click(chip);
 
     await waitFor(() => {
-      expect(screen.getByText('Quiero reportar lo que falta en el local')).toBeInTheDocument();
+      expect(screen.getByText('Quiero reportar un problema')).toBeInTheDocument();
       expect(screen.getByText('Abriendo pedidos de insumos...')).toBeInTheDocument();
     });
   });
@@ -38,8 +38,9 @@ describe('AssistantChat component', () => {
     render(<AssistantChat user={ownerUser} />);
 
     expect(screen.getByText('Pedidos por aprobar')).toBeInTheDocument();
-    expect(screen.getByText('Qué hay que comprar')).toBeInTheDocument();
-    expect(screen.getByText('Pedir insumos')).toBeInTheDocument();
+    expect(screen.getByText('Lista de compras')).toBeInTheDocument();
+    expect(screen.getByText('Resumen del día')).toBeInTheDocument();
+    expect(screen.getByText('Cargar una factura')).toBeInTheDocument();
   });
 
   it('shows character counter when text reaches 900 or more characters', () => {

@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { normalizeAccessKey } from '../../../services/purchaseDocumentsClient';
+import {
+  CAMERA_PERMISSION_DENIED_MESSAGE,
+  CAMERA_UNAVAILABLE_MESSAGE,
+} from '../../../services/cameraPermission';
 import { styles } from './purchaseUi';
 
 const DETECT_INTERVAL_MS = 500;
@@ -66,8 +70,11 @@ export default function InvoiceBarcodeScanner({ onDetected, onClose }) {
         }
         const detector = new window.BarcodeDetector({ formats: ['code_128'] });
         timer = setInterval(() => readCode(detector), DETECT_INTERVAL_MS);
-      } catch {
-        if (!cancelled) setError('No se pudo abrir la cámara. Revisa el permiso e inténtalo otra vez.');
+      } catch (err) {
+        if (!cancelled) {
+          const denied = err?.name === 'NotAllowedError' || err?.name === 'SecurityError';
+          setError(denied ? CAMERA_PERMISSION_DENIED_MESSAGE : CAMERA_UNAVAILABLE_MESSAGE);
+        }
       }
     };
 

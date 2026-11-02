@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import AssistantChat from './components/assistant/AssistantChat';
-import EcosystemView from './components/EcosystemView';
+import MasView from './components/MasView';
 import SettingsView from './components/SettingsView';
 import LoginView from './components/LoginView';
-import TrabajoView from './components/TrabajoView';
 import NotificationsPanel from './components/notifications/NotificationsPanel';
 
 import { getSettings, saveSettings } from './services/storage';
@@ -15,7 +14,7 @@ import { UNAUTHORIZED_SESSION_MESSAGE } from './services/apiClient';
 import { useUnreadCount } from './hooks/useUnreadCount';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('trabajo');
+  const [activeTab, setActiveTab] = useState('ualdo');
   const [negociosSubView, setNegociosSubView] = useState('overview');
   const [negociosParams, setNegociosParams] = useState(null);
   // Cada navegación desde un aviso lleva un número propio: el mismo aviso
@@ -87,8 +86,9 @@ export default function App() {
 
   const handleNotificationNavigate = (target) => {
     if (!target) return;
+    const legacyTabs = { negocios: 'mas', asistente: 'ualdo' };
     if (target.tab) {
-      setActiveTab(target.tab);
+      setActiveTab(legacyTabs[target.tab] || target.tab);
     }
     if (target.subView) {
       setNegociosSubView(target.subView);
@@ -124,24 +124,22 @@ export default function App() {
       />
 
       <main className="view-container">
-        {/* Pestaña 1: Trabajo (Ualdo Teams) */}
-        {activeTab === 'trabajo' && (
+        {/* Pestaña 1: Ualdo (chat, pantalla de inicio) */}
+        {activeTab === 'ualdo' && (
           authenticated ? (
-            <TrabajoView onLogout={() => { setAuthenticated(false); setUser(null); }} />
+            <AssistantChat user={user} />
           ) : (
             <LoginView onLoginSuccess={handleLoginSuccess} notice={sessionNotice} />
           )
         )}
 
-        {/* Pestaña 2: Negocios (Ualdo Negocios / DobleFilo) */}
-        {activeTab === 'negocios' && (
+        {/* Pestaña 2: Más (módulos de Negocios y acceso a Ualdo Teams) */}
+        {activeTab === 'mas' && (
           authenticated ? (
-            <EcosystemView
+            <MasView
               registeredApps={registeredApps}
               onUpdateApps={setRegisteredApps}
-              onSendChatPrompt={() => {
-                setActiveTab('asistente');
-              }}
+              onSendChatPrompt={() => setActiveTab('ualdo')}
               subView={negociosSubView}
               onSubViewChange={handleNegociosSubViewChange}
               negociosParams={negociosParams}
@@ -152,16 +150,7 @@ export default function App() {
           )
         )}
 
-        {/* Pestaña 3: Asistente (Chat Conversacional) */}
-        {activeTab === 'asistente' && (
-          authenticated ? (
-            <AssistantChat user={user} />
-          ) : (
-            <LoginView onLoginSuccess={handleLoginSuccess} notice={sessionNotice} />
-          )
-        )}
-
-        {/* Pestaña 4: Ajustes (Perfil, Tema, Acerca de & Avanzado) */}
+        {/* Pestaña 3: Ajustes (Perfil, Tema, Acerca de & Avanzado) */}
         {activeTab === 'settings' && (
           <SettingsView
             settings={settings}

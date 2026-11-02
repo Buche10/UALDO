@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   PackagePlus,
   ClipboardList,
-  Search,
   CheckCircle2,
   ShoppingCart,
   ArrowDownRight,
@@ -11,23 +10,62 @@ import {
   Calculator,
   Tags,
   CalendarDays,
+  FileText,
 } from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 import { useLotItems } from '../../hooks/useLotItems';
 
-const DECIDER_SUGGESTIONS = [
-  { label: 'Pedidos por aprobar', prompt: '¿Hay pedidos pendientes por aprobar?', icon: CheckCircle2 },
-  { label: 'Qué hay que comprar', prompt: '¿Qué hay que comprar?', icon: ShoppingCart },
-  { label: 'Pedir insumos', prompt: 'Quiero pedir insumos para el restaurante', icon: PackagePlus },
-];
+const PROBLEM_SUGGESTION = {
+  label: 'Reportar un problema',
+  prompt: 'Quiero reportar un problema',
+  icon: AlertTriangle,
+};
 
-const STAFF_SUGGESTIONS = [
-  { label: 'Reportar faltantes', prompt: 'Quiero reportar lo que falta en el local', icon: PackagePlus },
-  { label: 'Mis pedidos', prompt: 'Muéstrame mis pedidos recientes', icon: ClipboardList },
-  { label: 'Buscar un insumo', prompt: 'Buscar existencias de un insumo', icon: Search },
-];
+const ROLE_SUGGESTIONS = {
+  kitchen: [
+    { label: 'Voy a la bodega', prompt: 'Voy a retirar de la bodega', icon: ArrowDownRight },
+    { label: 'Registrar porcionado', prompt: 'Quiero registrar el porcionado de hoy', icon: PackagePlus },
+    PROBLEM_SUGGESTION,
+  ],
+  lounge: [
+    { label: 'Reservas de hoy', prompt: '¿Qué reservas hay hoy?', icon: CalendarDays },
+    PROBLEM_SUGGESTION,
+  ],
+  warehouse: [
+    { label: 'Llegó una compra', prompt: 'Llegó una compra', icon: PackagePlus },
+    { label: 'Contar el cierre del día', prompt: 'Quiero contar el cierre del día', icon: ClipboardList },
+  ],
+  admin: [
+    { label: 'Pedidos por aprobar', prompt: '¿Hay pedidos pendientes por aprobar?', icon: CheckCircle2 },
+    { label: 'Lista de compras', prompt: 'Muéstrame la lista de compras', icon: ShoppingCart },
+    { label: 'Resumen del día', prompt: 'Dame el resumen del día', icon: ClipboardList },
+    { label: 'Cargar una factura', prompt: 'Quiero cargar una factura', icon: FileText },
+  ],
+};
+
+const roleGroup = (role, hasDecide) => {
+  const value = String(role || '').toLowerCase();
+  if (value.startsWith('kitchen') || value === 'cocina') return ROLE_SUGGESTIONS.kitchen;
+  if (value.startsWith('lounge') || value === 'salon' || value === 'salón') return ROLE_SUGGESTIONS.lounge;
+  if (['warehouse', 'warehouse_head', 'warehouse_staff', 'bodega', 'bodega_head', 'bodega_staff'].includes(value)) {
+    return ROLE_SUGGESTIONS.warehouse;
+  }
+  if (['owner', 'admin', 'administracion', 'administración'].includes(value) || hasDecide) {
+    return ROLE_SUGGESTIONS.admin;
+  }
+  return [];
+};
+
+const withUniqueLabels = (suggestions) => {
+  const seen = new Set();
+  return suggestions.filter((suggestion) => {
+    if (seen.has(suggestion.label)) return false;
+    seen.add(suggestion.label);
+    return true;
+  });
+};
 
 export default function SuggestionChips({
   user,
@@ -44,6 +82,7 @@ export default function SuggestionChips({
   const { hasLotItems } = useLotItems({ enabled: canViewInventory });
   const canSeeReservations = user ? can(user, ABILITIES.RESERVATIONS_VIEW) : false;
   const userId = user?.id;
+  const role = user?.capabilities?.role || user?.role;
 
   useEffect(() => {
     if (propHasOpen !== undefined) return undefined;
@@ -62,8 +101,7 @@ export default function SuggestionChips({
   }, [canDeclareWithdrawal, userId, propHasOpen]);
 
   const hasOpenWithdrawals = propHasOpen !== undefined ? propHasOpen : internalHasOpen;
-  const baseSuggestions = hasDecide ? DECIDER_SUGGESTIONS : STAFF_SUGGESTIONS;
-  const suggestions = [...baseSuggestions];
+  const suggestions = [...roleGroup(role, hasDecide)];
 
   if (canDeclareWithdrawal) {
     suggestions.push({
@@ -72,20 +110,12 @@ export default function SuggestionChips({
       icon: ArrowDownRight,
     });
     if (hasOpenWithdrawals) {
-      suggestions.push({
-        label: 'Cerrar mi retiro',
-        prompt: 'Cerrar mi retiro',
-        icon: CheckCircle2,
-      });
+      suggestions.push({ label: 'Cerrar mi retiro', prompt: 'Cerrar mi retiro', icon: CheckCircle2 });
     }
   }
 
   if (canRegisterOvertime) {
-    suggestions.push({
-      label: 'Registrar horas extra',
-      prompt: 'Quiero registrar horas extra',
-      icon: Clock,
-    });
+    suggestions.push({ label: 'Registrar horas extra', prompt: 'Quiero registrar horas extra', icon: Clock });
   }
 
   if (canDeclareCashClose) {
@@ -105,22 +135,16 @@ export default function SuggestionChips({
   }
 
   if (canSeeReservations) {
-    suggestions.push({
-      label: 'Reservas de hoy',
-      prompt: '¿Qué reservas hay hoy?',
-      icon: CalendarDays,
-    });
+    suggestions.push({ label: 'Reservas de hoy', prompt: '¿Qué reservas hay hoy?', icon: CalendarDays });
   }
 
-  suggestions.push({
-    label: 'Reportar un problema',
-    prompt: 'Quiero reportar un problema',
-    icon: AlertTriangle,
-  });
+  suggestions.push(PROBLEM_SUGGESTION);
+
+  const visibleSuggestions = withUniqueLabels(suggestions).slice(0, 5);
 
   return (
     <div className="assistant-chips-container" role="toolbar" aria-label="Sugerencias rápidas">
-      {suggestions.map((sug) => {
+      {visibleSuggestions.map((sug) => {
         const Icon = sug.icon;
         return (
           <button

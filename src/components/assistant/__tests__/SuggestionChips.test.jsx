@@ -17,7 +17,7 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 35p / 36p / 37p)', 
     expect(toolbar.className).toContain('assistant-chips-container');
   });
 
-  it('un usuario con supply.decide ve las sugerencias de decisor', () => {
+  it('un usuario con supply.decide ve las sugerencias de administración', () => {
     const user = {
       id: 1,
       capabilities: { abilities: [ABILITIES.SUPPLY_DECIDE] },
@@ -25,20 +25,20 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 35p / 36p / 37p)', 
     render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: /pedidos por aprobar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /qué hay que comprar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /pedir insumos/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /lista de compras/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /resumen del día/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cargar una factura/i })).toBeInTheDocument();
   });
 
-  it('un usuario sin supply.decide ve las sugerencias de personal operativo', () => {
+  it('un usuario sin cargo conocido ve el acceso para reportar un problema', () => {
     const user = {
       id: 2,
       capabilities: { abilities: [ABILITIES.SUPPLY_REQUEST] },
     };
     render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: /reportar faltantes/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /mis pedidos/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /buscar un insumo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reportar un problema/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reportar faltantes/i })).not.toBeInTheDocument();
   });
 
   it('al pulsar un chip se invoca onSelectChip con el prompt correspondiente', () => {

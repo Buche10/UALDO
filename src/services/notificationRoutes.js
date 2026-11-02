@@ -4,17 +4,17 @@ import { getStoredUser } from './apiClient';
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
- * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime', 'incidents' o 'assets' según params.subView).
- * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
+ * - 'inventario': pestaña Más, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime', 'incidents' o 'assets' según params.subView).
+ * - 'pedido' o 'pedidos': pestaña Más, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
- * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView) o Declaración (Brief 35p).
- * - 'chat': pestaña Asistente.
- * - 'daily_close': pestaña Negocios, subvista Cierre del día (Brief 31p).
- * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
- * - 'overtime' o 'horas_extra': pestaña Negocios, subvista Horas extra (Brief 36p).
- * - 'incidencia' o 'incidencias': pestaña Negocios, subvista Incidencias (Brief 37p).
- * - 'assets' o 'activos': pestaña Negocios, subvista Vajilla y equipos (Brief 38p).
- * - 'reserva': pestaña Negocios, subvista Reservas; con `params.id` abre el
+ * - 'cierre_caja': pestaña Más, subvista Caja (CashCloseView) o Declaración (Brief 35p).
+ * - 'chat': pestaña Ualdo (Brief 42p).
+ * - 'daily_close': pestaña Más, subvista Cierre del día (Brief 31p).
+ * - 'retiros' o 'withdrawals': pestaña Más, subvista Retiros de bodega (Brief 32p).
+ * - 'overtime' o 'horas_extra': pestaña Más, subvista Horas extra (Brief 36p).
+ * - 'incidencia' o 'incidencias': pestaña Más, subvista Incidencias (Brief 37p).
+ * - 'assets' o 'activos': pestaña Más, subvista Vajilla y equipos (Brief 38p).
+ * - 'reserva': pestaña Más, subvista Reservas; con `params.id` abre el
  *   detalle y sin id abre la agenda del día (Brief 39p).
  */
 export const ALLOWED_SCREENS = new Set([
@@ -116,43 +116,43 @@ export const resolveNotificationRoute = (action, explicitParams = {}, userContex
       } else if (cleanParams.subView === 'assets') {
         subView = 'assets';
       }
-      return { tab: 'negocios', subView, params: cleanParams };
+      return { tab: 'mas', subView, params: cleanParams };
     }
 
     case 'daily_close':
-      return { tab: 'negocios', subView: 'daily_close', params: cleanParams };
+      return { tab: 'mas', subView: 'daily_close', params: cleanParams };
 
     case 'retiros':
     case 'withdrawals':
-      return { tab: 'negocios', subView: 'withdrawals', params: cleanParams };
+      return { tab: 'mas', subView: 'withdrawals', params: cleanParams };
 
     case 'overtime':
     case 'horas_extra':
-      return { tab: 'negocios', subView: 'overtime', params: cleanParams };
+      return { tab: 'mas', subView: 'overtime', params: cleanParams };
 
     case 'incidencia':
     case 'incidencias':
-      return { tab: 'negocios', subView: 'incidents', params: cleanParams };
+      return { tab: 'mas', subView: 'incidents', params: cleanParams };
 
     case 'assets':
     case 'activos':
-      return { tab: 'negocios', subView: 'assets', params: cleanParams };
+      return { tab: 'mas', subView: 'assets', params: cleanParams };
     case 'reserva':
-      return { tab: 'negocios', subView: 'reservations', params: cleanParams };
+      return { tab: 'mas', subView: 'reservations', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':
-      return { tab: 'negocios', subView: 'pedidos', params: cleanParams };
+      return { tab: 'mas', subView: 'pedidos', params: cleanParams };
 
     case 'cierre_caja': {
       const activeUser = userContext || getStoredUser();
       const isHeadOnly = can(activeUser, ABILITIES.CASH_REGISTER) && !can(activeUser, ABILITIES.CASH_REVIEW);
       const subView = isHeadOnly ? 'cash_declaration' : 'cashclose';
-      return { tab: 'negocios', subView, params: cleanParams };
+      return { tab: 'mas', subView, params: cleanParams };
     }
 
     case 'chat':
-      return { tab: 'asistente', params: cleanParams };
+      return { tab: 'ualdo', params: cleanParams };
 
     default:
       return null;
