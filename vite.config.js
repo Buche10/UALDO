@@ -69,7 +69,9 @@ export default defineConfig({
         'src/services/cashCloseClient.js',
         'src/services/cashConfigClient.js',
         'src/services/cashMovementsClient.js',
-        'src/services/money.js'
+        'src/services/money.js',
+        'src/services/overtimeClient.js',
+        'src/components/overtime/**',
       ],
       exclude: ['**/__tests__/**']
     }

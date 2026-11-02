@@ -5,7 +5,7 @@ import ModuleGrid from '../ModuleGrid';
 import { ABILITIES, ROLES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('ModuleGrid component (Brief 30p & 32p_fix)', () => {
+describe('ModuleGrid component (Brief 30p & 32p_fix & 36p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -79,6 +79,25 @@ describe('ModuleGrid component (Brief 30p & 32p_fix)', () => {
     expect(screen.getByText('Ventas')).toBeInTheDocument();
   });
 
+  it('un jefe de cocina ve la tarjeta de Horas extra (Brief 36p)', () => {
+    const kitchenHeadUser = {
+      id: 15,
+      capabilities: {
+        role: ROLES.KITCHEN_HEAD,
+        abilities: [ABILITIES.OVERTIME_REGISTER_KITCHEN],
+      },
+    };
+    const onSelect = vi.fn();
+
+    render(<ModuleGrid user={kitchenHeadUser} onSelectModule={onSelect} />);
+
+    const overtimeCard = screen.getByRole('button', { name: /Horas extra:/i });
+    expect(overtimeCard).toBeInTheDocument();
+
+    fireEvent.click(overtimeCard);
+    expect(onSelect).toHaveBeenCalledWith('overtime');
+  });
+
   it('al tocar una tarjeta de módulo llama a onSelectModule con su subView', () => {
     const ownerUser = {
       id: 1,
@@ -131,11 +150,9 @@ describe('ModuleGrid component (Brief 30p & 32p_fix)', () => {
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledTimes(1);
-      // El badge muestra 2 retiros pendientes propios
       expect(screen.getByText('2')).toBeInTheDocument();
     });
 
-    // Re-render con un nuevo objeto de usuario pero mismo id y capacidades
     rerender(<ModuleGrid user={userInstance2} onSelectModule={vi.fn()} />);
 
     expect(spy).toHaveBeenCalledTimes(1);

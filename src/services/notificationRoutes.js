@@ -1,13 +1,14 @@
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
- * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close' o 'withdrawals' según params.subView).
+ * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals' u 'overtime' según params.subView).
  * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
  * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
  * - 'chat': pestaña Asistente.
  * - 'daily_close': pestaña Negocios, subvista Cierre del día (Brief 31p).
  * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
+ * - 'overtime' o 'horas_extra': pestaña Negocios, subvista Horas extra (Brief 36p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -18,14 +19,17 @@ export const ALLOWED_SCREENS = new Set([
   'daily_close',
   'retiros',
   'withdrawals',
+  'overtime',
+  'horas_extra',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros']);
+const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime']);
 
 /**
  * Valida y filtra los parámetros de una acción de aviso.
- * Solo se admiten enteros positivos, fechas YYYY-MM-DD o subvistas en lista blanca.
+ * Solo se admiten enteros positivos, fechas YYYY-MM-DD, meses YYYY-MM o subvistas en lista blanca.
  * NUNCA se permiten URLs ni cadenas arbitrarias.
  */
 export const sanitizeActionParams = (params) => {
@@ -42,6 +46,8 @@ export const sanitizeActionParams = (params) => {
       if (/^\d+$/.test(trimmed)) {
         clean[key] = parseInt(trimmed, 10);
       } else if (DATE_REGEX.test(trimmed)) {
+        clean[key] = trimmed;
+      } else if ((key === 'mes' || key === 'month') && MONTH_REGEX.test(trimmed)) {
         clean[key] = trimmed;
       } else if (key === 'subView' && ALLOWED_SUBVIEWS.has(trimmed.toLowerCase())) {
         clean.subView = trimmed.toLowerCase() === 'retiros' ? 'withdrawals' : trimmed.toLowerCase();
@@ -86,6 +92,8 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
         subView = 'daily_close';
       } else if (cleanParams.subView === 'withdrawals' || cleanParams.subView === 'retiros') {
         subView = 'withdrawals';
+      } else if (cleanParams.subView === 'overtime') {
+        subView = 'overtime';
       }
       return { tab: 'negocios', subView, params: cleanParams };
     }
@@ -96,6 +104,10 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
     case 'retiros':
     case 'withdrawals':
       return { tab: 'negocios', subView: 'withdrawals', params: cleanParams };
+
+    case 'overtime':
+    case 'horas_extra':
+      return { tab: 'negocios', subView: 'overtime', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':

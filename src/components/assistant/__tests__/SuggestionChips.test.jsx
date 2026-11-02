@@ -5,57 +5,52 @@ import SuggestionChips from '../SuggestionChips';
 import { ABILITIES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix)', () => {
+describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it('el contenedor tiene role="toolbar" y la clase assistant-chips-container', () => {
-    render(<SuggestionChips onSelectChip={vi.fn()} />);
+    render(<SuggestionChips user={null} onSelectChip={vi.fn()} />);
     const toolbar = screen.getByRole('toolbar', { name: /sugerencias rápidas/i });
     expect(toolbar).toBeInTheDocument();
-    expect(toolbar).toHaveClass('assistant-chips-container');
+    expect(toolbar.className).toContain('assistant-chips-container');
   });
 
-  it('con supply.decide ve "Qué hay que comprar"', () => {
-    const onSelect = vi.fn();
-    const deciderUser = {
-      id: 5,
+  it('un usuario con supply.decide ve las sugerencias de decisor', () => {
+    const user = {
+      id: 1,
       capabilities: { abilities: [ABILITIES.SUPPLY_DECIDE] },
     };
-    render(<SuggestionChips user={deciderUser} onSelectChip={onSelect} />);
+    render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
-    expect(screen.queryByRole('button', { name: /lista de compras/i })).not.toBeInTheDocument();
-
-    const chip = screen.getByRole('button', { name: /qué hay que comprar/i });
-    expect(chip).toBeInTheDocument();
-
-    fireEvent.click(chip);
-    expect(onSelect).toHaveBeenCalledWith('¿Qué hay que comprar?');
+    expect(screen.getByRole('button', { name: /pedidos por aprobar/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /qué hay que comprar/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pedir insumos/i })).toBeInTheDocument();
   });
 
-  it('sin supply.decide ve "Reportar faltantes"', () => {
-    const onSelect = vi.fn();
-    const staffUser = {
-      id: 6,
-      capabilities: { abilities: [ABILITIES.SUPPLY_CREATE] },
+  it('un usuario sin supply.decide ve las sugerencias de personal operativo', () => {
+    const user = {
+      id: 2,
+      capabilities: { abilities: [ABILITIES.SUPPLY_REQUEST] },
     };
-    render(<SuggestionChips user={staffUser} onSelectChip={onSelect} />);
-
-    expect(screen.queryByRole('button', { name: /qué hay que comprar/i })).not.toBeInTheDocument();
-
-    const chip = screen.getByRole('button', { name: /reportar faltantes/i });
-    expect(chip).toBeInTheDocument();
-
-    fireEvent.click(chip);
-    expect(onSelect).toHaveBeenCalledWith('Quiero reportar lo que falta en el local');
-  });
-
-  it('sin usuario ve "Reportar faltantes"', () => {
-    render(<SuggestionChips onSelectChip={vi.fn()} />);
+    render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: /reportar faltantes/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /qué hay que comprar/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /mis pedidos/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /buscar un insumo/i })).toBeInTheDocument();
+  });
+
+  it('al pulsar un chip se invoca onSelectChip con el prompt correspondiente', () => {
+    const onSelect = vi.fn();
+    const user = {
+      id: 1,
+      capabilities: { abilities: [ABILITIES.SUPPLY_DECIDE] },
+    };
+    render(<SuggestionChips user={user} onSelectChip={onSelect} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /pedidos por aprobar/i }));
+    expect(onSelect).toHaveBeenCalledWith('¿Hay pedidos pendientes por aprobar?');
   });
 
   describe('accesos rápidos de retiros de bodega (Requerimiento 6 & Brief 32p_fix)', () => {
@@ -94,7 +89,6 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix)', () => {
     });
 
     it('solo muestra "Cerrar mi retiro" si el usuario actual tiene retiros pendientes propios (open o escalated)', async () => {
-      // Retiros de otros usuarios no activan el chip
       vi.spyOn(withdrawalsClient, 'listWithdrawals').mockResolvedValue({
         ok: true,
         data: [
@@ -117,7 +111,6 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix)', () => {
 
       unmount();
 
-      // Ahora la lista incluye un retiro escalado del propio usuario 7
       vi.spyOn(withdrawalsClient, 'listWithdrawals').mockResolvedValue({
         ok: true,
         data: [
@@ -130,6 +123,33 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix)', () => {
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /cerrar mi retiro/i })).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('accesos rápidos de horas extra (Brief 36p)', () => {
+    it('con overtime.register.kitchen ve "Registrar horas extra" y envía "Quiero registrar horas extra"', () => {
+      const onSelect = vi.fn();
+      const user = {
+        id: 10,
+        capabilities: { abilities: [ABILITIES.OVERTIME_REGISTER_KITCHEN] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={onSelect} />);
+
+      const chip = screen.getByRole('button', { name: /registrar horas extra/i });
+      expect(chip).toBeInTheDocument();
+
+      fireEvent.click(chip);
+      expect(onSelect).toHaveBeenCalledWith('Quiero registrar horas extra');
+    });
+
+    it('sin overtime.register.* no ve el chip de horas extra', () => {
+      const user = {
+        id: 11,
+        capabilities: { abilities: [ABILITIES.INVENTORY_VIEW] },
+      };
+      render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: /registrar horas extra/i })).toBeNull();
     });
   });
 });

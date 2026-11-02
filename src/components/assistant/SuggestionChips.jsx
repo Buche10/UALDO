@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart, ArrowDownRight } from 'lucide-react';
-import { can, ABILITIES } from '../../services/permissions';
+import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart, ArrowDownRight, Clock } from 'lucide-react';
+import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 
@@ -25,6 +25,7 @@ export default function SuggestionChips({
   const [internalHasOpen, setInternalHasOpen] = useState(false);
   const hasDecide = user ? can(user, ABILITIES.SUPPLY_DECIDE) : false;
   const canDeclareWithdrawal = user ? can(user, ABILITIES.WITHDRAWALS_DECLARE) : false;
+  const canRegisterOvertime = user ? canAny(user, [ABILITIES.OVERTIME_REGISTER_KITCHEN, ABILITIES.OVERTIME_REGISTER_LOUNGE]) : false;
   const userId = user?.id;
 
   useEffect(() => {
@@ -60,6 +61,14 @@ export default function SuggestionChips({
         icon: CheckCircle2,
       });
     }
+  }
+
+  if (canRegisterOvertime) {
+    suggestions.push({
+      label: 'Registrar horas extra',
+      prompt: 'Quiero registrar horas extra',
+      icon: Clock,
+    });
   }
 
   return (

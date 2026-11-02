@@ -5,6 +5,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   ArrowDownRight,
+  Clock,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -74,6 +75,19 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.WITHDRAWALS_DECLARE, ABILITIES.WITHDRAWALS_SUPERVISE],
     subView: 'withdrawals',
     roleRequiredLabel: 'personal operativo, jefes de área, administración o dueño',
+  },
+  {
+    id: 'overtime',
+    label: 'Horas extra',
+    description: 'Registro informativo de horas extra por área y resumen del mes.',
+    icon: Clock,
+    permissions: [
+      ABILITIES.OVERTIME_REGISTER_KITCHEN,
+      ABILITIES.OVERTIME_REGISTER_LOUNGE,
+      ABILITIES.OVERTIME_REPORT,
+    ],
+    subView: 'overtime',
+    roleRequiredLabel: 'jefe de cocina, salón, administración o dueño',
   },
 ];
 

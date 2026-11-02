@@ -16,7 +16,9 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('daily_close')).toBe(true);
       expect(ALLOWED_SCREENS.has('retiros')).toBe(true);
       expect(ALLOWED_SCREENS.has('withdrawals')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(8);
+      expect(ALLOWED_SCREENS.has('overtime')).toBe(true);
+      expect(ALLOWED_SCREENS.has('horas_extra')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(10);
     });
   });
 
@@ -35,11 +37,18 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ date: 'invalid-date' })).toEqual({});
     });
 
+    it('allows valid YYYY-MM month in mes or month', () => {
+      expect(sanitizeActionParams({ mes: '2026-10' })).toEqual({ mes: '2026-10' });
+      expect(sanitizeActionParams({ month: '2026-10' })).toEqual({ month: '2026-10' });
+      expect(sanitizeActionParams({ mes: '2026-13' })).toEqual({});
+    });
+
     it('allows valid subView in whitelist', () => {
       expect(sanitizeActionParams({ subView: 'daily_close' })).toEqual({ subView: 'daily_close' });
       expect(sanitizeActionParams({ subView: 'inventory' })).toEqual({ subView: 'inventory' });
       expect(sanitizeActionParams({ subView: 'withdrawals' })).toEqual({ subView: 'withdrawals' });
       expect(sanitizeActionParams({ subView: 'retiros' })).toEqual({ subView: 'withdrawals' });
+      expect(sanitizeActionParams({ subView: 'overtime' })).toEqual({ subView: 'overtime' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
@@ -78,6 +87,28 @@ describe('notificationRoutes security and routing', () => {
         tab: 'negocios',
         subView: 'daily_close',
         params: { subView: 'daily_close' },
+      });
+    });
+
+    it('resolves inventario with subView overtime to overtime screen (Brief 36p)', () => {
+      const route = resolveNotificationRoute('inventario', { subView: 'overtime', mes: '2026-10' });
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'overtime',
+        params: { subView: 'overtime', mes: '2026-10' },
+      });
+    });
+
+    it('resolves overtime and horas_extra to overtime screen (Brief 36p)', () => {
+      expect(resolveNotificationRoute('overtime', { mes: '2026-10' })).toEqual({
+        tab: 'negocios',
+        subView: 'overtime',
+        params: { mes: '2026-10' },
+      });
+      expect(resolveNotificationRoute('horas_extra')).toEqual({
+        tab: 'negocios',
+        subView: 'overtime',
+        params: {},
       });
     });
 
