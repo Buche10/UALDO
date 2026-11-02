@@ -88,7 +88,7 @@ describe('notificationRoutes security and routing', () => {
     it('resolves inventario to negocios tab with inventory subview', () => {
       const route = resolveNotificationRoute('inventario', { id: 15 });
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'inventory',
         params: { id: 15 },
       });
@@ -97,7 +97,7 @@ describe('notificationRoutes security and routing', () => {
     it('resolves inventario with assets subView to assets screen (Brief 38p)', () => {
       const route = resolveNotificationRoute('inventario', { subView: 'assets', tab: 'count' });
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'assets',
         params: { subView: 'assets', tab: 'count' },
       });
@@ -105,12 +105,12 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves assets and activos screens to assets subview (Brief 38p)', () => {
       expect(resolveNotificationRoute('assets', { tab: 'count' })).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'assets',
         params: { tab: 'count' },
       });
       expect(resolveNotificationRoute('activos')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'assets',
         params: {},
       });
@@ -119,12 +119,12 @@ describe('notificationRoutes security and routing', () => {
     it('resolves incidencia screen with id to negocios incidents subview (Brief 37p)', () => {
       const route = resolveNotificationRoute('incidencia', { id: 42 });
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'incidents',
         params: { id: 42 },
       });
       expect(resolveNotificationRoute('incidencias')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'incidents',
         params: {},
       });
@@ -132,12 +132,12 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves overtime and horas_extra to overtime screen (Brief 36p)', () => {
       expect(resolveNotificationRoute('overtime', { mes: '2026-10' })).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'overtime',
         params: { mes: '2026-10' },
       });
       expect(resolveNotificationRoute('horas_extra')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'overtime',
         params: {},
       });
@@ -146,7 +146,7 @@ describe('notificationRoutes security and routing', () => {
     it('resolves daily_close screen directly to negocios daily_close', () => {
       const route = resolveNotificationRoute('daily_close', {});
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'daily_close',
         params: {},
       });
@@ -154,12 +154,12 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves retiros and withdrawals to negocios withdrawals subview (Brief 32p)', () => {
       expect(resolveNotificationRoute('retiros', { id: 10 })).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'withdrawals',
         params: { id: 10 },
       });
       expect(resolveNotificationRoute('withdrawals')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'withdrawals',
         params: {},
       });
@@ -172,7 +172,7 @@ describe('notificationRoutes security and routing', () => {
       };
       const route = resolveNotificationRoute('cierre_caja', { date: '2026-10-07' }, adminUser);
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'cashclose',
         params: { date: '2026-10-07' },
       });
@@ -185,7 +185,7 @@ describe('notificationRoutes security and routing', () => {
       };
       const route = resolveNotificationRoute('cierre_caja', { date: '2026-11-02' }, loungeHeadUser);
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'cash_declaration',
         params: { date: '2026-11-02' },
       });
@@ -199,7 +199,7 @@ describe('notificationRoutes security and routing', () => {
 
       const route = resolveNotificationRoute('cierre_caja', { date: '2026-11-02' });
       expect(route).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'cash_declaration',
         params: { date: '2026-11-02' },
       });
@@ -207,12 +207,12 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves pedidos and pedido to the Pedidos subview of Negocios (Brief 22p)', () => {
       expect(resolveNotificationRoute('pedidos')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'pedidos',
         params: {},
       });
       expect(resolveNotificationRoute('pedido', { id: 101 })).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'pedidos',
         params: { id: 101 },
       });
@@ -220,12 +220,12 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves reserva with id to the detail and without id to the agenda (Brief 39p)', () => {
       expect(resolveNotificationRoute('reserva', { id: 77 })).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'reservations',
         params: { id: 77 },
       });
       expect(resolveNotificationRoute('reserva')).toEqual({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'reservations',
         params: {},
       });
@@ -233,7 +233,7 @@ describe('notificationRoutes security and routing', () => {
 
     it('resolves chat to asistente tab', () => {
       expect(resolveNotificationRoute('chat')).toEqual({
-        tab: 'asistente',
+        tab: 'ualdo',
         params: {},
       });
     });

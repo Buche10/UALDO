@@ -1,8 +1,9 @@
 import React from 'react';
-import { Building2, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { Building2, ShieldAlert, ArrowLeft, MessageCircle } from 'lucide-react';
 import DobleFiloCard from './DobleFiloCard';
 import ModuleGrid from './modules/ModuleGrid';
 import EcosystemModules from './ecosystem/EcosystemModules';
+import TeamsAccessCard from './TeamsAccessCard';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
 import { canAny } from '../services/permissions';
@@ -12,6 +13,9 @@ export default function EcosystemView({
   onSubViewChange,
   negociosParams = null,
   onParamsConsumed,
+  onSendChatPrompt,
+  teamsAvailable = false,
+  onOpenTeams,
 }) {
   const currentSubTab = subView;
   const user = getUser();
@@ -32,11 +36,34 @@ export default function EcosystemView({
         <div>
           <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Building2 size={20} color="var(--accent)" aria-hidden="true" />
-            <span>Ualdo Negocios</span>
+            <span>Más herramientas</span>
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-            Gestión de caja, punto de venta e inventario del motor.
+            Todo esto también lo puedes pedir en el chat.
           </p>
+          {onSendChatPrompt && (
+            <button
+              type="button"
+              onClick={onSendChatPrompt}
+              style={{
+                marginTop: '8px',
+                padding: '8px 14px',
+                borderRadius: '9999px',
+                border: '1px solid var(--border-glass)',
+                background: 'var(--chip-bg)',
+                color: 'var(--accent)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <MessageCircle size={14} aria-hidden="true" />
+              <span>Pedir en el chat</span>
+            </button>
+          )}
         </div>
 
         <DobleFiloCard onNavigateToInventory={() => handleSubTabChange('inventory')} />
@@ -47,6 +74,8 @@ export default function EcosystemView({
           </h3>
           <ModuleGrid user={user} onSelectModule={handleSubTabChange} />
         </div>
+
+        {teamsAvailable && <TeamsAccessCard onOpen={onOpenTeams} />}
       </div>
     );
   } else if (isRestricted) {

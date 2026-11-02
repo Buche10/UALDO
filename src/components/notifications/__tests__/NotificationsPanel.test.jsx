@@ -74,7 +74,7 @@ describe('NotificationsPanel component', () => {
       expect(markReadSpy).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174001');
       // Brief 22p: un aviso de pedido abre su detalle en Negocios, pestaña Pedidos.
       expect(handleNavigate).toHaveBeenCalledWith({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'pedidos',
         params: { id: 104 },
       });
@@ -201,7 +201,7 @@ describe('NotificationsPanel component', () => {
 
     await waitFor(() => {
       expect(handleNavigate).toHaveBeenCalledWith({
-        tab: 'negocios',
+        tab: 'mas',
         subView: 'inventory',
         params: { id: 5 }, // url removed
       });

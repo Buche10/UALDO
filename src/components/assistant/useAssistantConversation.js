@@ -47,9 +47,13 @@ export function useAssistantConversation(user) {
     } catch (e) {}
   }, [messages, chatStorageKey]);
 
-  const handleSend = async (textToSend) => {
-    const text = (textToSend !== undefined ? textToSend : inputText).trim();
-    if (!text || loading) return;
+  const handleSend = async (textToSend, attachmentsToSend = []) => {
+    const attachments = Array.isArray(attachmentsToSend)
+      ? attachmentsToSend.filter((attachment) => attachment?.id !== undefined)
+      : [];
+    const rawText = (textToSend !== undefined ? textToSend : inputText).trim();
+    const text = rawText || (attachments.length > 0 ? 'Te adjunto un archivo.' : '');
+    if (!text || loading) return false;
 
     setErrorBanner(null);
     setInputText('');
@@ -58,13 +62,14 @@ export function useAssistantConversation(user) {
       id: `msg_user_${Date.now()}`,
       role: 'user',
       content: text,
+      attachments,
       timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    const response = await sendMessage(text);
+    const response = await sendMessage(text, attachments.map((attachment) => attachment.id));
     setLoading(false);
 
     if (response.ok) {
@@ -73,15 +78,28 @@ export function useAssistantConversation(user) {
         role: 'assistant',
         content: response.reply,
         pendingActions: response.pendingActions || [],
+        cards: response.cards || [],
+        quickReplies: response.quickReplies || [],
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, assistantMsg]);
-    } else {
-      setErrorBanner({
-        message: response.message || 'No se pudo conectar con el asistente.',
-        failedText: text
-      });
+      return true;
     }
+
+    setErrorBanner({
+      message: response.message || 'No se pudo conectar con el asistente.',
+      failedText: text,
+      failedAttachments: attachments,
+    });
+    return false;
+  };
+
+  const handleQuickReply = (messageId, text) => {
+    if (!text) return;
+    setMessages(prev => prev.map(msg => (
+      msg.id === messageId ? { ...msg, quickReplies: [] } : msg
+    )));
+    return handleSend(text);
   };
 
   const handleApprove = async (token) => {
@@ -138,6 +156,7 @@ export function useAssistantConversation(user) {
     loading,
     errorBanner,
     handleSend,
+    handleQuickReply,
     handleApprove,
     handleCancel,
     handleKeyDown

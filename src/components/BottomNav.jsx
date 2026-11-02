@@ -1,26 +1,26 @@
 import React from 'react';
-import { ListChecks, Store, Sparkles, Settings } from 'lucide-react';
+import { LayoutGrid, Settings, Sparkles } from 'lucide-react';
+
+const TABS = [
+  { id: 'ualdo', label: 'Ualdo', icon: Sparkles },
+  { id: 'mas', label: 'Más', icon: LayoutGrid },
+  { id: 'settings', label: 'Ajustes', icon: Settings },
+];
 
 export default function BottomNav({ activeTab, setActiveTab }) {
-  const tabs = [
-    { id: 'trabajo', label: 'Trabajo', icon: ListChecks },
-    { id: 'negocios', label: 'Negocios', icon: Store },
-    { id: 'asistente', label: 'Asistente', icon: Sparkles },
-    { id: 'settings', label: 'Ajustes', icon: Settings }
-  ];
-
   return (
     <nav className="bottom-nav">
-      {tabs.map((tab) => {
+      {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
         return (
           <button
             key={tab.id}
+            type="button"
             className={`nav-item ${isActive ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <Icon size={20} />
+            <Icon size={20} aria-hidden="true" />
             <span>{tab.label}</span>
           </button>
         );

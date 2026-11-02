@@ -48,6 +48,8 @@ export default function Header({
 
   const getTabTitle = () => {
     switch (activeTab) {
+      case 'ualdo': return 'Ualdo';
+      case 'mas': return 'Más';
       case 'trabajo': return 'Ualdo Teams';
       case 'negocios': return 'Ualdo Negocios';
       case 'asistente': return 'Asistente';
