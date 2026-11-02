@@ -7,6 +7,7 @@ import PendingReports from './PendingReports';
 import LowStockSuggestions from './LowStockSuggestions';
 import SupplyReminderSettings from './SupplyReminderSettings';
 import PurchaseOutcomePanel from './PurchaseOutcomePanel';
+import ReservationsCommitment from './ReservationsCommitment';
 
 /**
  * Panel de compras consolidado para el dueño (Brief 22p / 26p / 33p).
@@ -96,6 +97,8 @@ export default function ShoppingListPanel({ onViewRequest, canDecide = false }) 
         items={overview.bajo_minimo}
       />
 
+      {/* Bloque 4: Comprometido por reservas (solo informativo) */}
+      <ReservationsCommitment items={overview.comprometido_por_reservas} />
       {/* Ajuste de aviso de faltantes (solo para el dueño) */}
       {canDecide && <SupplyReminderSettings />}
     </div>

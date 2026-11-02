@@ -13,6 +13,7 @@ import DailyCloseSettingsForm from './inventory/dailyClose/DailyCloseSettingsFor
 import WithdrawalSettingsForm from './withdrawals/WithdrawalSettingsForm';
 import PurchasingSettingsForm from './settings/PurchasingSettingsForm';
 import LotSettingsForm from './settings/LotSettingsForm';
+import ReservationSettingsForm from './settings/ReservationSettingsForm';
 
 export default function SettingsView({ settings, onSaveSettings, onClearAllData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -293,6 +294,7 @@ export default function SettingsView({ settings, onSaveSettings, onClearAllData 
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <WithdrawalSettingsForm />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <PurchasingSettingsForm />}
       {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <LotSettingsForm />}
+      {can(currentUser, ABILITIES.SETTINGS_MANAGE) && <ReservationSettingsForm />}
 
       {/* 3. SECCIÓN APARIENCIA */}
       <div className="glass-card" style={{ padding: '16px' }}>

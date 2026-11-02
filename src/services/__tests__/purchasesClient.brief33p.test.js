@@ -175,7 +175,7 @@ describe('purchasesClient (Brief 33p additions)', () => {
           unit: 'unidad',
           quantity: '2',
           line_total: '8,50',
-          note: 'Reposicion salon',
+          note: 'Reposición salón',
         },
       ]);
       expect(Object.keys(validLine.errors).length).toBe(0);
@@ -186,7 +186,7 @@ describe('purchasesClient (Brief 33p additions)', () => {
         unit: 'unidad',
         quantity: '2',
         line_total: '8.50',
-        note: 'Reposicion salon',
+        note: 'Reposición salón',
       });
     });
   });

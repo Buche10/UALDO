@@ -3,6 +3,7 @@ import ModuleCard from './ModuleCard';
 import { getVisibleModules } from './moduleRegistry';
 import { can, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
+import { useReservationsTodayCount } from '../../hooks/useReservations';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 import { useLotItems } from '../../hooks/useLotItems';
 
@@ -20,6 +21,8 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
 
   const userId = user?.id;
   const canDeclare = can(user, ABILITIES.WITHDRAWALS_DECLARE);
+  const canSeeReservations = can(user, ABILITIES.RESERVATIONS_VIEW);
+  const todayReservations = useReservationsTodayCount(canSeeReservations);
 
   useEffect(() => {
     if (badges.withdrawals !== undefined) {
@@ -73,6 +76,8 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
         let badgeValue = null;
         if (module.id === 'withdrawals') {
           badgeValue = openWithdrawalsCount;
+        } else if (module.id === 'reservations') {
+          badgeValue = todayReservations;
         }
         const moduleWithBadge = badgeValue ? { ...module, badge: badgeValue } : module;
 

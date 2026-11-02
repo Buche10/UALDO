@@ -14,6 +14,8 @@ import { getStoredUser } from './apiClient';
  * - 'overtime' o 'horas_extra': pestaña Negocios, subvista Horas extra (Brief 36p).
  * - 'incidencia' o 'incidencias': pestaña Negocios, subvista Incidencias (Brief 37p).
  * - 'assets' o 'activos': pestaña Negocios, subvista Vajilla y equipos (Brief 38p).
+ * - 'reserva': pestaña Negocios, subvista Reservas; con `params.id` abre el
+ *   detalle y sin id abre la agenda del día (Brief 39p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -30,6 +32,7 @@ export const ALLOWED_SCREENS = new Set([
   'incidencias',
   'assets',
   'activos',
+  'reserva',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -134,6 +137,8 @@ export const resolveNotificationRoute = (action, explicitParams = {}, userContex
     case 'assets':
     case 'activos':
       return { tab: 'negocios', subView: 'assets', params: cleanParams };
+    case 'reserva':
+      return { tab: 'negocios', subView: 'reservations', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':

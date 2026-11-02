@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Calculator,
   Tags,
+  CalendarDays,
 } from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
@@ -41,6 +42,7 @@ export default function SuggestionChips({
   const canDeclareCashClose = user ? can(user, ABILITIES.CASH_REGISTER) && !can(user, ABILITIES.CASH_REVIEW) : false;
   const canViewInventory = user ? can(user, ABILITIES.INVENTORY_VIEW) : false;
   const { hasLotItems } = useLotItems({ enabled: canViewInventory });
+  const canSeeReservations = user ? can(user, ABILITIES.RESERVATIONS_VIEW) : false;
   const userId = user?.id;
 
   useEffect(() => {
@@ -99,6 +101,14 @@ export default function SuggestionChips({
       label: '¿Qué lote uso?',
       prompt: '¿Qué lote de carne tengo que usar primero?',
       icon: Tags,
+    });
+  }
+
+  if (canSeeReservations) {
+    suggestions.push({
+      label: 'Reservas de hoy',
+      prompt: '¿Qué reservas hay hoy?',
+      icon: CalendarDays,
     });
   }
 

@@ -168,6 +168,31 @@ describe('ShoppingListPanel (Brief 26p)', () => {
     });
   });
 
+  it('muestra el bloque informativo "Por reservas" cuando llega comprometido_por_reservas (Brief 39p)', async () => {
+    vi.spyOn(client, 'getPurchasingOverview').mockResolvedValue({
+      ok: true,
+      data: {
+        data: {
+          aprobado: [],
+          por_aprobar: [],
+          bajo_minimo: [],
+          comprometido_por_reservas: [
+            { item_id: 7, name: 'Bife', unit: 'kg', stock: '20.000', committed: '15.000', available: '5.000', min: '8.000', suggested: '3.000' },
+          ],
+        },
+      },
+    });
+
+    render(<ShoppingListPanel />);
+
+    await waitFor(() => expect(screen.getByText('Por reservas')).toBeInTheDocument());
+    expect(screen.getByText('Bife')).toBeInTheDocument();
+    expect(screen.getByText(/Disponible: 5 kg/)).toBeInTheDocument();
+    expect(screen.getByText(/Mínimo: 8 kg/)).toBeInTheDocument();
+    expect(screen.getByText(/Sugerencia: 3 kg/)).toBeInTheDocument();
+    expect(screen.getByText(/Solo informativo: no crea pedidos ni compras/)).toBeInTheDocument();
+  });
+
   it('muestra mensaje de error con botón de reintentar si falla la carga', async () => {
     vi.spyOn(client, 'getPurchasingOverview').mockResolvedValueOnce({
       ok: false,
