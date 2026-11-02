@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   Clock,
   AlertTriangle,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -98,6 +99,21 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.INCIDENTS_REPORT, ABILITIES.INCIDENTS_MANAGE],
     subView: 'incidents',
     roleRequiredLabel: 'personal del restaurante, jefes de área, administración o dueño',
+  },
+  {
+    id: 'assets',
+    label: 'Vajilla y equipos',
+    description: 'Catálogo de activos, conteo mensual por área y reporte de daños.',
+    icon: UtensilsCrossed,
+    permissions: [
+      ABILITIES.ASSETS_COUNT_KITCHEN,
+      ABILITIES.ASSETS_COUNT_LOUNGE,
+      ABILITIES.ASSETS_VALIDATE_KITCHEN,
+      ABILITIES.ASSETS_VALIDATE_LOUNGE,
+      ABILITIES.SETTINGS_MANAGE,
+    ],
+    subView: 'assets',
+    roleRequiredLabel: 'personal de cocina, salón, jefes de área, administración o dueño',
   },
 ];
 

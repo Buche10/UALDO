@@ -9,6 +9,7 @@ import DailyCloseView from './inventory/dailyClose/DailyCloseView';
 import WithdrawalsView from './withdrawals/WithdrawalsView';
 import OvertimeView from './overtime/OvertimeView';
 import IncidentsView from './incidents/IncidentsView';
+import AssetsView from './assets/AssetsView';
 import ModuleGrid from './modules/ModuleGrid';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
@@ -141,6 +142,15 @@ export default function EcosystemView({
         user={user}
         initialId={negociosParams?.id}
         onBack={() => handleSubTabChange('overview')}
+      />
+    );
+  } else if (currentSubTab === 'assets') {
+    content = (
+      <AssetsView
+        user={user}
+        initialTab={negociosParams?.tab || negociosParams?.initialTab}
+        onBack={() => handleSubTabChange('overview')}
+        onNavigateToIncident={() => handleSubTabChange('incidents')}
       />
     );
   }

@@ -1,7 +1,7 @@
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
- * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime' o 'incidents' según params.subView).
+ * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime', 'incidents' o 'assets' según params.subView).
  * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
  * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
@@ -10,6 +10,7 @@
  * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
  * - 'overtime' o 'horas_extra': pestaña Negocios, subvista Horas extra (Brief 36p).
  * - 'incidencia' o 'incidencias': pestaña Negocios, subvista Incidencias (Brief 37p).
+ * - 'assets' o 'activos': pestaña Negocios, subvista Vajilla y equipos (Brief 38p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -24,11 +25,14 @@ export const ALLOWED_SCREENS = new Set([
   'horas_extra',
   'incidencia',
   'incidencias',
+  'assets',
+  'activos',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
-const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents']);
+const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents', 'assets']);
+const ALLOWED_TABS = new Set(['catalog', 'catalogo', 'count', 'conteo', 'report', 'reporte']);
 
 /**
  * Valida y filtra los parámetros de una acción de aviso.
@@ -54,6 +58,8 @@ export const sanitizeActionParams = (params) => {
         clean[key] = trimmed;
       } else if (key === 'subView' && ALLOWED_SUBVIEWS.has(trimmed.toLowerCase())) {
         clean.subView = trimmed.toLowerCase() === 'retiros' ? 'withdrawals' : trimmed.toLowerCase();
+      } else if (key === 'tab' && ALLOWED_TABS.has(trimmed.toLowerCase())) {
+        clean.tab = trimmed.toLowerCase();
       }
     }
   }
@@ -99,6 +105,8 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
         subView = 'overtime';
       } else if (cleanParams.subView === 'incidents') {
         subView = 'incidents';
+      } else if (cleanParams.subView === 'assets') {
+        subView = 'assets';
       }
       return { tab: 'negocios', subView, params: cleanParams };
     }
@@ -117,6 +125,10 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
     case 'incidencia':
     case 'incidencias':
       return { tab: 'negocios', subView: 'incidents', params: cleanParams };
+
+    case 'assets':
+    case 'activos':
+      return { tab: 'negocios', subView: 'assets', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':
