@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { registerMovement, normalizeQuantity } from '../services/inventoryClient';
+import { lotPayloadFields, lotSelectionError } from '../services/lotSelection';
 
 /**
  * Genera un UUID v4 usando crypto.randomUUID o crypto.getRandomValues como respaldo seguro.
@@ -39,10 +40,16 @@ export function useMovementSubmit({ item, onClose, onMovementRegistered }) {
     setValidationError(null);
   };
 
-  const submitMovement = async ({ kind, quantity, reason, location }) => {
+  const submitMovement = async ({ kind, quantity, reason, location, lotSelection }) => {
     setValidationError(null);
     setError(null);
     setFieldErrors({});
+
+    const lotError = lotSelectionError(lotSelection);
+    if (lotError) {
+      setValidationError(lotError);
+      return;
+    }
 
     const normQty = normalizeQuantity(quantity);
     if (!normQty) {
@@ -58,6 +65,7 @@ export function useMovementSubmit({ item, onClose, onMovementRegistered }) {
         quantity: normQty,
         reason,
         location,
+        ...lotPayloadFields(lotSelection),
       },
       clientUuidRef.current
     );

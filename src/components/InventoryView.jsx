@@ -207,6 +207,7 @@ export default function InventoryView({ initialSubView = null }) {
           onSelectForMovement={setSelectedItemForMovement}
           onSelectForHistory={setSelectedItemForHistory}
           onSelectForTransfer={setSelectedItemForTransfer}
+          onItemUpdated={reload}
         />
       )}
 

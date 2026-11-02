@@ -1,4 +1,5 @@
 import { request } from './apiClient';
+import { normalizeLotJustification } from './lotSelection';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const QTY_REGEX = /^\d+(\.\d{1,3})?$/;
@@ -95,10 +96,42 @@ export const createWithdrawal = async (data = {}) => {
       };
     }
 
-    normalizedItems.push({
+    const normalizedItem = {
       item_id: itemId,
       quantity: normQty,
-    });
+    };
+
+    if (item.lot_id !== undefined && item.lot_id !== null && item.lot_id !== '') {
+      const lotId = parseInt(item.lot_id, 10);
+      if (isNaN(lotId) || lotId <= 0) {
+        lineErrors[itemId] = ['El lote seleccionado no es válido.'];
+        return {
+          ok: false,
+          status: 422,
+          error: 'Revisa el lote de los insumos marcados.',
+          lineErrors,
+          isNetworkError: false,
+        };
+      }
+      normalizedItem.lot_id = lotId;
+    }
+
+    if (item.justification !== undefined && item.justification !== null && String(item.justification).trim() !== '') {
+      const justification = normalizeLotJustification(item.justification);
+      if (!justification) {
+        lineErrors[itemId] = ['El motivo para usar otro lote debe tener entre 5 y 300 caracteres.'];
+        return {
+          ok: false,
+          status: 422,
+          error: 'Revisa el motivo del lote.',
+          lineErrors,
+          isNetworkError: false,
+        };
+      }
+      normalizedItem.justification = justification;
+    }
+
+    normalizedItems.push(normalizedItem);
   }
 
   const cleanPurpose = typeof purpose === 'string' ? purpose.trim() : '';

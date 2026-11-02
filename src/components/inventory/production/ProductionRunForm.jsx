@@ -1,9 +1,10 @@
 import React from 'react';
 import { ArrowLeft, Scissors } from 'lucide-react';
 import { useProductionRunForm } from '../../../hooks/useProductionRunForm';
-import { inputKey, outputKey } from '../../../hooks/productionForm';
+import { basisInput, inputKey, outputKey } from '../../../hooks/productionForm';
 import { INVENTORY_LOCATIONS } from '../../../services/inventoryLocations';
 import ProductionLineField from './ProductionLineField';
+import LotPicker from '../../lots/LotPicker';
 
 const sectionTitle = { fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', margin: '4px 0 0 0' };
 const fieldLabel = { display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' };
@@ -29,8 +30,9 @@ function WeightField({ id, label, required, value, error, onChange }) {
  * Registrar un porcionado desde una ficha (Brief 21p).
  */
 export default function ProductionRunForm({ template, onBack, onRecorded }) {
-  const { form, setValue, setField, submit, submitting, error, fieldErrors, expected, scalesBySum, planLoading, planFailed } = useProductionRunForm({ template, onRecorded });
+  const { form, setValue, setField, setLotSelection, submit, submitting, error, fieldErrors, expected, scalesBySum, planLoading, planFailed } = useProductionRunForm({ template, onRecorded });
   const generalErrors = GENERAL_ERROR_KEYS.map((key) => fieldErrors[key]).filter(Boolean);
+  const basis = basisInput(template);
 
   let planText = 'Escribe la entrada principal para ver lo esperado.';
   if (scalesBySum) planText = 'Las cantidades esperadas se calculan al registrar.';
@@ -97,6 +99,18 @@ export default function ProductionRunForm({ template, onBack, onRecorded }) {
       </div>
 
       <h4 style={sectionTitle}>Entradas</h4>
+      {basis && (
+        <LotPicker
+          itemId={basis.item_id}
+          itemName={basis.item_name}
+          unit={basis.unit}
+          location={form.location}
+          value={form}
+          onChange={setLotSelection}
+          disabled={submitting}
+          error={fieldErrors.lot}
+        />
+      )}
       {(template.inputs || []).map((line) => renderLine(line, inputKey, false))}
 
       <h4 style={sectionTitle}>Salidas</h4>

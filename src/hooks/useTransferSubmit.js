@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { transferStock, normalizeQuantity } from '../services/inventoryClient';
 import { generateClientUuid } from './useMovementSubmit';
+import { lotPayloadFields, lotSelectionError } from '../services/lotSelection';
 
 /**
  * Hook para gestionar el envío de transferencias de inventario entre ubicaciones con idempotencia.
@@ -20,13 +21,19 @@ export function useTransferSubmit({ item, onClose, onTransferSuccess }) {
     setValidationError(null);
   }, []);
 
-  const submitTransfer = useCallback(async ({ from, to, quantity, reason }) => {
+  const submitTransfer = useCallback(async ({ from, to, quantity, reason, lotSelection }) => {
     setValidationError(null);
     setError(null);
     setFieldErrors({});
 
     if (from === to) {
       setValidationError('El origen y el destino deben ser diferentes.');
+      return;
+    }
+
+    const lotError = lotSelectionError(lotSelection);
+    if (lotError) {
+      setValidationError(lotError);
       return;
     }
 
@@ -54,6 +61,7 @@ export function useTransferSubmit({ item, onClose, onTransferSuccess }) {
         to,
         quantity: normQty,
         reason,
+        ...lotPayloadFields(lotSelection),
       },
       clientUuidRef.current
     );

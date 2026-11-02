@@ -84,6 +84,8 @@ export function buildPayload(template, form) {
     mainOutputWeight: form.mainOutputWeight,
     wasteQuantity: form.wasteQuantity,
     notes: form.notes,
+    inputLotId: form.lotId,
+    justification: form.lotJustification,
   };
 }
 

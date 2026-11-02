@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, X, AlertCircle } from 'lucide-react';
 import { useItemSearch } from '../../hooks/useItemSearch';
-
+import WithdrawalLotField from './WithdrawalLotField';
 export default function WithdrawalItemRow({
   item,
   index,
@@ -19,6 +19,12 @@ export default function WithdrawalItemRow({
       item_id: catalogItem.id,
       name: catalogItem.name,
       unit: catalogItem.unit || 'unidad',
+      requires_lot: Boolean(catalogItem.requires_lot),
+      lotId: '',
+      lotJustification: '',
+      lotNeedsJustification: false,
+      chosenCode: null,
+      recommendedCode: null,
     });
     setSearchTerm('');
   };
@@ -136,7 +142,7 @@ export default function WithdrawalItemRow({
             <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{item.name}</strong>
             <button
               type="button"
-              onClick={() => onChange(item.tempId, { item_id: null, name: '', unit: '' })}
+              onClick={() => onChange(item.tempId, { item_id: null, name: '', unit: '', requires_lot: false, lotId: '', lotJustification: '', lotNeedsJustification: false })}
               disabled={disabled}
               style={{
                 background: 'none',
@@ -176,6 +182,10 @@ export default function WithdrawalItemRow({
             </span>
           </div>
         </div>
+      )}
+
+      {item.item_id && item.requires_lot && (
+        <WithdrawalLotField item={item} lineError={lineError} disabled={disabled} onChange={onChange} />
       )}
 
       {lineError && (

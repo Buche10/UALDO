@@ -70,7 +70,7 @@ describe('DailyCloseView component (Brief 31p / 31p_fix)', () => {
       data: { data: { id: 25, status: 'draft' } },
     });
 
-    render(<DailyCloseView user={kitchenUser} />);
+    render(<DailyCloseView user={kitchenUser} initialDate="2026-11-01" />);
 
     expect(await screen.findByText('Cocina')).toBeInTheDocument();
     expect(screen.queryByText('Salón')).not.toBeInTheDocument();

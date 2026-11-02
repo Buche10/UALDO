@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useMovementSubmit, generateClientUuid } from '../../hooks/useMovementSubmit';
 import { INVENTORY_LOCATIONS, DEFAULT_LOCATION } from '../../services/inventoryLocations';
+import { emptyLotSelection } from '../../services/lotSelection';
+import MovementKindSelector from './MovementKindSelector';
+import MovementLotField from './MovementLotField';
+import MovementModalActions from './MovementModalActions';
 
 export { generateClientUuid };
-
-const KINDS = [
-  { value: 'entrada', label: 'Entrada' },
-  { value: 'salida', label: 'Salida' },
-  { value: 'conteo', label: 'Conteo' },
-  { value: 'merma', label: 'Merma' },
-];
 
 export default function MovementModal({ isOpen, item, onClose, onMovementRegistered }) {
   const [kind, setKind] = useState('entrada');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
   const [location, setLocation] = useState(DEFAULT_LOCATION);
+  const [lotSelection, setLotSelection] = useState(emptyLotSelection);
 
   const {
     submitting,
@@ -33,6 +31,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
       setQuantity('');
       setReason('');
       setLocation(DEFAULT_LOCATION);
+      setLotSelection(emptyLotSelection());
     }
   }, [isOpen, item]);
 
@@ -40,7 +39,17 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    submitMovement({ kind, quantity, reason, location });
+    submitMovement({ kind, quantity, reason, location, lotSelection });
+  };
+
+  const handleKindChange = (value) => {
+    setKind(value);
+    setLotSelection(emptyLotSelection());
+  };
+
+  const handleLocationChange = (value) => {
+    setLocation(value);
+    setLotSelection(emptyLotSelection());
   };
 
   return (
@@ -81,37 +90,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
-              Tipo de movimiento
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {KINDS.map(k => (
-                <button
-                  key={k.value}
-                  type="button"
-                  onClick={() => setKind(k.value)}
-                  style={{
-                    padding: '8px 4px',
-                    borderRadius: '8px',
-                    border: kind === k.value ? '1px solid var(--primary-2)' : '1px solid var(--border-glass)',
-                    background: kind === k.value ? 'var(--primary)' : 'var(--chip-bg)',
-                    color: kind === k.value ? 'var(--on-primary)' : 'var(--text-muted)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {k.label}
-                </button>
-              ))}
-            </div>
-            {fieldErrors.kind && (
-              <span style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px', display: 'block' }}>
-                {Array.isArray(fieldErrors.kind) ? fieldErrors.kind.join(', ') : fieldErrors.kind}
-              </span>
-            )}
-          </div>
+          <MovementKindSelector kind={kind} fieldErrors={fieldErrors} onChange={handleKindChange} />
 
           <div>
             <label htmlFor="movement-quantity" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
@@ -146,7 +125,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
             <select
               id="movement-location-select"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => handleLocationChange(e.target.value)}
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-glass)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
             >
               {INVENTORY_LOCATIONS.map((loc) => (
@@ -164,6 +143,16 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
               </span>
             )}
           </div>
+
+          <MovementLotField
+            item={item}
+            kind={kind}
+            location={location}
+            selection={lotSelection}
+            disabled={submitting}
+            error={fieldErrors.lot_id}
+            onChange={setLotSelection}
+          />
 
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
@@ -184,33 +173,7 @@ export default function MovementModal({ isOpen, item, onClose, onMovementRegiste
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              style={{
-                flex: 1,
-                padding: '12px',
-                borderRadius: '9999px',
-                border: '1px solid var(--border-glass)',
-                background: 'transparent',
-                color: 'var(--text-muted)',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary"
-              style={{ flex: 1, padding: '12px', borderRadius: '9999px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              {submitting ? 'Registrando...' : 'Registrar'}
-            </button>
-          </div>
+          <MovementModalActions submitting={submitting} onClose={onClose} />
         </form>
       </div>
     </div>
