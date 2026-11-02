@@ -1,7 +1,7 @@
 /**
  * Lista blanca de pantallas de navegación para avisos del motor.
  * Solo pantallas reconocidas en la PWA de Ualdo:
- * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals' u 'overtime' según params.subView).
+ * - 'inventario': pestaña Negocios, subvista Inventario (o 'daily_close', 'withdrawals', 'overtime' o 'incidents' según params.subView).
  * - 'pedido' o 'pedidos': pestaña Negocios, subvista Pedidos; con `params.id` se
  *   abre el detalle de ese pedido (Brief 22p).
  * - 'cierre_caja': pestaña Negocios, subvista Caja (CashCloseView).
@@ -9,6 +9,7 @@
  * - 'daily_close': pestaña Negocios, subvista Cierre del día (Brief 31p).
  * - 'retiros' o 'withdrawals': pestaña Negocios, subvista Retiros de bodega (Brief 32p).
  * - 'overtime' o 'horas_extra': pestaña Negocios, subvista Horas extra (Brief 36p).
+ * - 'incidencia' o 'incidencias': pestaña Negocios, subvista Incidencias (Brief 37p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -21,11 +22,13 @@ export const ALLOWED_SCREENS = new Set([
   'withdrawals',
   'overtime',
   'horas_extra',
+  'incidencia',
+  'incidencias',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
-const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime']);
+const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents']);
 
 /**
  * Valida y filtra los parámetros de una acción de aviso.
@@ -94,6 +97,8 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
         subView = 'withdrawals';
       } else if (cleanParams.subView === 'overtime') {
         subView = 'overtime';
+      } else if (cleanParams.subView === 'incidents') {
+        subView = 'incidents';
       }
       return { tab: 'negocios', subView, params: cleanParams };
     }
@@ -108,6 +113,10 @@ export const resolveNotificationRoute = (action, explicitParams = {}) => {
     case 'overtime':
     case 'horas_extra':
       return { tab: 'negocios', subView: 'overtime', params: cleanParams };
+
+    case 'incidencia':
+    case 'incidencias':
+      return { tab: 'negocios', subView: 'incidents', params: cleanParams };
 
     case 'pedido':
     case 'pedidos':

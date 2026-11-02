@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart, ArrowDownRight, Clock } from 'lucide-react';
+import { PackagePlus, ClipboardList, Search, CheckCircle2, ShoppingCart, ArrowDownRight, Clock, AlertTriangle } from 'lucide-react';
 import { can, canAny, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
@@ -70,6 +70,12 @@ export default function SuggestionChips({
       icon: Clock,
     });
   }
+
+  suggestions.push({
+    label: 'Reportar un problema',
+    prompt: 'Quiero reportar un problema',
+    icon: AlertTriangle,
+  });
 
   return (
     <div className="assistant-chips-container" role="toolbar" aria-label="Sugerencias rápidas">

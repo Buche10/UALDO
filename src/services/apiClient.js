@@ -46,6 +46,25 @@ export const clearAuthSession = () => {
   } catch (e) {}
 };
 
+export const getApiBaseUrl = () => {
+  let baseUrl = '';
+  try {
+    const settings = getSettings();
+    baseUrl = settings.apiBaseUrl;
+  } catch (err) {
+    if (import.meta.env.PROD) {
+      throw new Error('URL de API inválida en producción (debe ser HTTPS).');
+    }
+    baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://ualbusiness.test/api/v1';
+  }
+
+  if (import.meta.env.PROD && !baseUrl.startsWith('https://')) {
+    throw new Error('URL de API inválida en producción (debe ser HTTPS).');
+  }
+
+  return baseUrl.replace(/\/+$/, '');
+};
+
 export const request = async (path, options = {}) => {
   const {
     method = 'GET',
@@ -54,32 +73,18 @@ export const request = async (path, options = {}) => {
     timeout = 10000
   } = options;
 
-  let baseUrl = '';
+  let cleanBaseUrl = '';
   try {
-    const settings = getSettings();
-    baseUrl = settings.apiBaseUrl;
+    cleanBaseUrl = getApiBaseUrl();
   } catch (err) {
-    if (import.meta.env.PROD) {
-      return {
-        ok: false,
-        status: 0,
-        error: 'URL de API inválida en producción (debe ser HTTPS).',
-        isNetworkError: true
-      };
-    }
-    baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://ualbusiness.test/api/v1';
-  }
-
-  if (import.meta.env.PROD && !baseUrl.startsWith('https://')) {
     return {
       ok: false,
       status: 0,
-      error: 'URL de API inválida en producción (debe ser HTTPS).',
+      error: err.message,
       isNetworkError: true
     };
   }
 
-  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${cleanBaseUrl}${cleanPath}`;
 
@@ -105,7 +110,7 @@ export const request = async (path, options = {}) => {
       signal: controller.signal
     };
 
-    if (body && method !== 'GET' && method !== 'HEAD') {
+    if (body) {
       fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
     }
 
@@ -114,7 +119,7 @@ export const request = async (path, options = {}) => {
 
     if (response.status === 401) {
       clearAuthSession();
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
+      if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('ualdo:unauthorized', {
           detail: { message: UNAUTHORIZED_SESSION_MESSAGE }
         }));
@@ -156,6 +161,105 @@ export const request = async (path, options = {}) => {
       status: 0,
       error: err.name === 'AbortError' ? 'Tiempo de espera agotado al conectar con el servidor.' : (err.message || 'Error de conexión'),
       isNetworkError: true
+    };
+  }
+};
+
+/**
+ * Sube un archivo mediante FormData sin fijar Content-Type a mano (Brief 34ap / 37p).
+ *
+ * @param {string} path Ruta relativa al API (e.g. '/incidents/1/evidence')
+ * @param {File|Blob} file Archivo a subir
+ * @param {string} [fieldName='file'] Nombre del campo en el FormData
+ * @param {object} [options={}] Opciones adicionales (headers, timeout)
+ * @returns {Promise<{ ok: boolean, status: number, data?: object, error?: string, isNetworkError?: boolean }>}
+ */
+export const uploadFile = async (path, file, fieldName = 'file', options = {}) => {
+  const { timeout = 30000, headers = {} } = options;
+
+  let cleanBaseUrl = '';
+  try {
+    cleanBaseUrl = getApiBaseUrl();
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err.message,
+      isNetworkError: true,
+    };
+  }
+
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${cleanBaseUrl}${cleanPath}`;
+
+  const token = getAuthToken();
+  const reqHeaders = {
+    Accept: 'application/json',
+    ...headers,
+  };
+  if (token) {
+    reqHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: reqHeaders,
+      body: formData,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.status === 401) {
+      clearAuthSession();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ualdo:unauthorized', {
+          detail: { message: UNAUTHORIZED_SESSION_MESSAGE },
+        }));
+      }
+      return {
+        ok: false,
+        status: 401,
+        error: UNAUTHORIZED_SESSION_MESSAGE,
+      };
+    }
+
+    let data = null;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = text ? { message: text } : null;
+    }
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data?.message || data?.error || `Error ${response.status}`,
+        data,
+      };
+    }
+
+    return {
+      ok: true,
+      status: response.status,
+      data,
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    return {
+      ok: false,
+      status: 0,
+      error: err.name === 'AbortError' ? 'Tiempo de espera agotado al conectar con el servidor.' : (err.message || 'Error de conexión'),
+      isNetworkError: true,
     };
   }
 };

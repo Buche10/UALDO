@@ -40,6 +40,13 @@ El salón ve la agenda de reservas por día. Quien tiene permiso crea, edita y c
 7. **Avisos.** Pantalla `reserva` con `params.id`, que abre el detalle. Sin `id`, abre la agenda del día. Añádela a `ALLOWED_SCREENS` y a su test.
 8. **Chat.** Con `reservations.view`: acceso "Reservas de hoy", con el texto "¿Qué reservas hay hoy?".
 
+### Pendientes de la auditoría del Brief 33p
+
+La auditoría del 2026-11-01 aprobó el 33p con observaciones. Corrígelas en esta misma rama (requiere el Brief 39_fix del motor, que añade `GET /api/v1/purchases/to-receive`):
+
+- **Recepción para los jefes.** Hoy la pantalla de Compras solo se abre con `purchases.manage` (`src/components/InventoryView.jsx`, línea 105), así que un jefe con `purchases.receive` no llega nunca a `ReceivePurchaseDialog`. Añade en Inventario, para quien tiene `purchases.receive` y no `purchases.manage`, el acceso "Compras por recibir": lista de `GET /purchases/to-receive` y, al tocar una, su detalle (`GET /purchases/{id}`) con el botón "Recibir". Cliente `listPurchasesToReceive({ page })` en `src/services/purchasesClient.js` (lee `res.data.data` y `res.data.meta`). Sin montos si no tiene `inventory.costs`. Test: un jefe de cocina ve la lista y abre el diálogo de recepción; un cocinero no ve el acceso.
+- **Tildes en datos de prueba.** `src/services/__tests__/purchasesClient.brief33p.test.js` (líneas 178 y 189): "Reposicion salon" debe ser "Reposición salón".
+
 ## Restricciones técnicas
 
 - CERO EMOJIS, sin excepción: ni en interfaz, textos, código, comentarios, logs, consola, commits, docs, tests, datos semilla o nombres de archivo. Iconos solo en SVG (`lucide-react`).
@@ -75,4 +82,5 @@ cd C:/laragon/www/UALDO && npm run build
 - [ ] Crear, editar y cancelar reservas con o sin platos, según el permiso.
 - [ ] Comprometido y disponible por insumo, y aviso de bajo mínimo.
 - [ ] Contacto del cliente protegido.
+- [ ] Pendientes del 33p: "Compras por recibir" para los jefes; tildes en los datos de prueba.
 - [ ] Lint, tests y build en verde; cero emojis; marca Ualdo; sin colores fijos.

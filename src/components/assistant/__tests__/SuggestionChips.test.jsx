@@ -5,7 +5,7 @@ import SuggestionChips from '../SuggestionChips';
 import { ABILITIES } from '../../../services/permissions';
 import * as withdrawalsClient from '../../../services/withdrawalsClient';
 
-describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p)', () => {
+describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p / 37p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -150,6 +150,19 @@ describe('SuggestionChips (Brief 26p / 30p / 32p / 32p_fix / 36p)', () => {
       render(<SuggestionChips user={user} onSelectChip={vi.fn()} />);
 
       expect(screen.queryByRole('button', { name: /registrar horas extra/i })).toBeNull();
+    });
+  });
+
+  describe('accesos rápidos de incidencias (Brief 37p)', () => {
+    it('muestra "Reportar un problema" para todos y envía "Quiero reportar un problema"', () => {
+      const onSelect = vi.fn();
+      render(<SuggestionChips user={null} onSelectChip={onSelect} />);
+
+      const chip = screen.getByRole('button', { name: /reportar un problema/i });
+      expect(chip).toBeInTheDocument();
+
+      fireEvent.click(chip);
+      expect(onSelect).toHaveBeenCalledWith('Quiero reportar un problema');
     });
   });
 });

@@ -72,6 +72,8 @@ export default defineConfig({
         'src/services/money.js',
         'src/services/overtimeClient.js',
         'src/components/overtime/**',
+        'src/services/incidentsClient.js',
+        'src/components/incidents/**',
       ],
       exclude: ['**/__tests__/**']
     }
