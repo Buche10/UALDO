@@ -10,6 +10,7 @@ import {
   INCIDENT_SEVERITY_LABELS,
 } from '../../services/incidentsClient';
 import ReportTypeSelector from './ReportTypeSelector';
+import IncidentAssetSelector from './IncidentAssetSelector';
 
 const DEFAULT_TITLES = {
   averia: 'Avería de equipo',
@@ -27,6 +28,7 @@ export default function ReportIncidentSheet({ user, isOpen, onClose, onCreated }
   const [quantity, setQuantity] = useState('1');
   const [dishName, setDishName] = useState('');
   const [complaintKind, setComplaintKind] = useState('plato_frio');
+  const [assetId, setAssetId] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -42,6 +44,13 @@ export default function ReportIncidentSheet({ user, isOpen, onClose, onCreated }
     setStep(2);
   };
 
+  const handleSelectAsset = (asset) => {
+    setAssetId(asset ? asset.id : null);
+    if (asset && type === 'rotura' && !assetLabel) {
+      setAssetLabel(asset.name);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -49,6 +58,7 @@ export default function ReportIncidentSheet({ user, isOpen, onClose, onCreated }
     setSubmitting(true);
 
     const payload = { type, title: title.trim(), description: description.trim(), area: defaultArea };
+    if (assetId) payload.asset_id = assetId;
     if (type === 'averia') payload.severity = severity;
     if (type === 'rotura') {
       payload.asset_label = assetLabel.trim();
@@ -100,6 +110,10 @@ export default function ReportIncidentSheet({ user, isOpen, onClose, onCreated }
               <label htmlFor="inc-title" style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Título</label>
               <input id="inc-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', color: 'var(--text-main)' }} />
             </div>
+
+            {(type === 'averia' || type === 'rotura') && (
+              <IncidentAssetSelector area={defaultArea} selectedAssetId={assetId} onSelectAsset={handleSelectAsset} />
+            )}
 
             {type === 'averia' && (
               <div>

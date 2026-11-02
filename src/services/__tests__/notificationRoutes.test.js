@@ -26,7 +26,9 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('horas_extra')).toBe(true);
       expect(ALLOWED_SCREENS.has('incidencia')).toBe(true);
       expect(ALLOWED_SCREENS.has('incidencias')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(12);
+      expect(ALLOWED_SCREENS.has('assets')).toBe(true);
+      expect(ALLOWED_SCREENS.has('activos')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(14);
     });
   });
 
@@ -58,6 +60,7 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ subView: 'retiros' })).toEqual({ subView: 'withdrawals' });
       expect(sanitizeActionParams({ subView: 'overtime' })).toEqual({ subView: 'overtime' });
       expect(sanitizeActionParams({ subView: 'incidents' })).toEqual({ subView: 'incidents' });
+      expect(sanitizeActionParams({ subView: 'assets' })).toEqual({ subView: 'assets' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
@@ -87,6 +90,28 @@ describe('notificationRoutes security and routing', () => {
         tab: 'negocios',
         subView: 'inventory',
         params: { id: 15 },
+      });
+    });
+
+    it('resolves inventario with assets subView to assets screen (Brief 38p)', () => {
+      const route = resolveNotificationRoute('inventario', { subView: 'assets', tab: 'count' });
+      expect(route).toEqual({
+        tab: 'negocios',
+        subView: 'assets',
+        params: { subView: 'assets', tab: 'count' },
+      });
+    });
+
+    it('resolves assets and activos screens to assets subview (Brief 38p)', () => {
+      expect(resolveNotificationRoute('assets', { tab: 'count' })).toEqual({
+        tab: 'negocios',
+        subView: 'assets',
+        params: { tab: 'count' },
+      });
+      expect(resolveNotificationRoute('activos')).toEqual({
+        tab: 'negocios',
+        subView: 'assets',
+        params: {},
       });
     });
 
