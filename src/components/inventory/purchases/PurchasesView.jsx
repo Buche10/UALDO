@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
+import { getUser } from '../../../services/auth';
+import { ABILITIES, can } from '../../../services/permissions';
 import { usePurchases } from '../../../hooks/usePurchasesData';
 import PurchaseList from './PurchaseList';
 import PurchaseForm from './PurchaseForm';
@@ -8,6 +10,9 @@ import SuppliersPanel from './SuppliersPanel';
 import ValuationPanel from './ValuationPanel';
 import OtherPurchasesPanel from './OtherPurchasesPanel';
 import ReconciliationPanel from './ReconciliationPanel';
+import InvoiceSriEntry from './InvoiceSriEntry';
+import InvoiceReview from './InvoiceReview';
+import InvoiceDocumentsList from './InvoiceDocumentsList';
 
 const TABS = [
   { id: 'purchases', label: 'Compras' },
@@ -23,18 +28,23 @@ const NOTICES = {
   receive: 'Compra recibida: el stock y los costos se actualizaron.',
   cancel: 'Compra cancelada.',
   lines: 'Líneas guardadas.',
+  confirmed: 'Factura confirmada. Revisa la compra y recíbela cuando llegue.',
 };
 
 /**
- * Compras, proveedores, otras compras y conciliación (Brief 20p / 33p).
+ * Compras, proveedores, otras compras y conciliación (Brief 20p / 33p / 34ap).
  */
 export default function PurchasesView({ onBack }) {
   const [tab, setTab] = useState('purchases');
   const [screen, setScreen] = useState('list');
   const [purchaseId, setPurchaseId] = useState(null);
+  const [review, setReview] = useState(null);
   const [status, setStatus] = useState('');
   const [notice, setNotice] = useState(null);
+  const [documentsKey, setDocumentsKey] = useState(0);
   const list = usePurchases(status);
+  const currentUser = getUser();
+  const canManageInvoices = !currentUser || can(currentUser, ABILITIES.PURCHASES_MANAGE);
 
   const syncList = (purchase) => {
     if (!purchase?.id) return;
@@ -55,13 +65,60 @@ export default function PurchasesView({ onBack }) {
 
   const backToList = () => { setNotice(null); setScreen('list'); };
 
+  const openInvoice = (document, duplicate = false) => {
+    setReview({ id: document.id, duplicate });
+    setNotice(null);
+    setScreen('invoice');
+  };
+
+  const backFromInvoice = () => {
+    setReview(null);
+    setDocumentsKey((value) => value + 1);
+    setNotice(null);
+    setScreen('list');
+  };
+
+  const handleInvoiceConfirmed = (purchase) => {
+    syncList(purchase);
+    setDocumentsKey((value) => value + 1);
+    setReview(null);
+    if (purchase?.id) openDetail(purchase.id, 'confirmed');
+    else backToList();
+  };
+
+  const openHistoryDocument = (document) => {
+    if (document.confirmed_at && document.purchase_id) {
+      openDetail(document.purchase_id, null);
+      return;
+    }
+    openInvoice(document);
+  };
+
   let purchasesContent;
   if (screen === 'new') {
     purchasesContent = <PurchaseForm onBack={backToList} onCreated={(created, idempotent) => { syncList(created); openDetail(created?.id, idempotent ? 'idempotent' : 'created'); }} />;
   } else if (screen === 'detail' && purchaseId) {
     purchasesContent = <PurchaseDetail key={purchaseId} purchaseId={purchaseId} onBack={backToList} onSynced={handleSynced} />;
+  } else if (screen === 'invoice' && review) {
+    purchasesContent = (
+      <InvoiceReview
+        key={review.id}
+        documentId={review.id}
+        duplicate={review.duplicate}
+        onBack={backFromInvoice}
+        onConfirmed={handleInvoiceConfirmed}
+        onManualEntry={() => { setReview(null); setScreen('new'); setNotice(null); }}
+        onOpenPurchase={(id) => openDetail(id, null)}
+      />
+    );
   } else {
-    purchasesContent = <PurchaseList list={list} status={status} onStatusChange={setStatus} onOpen={(p) => openDetail(p.id, null)} onNew={() => { setNotice(null); setScreen('new'); }} />;
+    purchasesContent = (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {canManageInvoices && <InvoiceSriEntry onDocument={openInvoice} />}
+        <PurchaseList list={list} status={status} onStatusChange={setStatus} onOpen={(p) => openDetail(p.id, null)} onNew={() => { setNotice(null); setScreen('new'); }} />
+        {canManageInvoices && <InvoiceDocumentsList onOpen={openHistoryDocument} refreshKey={documentsKey} />}
+      </div>
+    );
   }
 
   return (

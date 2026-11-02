@@ -48,6 +48,7 @@ export default defineConfig({
         'src/services/inventoryCountsClient.js',
         'src/services/productionClient.js',
         'src/services/purchasesClient.js',
+        'src/services/purchaseDocumentsClient.js',
         'src/services/supplyRequestsClient.js',
         'src/services/salesClient.js',
         'src/services/runfoodCatalogClient.js',

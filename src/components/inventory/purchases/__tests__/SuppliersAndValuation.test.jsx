@@ -3,12 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PurchasesView from '../PurchasesView';
 import * as purchasesClient from '../../../../services/purchasesClient';
+import * as purchaseDocumentsClient from '../../../../services/purchaseDocumentsClient';
 import { listedPurchase, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
 
 describe('Suppliers tab', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([listedPurchase]));
+    vi.spyOn(purchaseDocumentsClient, 'listInvoiceDocuments').mockResolvedValue({ ok: true, data: [] });
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier, { ...supplier, id: 5, name: 'Viejo proveedor', is_active: false, tax_id: null, contact_name: null, phone: null }], 1, 2));
   });
 
@@ -68,6 +70,7 @@ describe('Valuation tab', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([]));
+    vi.spyOn(purchaseDocumentsClient, 'listInvoiceDocuments').mockResolvedValue({ ok: true, data: [] });
   });
 
   it('shows the total, each location and the warning of items without cost', async () => {

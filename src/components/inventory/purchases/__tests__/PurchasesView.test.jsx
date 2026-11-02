@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import PurchasesView from '../PurchasesView';
 import * as purchasesClient from '../../../../services/purchasesClient';
+import * as purchaseDocumentsClient from '../../../../services/purchaseDocumentsClient';
 import * as inventoryClient from '../../../../services/inventoryClient';
 import { draftPurchase, inventoryItems, listedPurchase, pageOf, supplier } from '../../../../hooks/__tests__/purchaseFixtures';
 
@@ -16,6 +17,7 @@ describe('PurchasesView', () => {
     vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([listedPurchase]));
     vi.spyOn(purchasesClient, 'getPurchase').mockResolvedValue({ ok: true, data: { data: draftPurchase } });
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier]));
+    vi.spyOn(purchaseDocumentsClient, 'listInvoiceDocuments').mockResolvedValue({ ok: true, data: [] });
     vi.spyOn(inventoryClient, 'listInventory').mockResolvedValue({ ok: true, data: { items: inventoryItems } });
   });
 
