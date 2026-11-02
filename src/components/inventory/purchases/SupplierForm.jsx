@@ -27,14 +27,14 @@ function initialValues(supplier) {
  * Alta o edición de un proveedor (Brief 20p). El nombre es único en el
  * negocio sin distinguir mayúsculas: el 422 aparece junto al nombre.
  */
-export default function SupplierForm({ supplier, onBack, onSaved }) {
-  const [values, setValues] = useState(() => initialValues(supplier));
+export default function SupplierForm({ supplier, prefill, onBack, onSaved, backLabel = 'Volver a proveedores' }) {
+  const [values, setValues] = useState(() => initialValues(supplier || prefill));
   const { saving, errors, error, save } = useSupplierSave({ onSaved });
   const setValue = (name, value) => setValues((prev) => ({ ...prev, [name]: value }));
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); save(supplier?.id, values); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} /><span>Volver a proveedores</span></button>
+      <button type="button" onClick={onBack} style={styles.back}><ArrowLeft size={16} /><span>{backLabel}</span></button>
       <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>{supplier ? 'Editar proveedor' : 'Nuevo proveedor'}</h3>
 
       <div aria-live="polite">{error && <div style={styles.errorBox}>{error}</div>}</div>

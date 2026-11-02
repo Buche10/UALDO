@@ -54,6 +54,25 @@ export default function PurchasingSettingsFields({ form, saving, onChange }) {
           style={{ padding: '6px 8px', borderRadius: '8px', fontSize: '12px', maxWidth: '140px' }}
         />
       </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label htmlFor="purchasing-buyer-tax-id" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          RUC del negocio (opcional)
+        </label>
+        <input
+          id="purchasing-buyer-tax-id"
+          type="text"
+          inputMode="numeric"
+          maxLength={13}
+          placeholder="13 dígitos"
+          value={form.buyer_tax_id || ''}
+          onChange={(e) => onChange('buyer_tax_id', e.target.value)}
+          disabled={saving}
+          className="form-input"
+          style={{ padding: '6px 8px', borderRadius: '8px', fontSize: '12px', maxWidth: '180px' }}
+        />
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Sirve para avisar si una factura no está a nombre del negocio.</span>
+      </div>
     </>
   );
 }

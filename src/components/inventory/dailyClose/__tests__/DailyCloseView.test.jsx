@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DailyCloseView from '../DailyCloseView';
+import { getTodayStr } from '../dailyCloseDates';
 import * as auth from '../../../../services/auth';
 import * as countsClient from '../../../../services/inventoryCountsClient';
 import { ABILITIES } from '../../../../services/permissions';
@@ -80,7 +81,7 @@ describe('DailyCloseView component (Brief 31p / 31p_fix)', () => {
 
     expect(await screen.findByTestId('mock-count-sheet')).toBeInTheDocument();
     expect(screen.getByText('Planilla conteo #25')).toBeInTheDocument();
-    expect(createSpy).toHaveBeenCalledWith('kitchen', '2026-11-01');
+    expect(createSpy).toHaveBeenCalledWith('kitchen', getTodayStr());
   });
 
   it('al empezar conteo maneja 409 con existing_count_id abriendo el conteo existente', async () => {

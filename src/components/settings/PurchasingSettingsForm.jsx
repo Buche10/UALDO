@@ -16,6 +16,7 @@ export default function PurchasingSettingsForm() {
     base_excess_factor: '1.5',
     receipt_tolerance_pct: '1.0',
     other_purchase_alert_dollars: '50.00',
+    buyer_tax_id: '',
   });
 
   const loadSettings = useCallback(async () => {
@@ -31,6 +32,7 @@ export default function PurchasingSettingsForm() {
         other_purchase_alert_dollars: d.other_purchase_alert_cents !== undefined
           ? (d.other_purchase_alert_cents / 100).toFixed(2)
           : '50.00',
+        buyer_tax_id: d.buyer_tax_id ? String(d.buyer_tax_id) : '',
       });
       setLoaded(true);
     } else {
@@ -73,10 +75,18 @@ export default function PurchasingSettingsForm() {
       return;
     }
 
+    const buyerTaxId = form.buyer_tax_id.trim();
+    if (buyerTaxId && !/^\d{13}$/.test(buyerTaxId)) {
+      setSaving(false);
+      setError('El RUC del negocio debe tener 13 dígitos.');
+      return;
+    }
+
     const payload = {
       base_excess_factor: factor,
       receipt_tolerance_pct: tolerance,
       other_purchase_alert_cents: Math.round(dollars * 100),
+      buyer_tax_id: buyerTaxId || null,
     };
 
     const res = await updatePurchasingSettings(payload);
@@ -95,6 +105,7 @@ export default function PurchasingSettingsForm() {
         other_purchase_alert_dollars: d.other_purchase_alert_cents !== undefined
           ? (d.other_purchase_alert_cents / 100).toFixed(2)
           : prev.other_purchase_alert_dollars,
+        buyer_tax_id: d.buyer_tax_id !== undefined ? String(d.buyer_tax_id || '') : prev.buyer_tax_id,
       }));
     }
 
