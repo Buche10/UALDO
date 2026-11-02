@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   ArrowDownRight,
   Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -88,6 +89,15 @@ export const MODULE_REGISTRY = [
     ],
     subView: 'overtime',
     roleRequiredLabel: 'jefe de cocina, salón, administración o dueño',
+  },
+  {
+    id: 'incidents',
+    label: 'Incidencias',
+    description: 'Reporte y seguimiento de averías, roturas y quejas.',
+    icon: AlertTriangle,
+    permissions: [ABILITIES.INCIDENTS_REPORT, ABILITIES.INCIDENTS_MANAGE],
+    subView: 'incidents',
+    roleRequiredLabel: 'personal del restaurante, jefes de área, administración o dueño',
   },
 ];
 

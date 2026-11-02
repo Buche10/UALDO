@@ -8,6 +8,7 @@ import SalesView from './sales/SalesView';
 import DailyCloseView from './inventory/dailyClose/DailyCloseView';
 import WithdrawalsView from './withdrawals/WithdrawalsView';
 import OvertimeView from './overtime/OvertimeView';
+import IncidentsView from './incidents/IncidentsView';
 import ModuleGrid from './modules/ModuleGrid';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
@@ -131,6 +132,14 @@ export default function EcosystemView({
       <OvertimeView
         user={user}
         initialMonth={negociosParams?.mes || negociosParams?.month}
+        onBack={() => handleSubTabChange('overview')}
+      />
+    );
+  } else if (currentSubTab === 'incidents') {
+    content = (
+      <IncidentsView
+        user={user}
+        initialId={negociosParams?.id}
         onBack={() => handleSubTabChange('overview')}
       />
     );

@@ -18,7 +18,9 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('withdrawals')).toBe(true);
       expect(ALLOWED_SCREENS.has('overtime')).toBe(true);
       expect(ALLOWED_SCREENS.has('horas_extra')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(10);
+      expect(ALLOWED_SCREENS.has('incidencia')).toBe(true);
+      expect(ALLOWED_SCREENS.has('incidencias')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(12);
     });
   });
 
@@ -49,6 +51,7 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ subView: 'withdrawals' })).toEqual({ subView: 'withdrawals' });
       expect(sanitizeActionParams({ subView: 'retiros' })).toEqual({ subView: 'withdrawals' });
       expect(sanitizeActionParams({ subView: 'overtime' })).toEqual({ subView: 'overtime' });
+      expect(sanitizeActionParams({ subView: 'incidents' })).toEqual({ subView: 'incidents' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
@@ -81,21 +84,17 @@ describe('notificationRoutes security and routing', () => {
       });
     });
 
-    it('resolves inventario with subView daily_close to daily_close screen (Brief 31p)', () => {
-      const route = resolveNotificationRoute('inventario', { subView: 'daily_close' });
+    it('resolves incidencia screen with id to negocios incidents subview (Brief 37p)', () => {
+      const route = resolveNotificationRoute('incidencia', { id: 42 });
       expect(route).toEqual({
         tab: 'negocios',
-        subView: 'daily_close',
-        params: { subView: 'daily_close' },
+        subView: 'incidents',
+        params: { id: 42 },
       });
-    });
-
-    it('resolves inventario with subView overtime to overtime screen (Brief 36p)', () => {
-      const route = resolveNotificationRoute('inventario', { subView: 'overtime', mes: '2026-10' });
-      expect(route).toEqual({
+      expect(resolveNotificationRoute('incidencias')).toEqual({
         tab: 'negocios',
-        subView: 'overtime',
-        params: { subView: 'overtime', mes: '2026-10' },
+        subView: 'incidents',
+        params: {},
       });
     });
 
