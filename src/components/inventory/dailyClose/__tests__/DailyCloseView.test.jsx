@@ -6,7 +6,6 @@ import { getTodayStr } from '../dailyCloseDates';
 import * as auth from '../../../../services/auth';
 import * as countsClient from '../../../../services/inventoryCountsClient';
 import { ABILITIES } from '../../../../services/permissions';
-import { getTodayStr } from '../dailyCloseDates';
 
 // Mock de CountSheet para probar la navegación sin acoplar la planilla completa
 vi.mock('../../counts/CountSheet', () => ({
