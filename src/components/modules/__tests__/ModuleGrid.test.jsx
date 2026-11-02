@@ -192,8 +192,44 @@ describe('ModuleGrid component (Brief 30p & 32p_fix & 35p & 36p & 38p)', () => {
     expect(onSelect).toHaveBeenCalledWith('reservations');
   });
 
-  it('muestra mensaje informativo si el usuario no tiene módulos habilitados', () => {
-    const restrictedUser = {
+  describe('tarjeta Compras (Brief 41p)', () => {
+    it('el dueño ve la tarjeta y abre la subvista purchases', () => {
+      const owner = { id: 1, role: 'owner', capabilities: { is_owner: true } };
+      const onSelect = vi.fn();
+
+      render(<ModuleGrid user={owner} onSelectModule={onSelect} />);
+
+      const card = screen.getByRole('button', { name: /Compras:/i });
+      expect(card).toBeInTheDocument();
+      expect(screen.getByText('Compras, recepción contra factura, facturas del SRI y conciliación.')).toBeInTheDocument();
+      fireEvent.click(card);
+      expect(onSelect).toHaveBeenCalledWith('purchases');
+    });
+
+    it('un jefe con solo purchases.receive ve la tarjeta', () => {
+      const kitchenHead = {
+        id: 22,
+        capabilities: { role: ROLES.KITCHEN_HEAD, abilities: [ABILITIES.PURCHASES_RECEIVE] },
+      };
+
+      render(<ModuleGrid user={kitchenHead} onSelectModule={vi.fn()} />);
+
+      expect(screen.getByRole('button', { name: /Compras:/i })).toBeInTheDocument();
+    });
+
+    it('un cocinero sin permisos de compras no ve la tarjeta', () => {
+      const cook = {
+        id: 23,
+        capabilities: { role: ROLES.KITCHEN_STAFF, abilities: [ABILITIES.INVENTORY_VIEW] },
+      };
+
+      render(<ModuleGrid user={cook} onSelectModule={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: /Compras:/i })).not.toBeInTheDocument();
+    });
+  });
+
+  it('muestra mensaje informativo si el usuario no tiene módulos habilitados', () => {    const restrictedUser = {
       id: 99,
       capabilities: { abilities: [] },
     };

@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EcosystemView from '../EcosystemView';
 import * as auth from '../../services/auth';
 import * as client from '../../services/supplyRequestsClient';
+import * as purchasesClient from '../../services/purchasesClient';
+import * as purchaseDocumentsClient from '../../services/purchaseDocumentsClient';
 import { pendingRequest } from '../../hooks/__tests__/supplyRequestFixtures';
 import { ABILITIES, ROLES } from '../../services/permissions';
 
@@ -14,6 +16,8 @@ describe('EcosystemView (Brief 22p / 30p / 35p)', () => {
     vi.restoreAllMocks();
     vi.spyOn(client, 'listRequests').mockResolvedValue(pageOf([pendingRequest]));
     vi.spyOn(client, 'getRequest').mockResolvedValue({ ok: true, data: { data: pendingRequest } });
+    vi.spyOn(purchasesClient, 'listPurchases').mockResolvedValue(pageOf([]));
+    vi.spyOn(purchaseDocumentsClient, 'listInvoiceDocuments').mockResolvedValue({ ok: true, data: [] });
   });
 
   it('shows the Pedidos module card to any member and changes the subview', () => {
@@ -133,6 +137,56 @@ describe('EcosystemView (Brief 22p / 30p / 35p)', () => {
       });
       render(<EcosystemView subView="daily_close" onSubViewChange={vi.fn()} />);
       expect(screen.getByText('Cierre del día')).toBeInTheDocument();
+    });
+  });
+
+  describe('Tarjeta Compras (Brief 41p)', () => {
+    it('el dueño ve la tarjeta Compras y abre PurchasesView', async () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 1,
+        role: 'owner',
+        capabilities: { is_owner: true, abilities: [ABILITIES.PURCHASES_MANAGE] },
+      });
+      const onSubViewChange = vi.fn();
+      const { unmount } = render(<EcosystemView subView="overview" onSubViewChange={onSubViewChange} />);
+
+      const card = screen.getByRole('button', { name: /Compras:/i });
+      expect(card).toBeInTheDocument();
+      fireEvent.click(card);
+      expect(onSubViewChange).toHaveBeenCalledWith('purchases');
+      unmount();
+
+      render(<EcosystemView subView="purchases" onSubViewChange={vi.fn()} />);
+      expect(screen.getByText('Compras y proveedores')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Compras' })).toBeInTheDocument();
+      await waitFor(() => expect(purchasesClient.listPurchases).toHaveBeenCalled());
+    });
+
+    it('un jefe con solo purchases.receive abre Compras por recibir', async () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 25,
+        role: 'kitchen_head',
+        capabilities: { abilities: [ABILITIES.PURCHASES_RECEIVE] },
+      });
+      vi.spyOn(purchasesClient, 'listPurchasesToReceive').mockResolvedValue(pageOf([]));
+
+      render(<EcosystemView subView="purchases" onSubViewChange={vi.fn()} />);
+
+      expect(screen.getByRole('heading', { name: 'Compras por recibir' })).toBeInTheDocument();
+      expect(screen.queryByText('Compras y proveedores')).not.toBeInTheDocument();
+      await waitFor(() => expect(purchasesClient.listPurchasesToReceive).toHaveBeenCalled());
+    });
+
+    it('un cocinero sin permisos de compras no ve la tarjeta', () => {
+      vi.spyOn(auth, 'getUser').mockReturnValue({
+        id: 30,
+        role: 'kitchen_staff',
+        capabilities: { abilities: [ABILITIES.INVENTORY_VIEW] },
+      });
+
+      render(<EcosystemView subView="overview" onSubViewChange={vi.fn()} />);
+
+      expect(screen.queryByRole('button', { name: /Compras:/i })).not.toBeInTheDocument();
     });
   });
 });

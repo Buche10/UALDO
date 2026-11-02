@@ -1,17 +1,51 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Bell } from 'lucide-react';
 import { getUser } from '../services/auth';
 import { roleLabel } from '../services/permissions';
+import { checkMotorHealth } from '../services/aiEngine';
+
+const HEALTH_REFRESH_MS = 60000;
+
+const STATUS_VIEW = {
+  checking: { label: 'Comprobando conexión', dot: 'connecting' },
+  ok: { label: 'Conectado', dot: 'online' },
+  issues: { label: 'Motor con problemas', dot: 'warning' },
+  offline: { label: 'Sin conexión', dot: 'offline' },
+};
 
 export default function Header({
-  nodeStatus,
-  onRefreshStatus,
   activeTab,
   unreadCount = 0,
   onOpenNotifications,
   isAuthenticated = false,
   user = null,
 }) {
+  const [health, setHealth] = useState({ state: 'checking', latency: 0 });
+
+  const refreshHealth = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+    setHealth((prev) => ({ ...prev, state: prev.state === 'ok' ? 'ok' : 'checking' }));
+    const result = await checkMotorHealth();
+    setHealth({ state: result.status, latency: result.latency || 0 });
+  }, []);
+
+  useEffect(() => {
+    refreshHealth();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshHealth();
+    }, HEALTH_REFRESH_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshHealth();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [refreshHealth]);
+
   const getTabTitle = () => {
     switch (activeTab) {
       case 'trabajo': return 'Ualdo Teams';
@@ -25,15 +59,16 @@ export default function Header({
   const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
   const currentUser = user || (isAuthenticated ? getUser() : null);
   const label = currentUser ? roleLabel(currentUser) : null;
+  const statusView = STATUS_VIEW[health.state] || STATUS_VIEW.checking;
 
   return (
     <header className="app-header">
       <div className="brand-section">
-        <img 
-          src="/brand/ualdo-claro.png" 
-          alt="Ualdo" 
-          className="brand-logo-img" 
-          style={{ height: '32px', width: 'auto' }} 
+        <img
+          src="/brand/ualdo-claro.png"
+          alt="Ualdo"
+          className="brand-logo-img"
+          style={{ height: '32px', width: 'auto' }}
         />
         <div>
           <div className="brand-sub">{getTabTitle()}</div>
@@ -100,17 +135,25 @@ export default function Header({
           </button>
         )}
 
-        <div 
-          className="node-status-badge glass-card-interactive" 
-          onClick={onRefreshStatus}
-          title="Toca para re-escanear estado de red"
+        <button
+          type="button"
+          className="node-status-badge glass-card-interactive"
+          onClick={refreshHealth}
+          title="Toca para comprobar la conexión con el motor"
+          aria-label={`Estado del motor: ${statusView.label}`}
         >
-          <span className={`status-dot ${nodeStatus.online ? 'online' : 'connecting'}`}></span>
-          <span>
-            {nodeStatus.online ? `${nodeStatus.latency}ms` : 'Desconectado'}
-          </span>
-          <RefreshCw size={12} className={nodeStatus.checking ? 'spin' : ''} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-        </div>
+          <span className={`status-dot ${statusView.dot}`} aria-hidden="true"></span>
+          <span aria-live="polite">{statusView.label}</span>
+          {health.state === 'ok' && (
+            <span style={{ color: 'var(--text-muted)' }}>{health.latency} ms</span>
+          )}
+          <RefreshCw
+            size={12}
+            className={health.state === 'checking' ? 'spin' : ''}
+            style={{ color: 'var(--text-muted)' }}
+            aria-hidden="true"
+          />
+        </button>
       </div>
     </header>
   );

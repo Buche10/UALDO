@@ -10,7 +10,6 @@ import NotificationsPanel from './components/notifications/NotificationsPanel';
 
 import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
-import { checkNodeStatus } from './services/aiEngine';
 import { isAuthenticated, fetchMe, getUser } from './services/auth';
 import { UNAUTHORIZED_SESSION_MESSAGE } from './services/apiClient';
 import { useUnreadCount } from './hooks/useUnreadCount';
@@ -34,22 +33,6 @@ export default function App() {
   const { unreadCount, refreshUnreadCount } = useUnreadCount({
     enabled: authenticated,
   });
-
-  const [nodeStatus, setNodeStatus] = useState({
-    online: false,
-    latency: 0,
-    checking: false
-  });
-
-  const checkConnection = async () => {
-    setNodeStatus(prev => ({ ...prev, checking: true }));
-    const status = await checkNodeStatus(settings.nodeIp, settings.nodePort, settings.aiProvider);
-    setNodeStatus({
-      online: status.online,
-      latency: status.latency || 12,
-      checking: false
-    });
-  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -83,15 +66,10 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    checkConnection();
-  }, [settings.nodeIp, settings.nodePort, settings.aiProvider, authenticated]);
-
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setAuthenticated(true);
     setSessionNotice(null);
-    checkConnection();
     refreshUnreadCount();
   };
 
@@ -138,8 +116,6 @@ export default function App() {
   return (
     <div id="root">
       <Header 
-        nodeStatus={nodeStatus} 
-        onRefreshStatus={checkConnection} 
         activeTab={activeTab} 
         unreadCount={unreadCount}
         onOpenNotifications={() => setShowNotifications(true)}
