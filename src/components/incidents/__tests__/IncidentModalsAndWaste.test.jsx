@@ -195,12 +195,57 @@ describe('IncidentActionModals validations', () => {
     const textarea = screen.getByLabelText(/Resolución aplicada/i);
     fireEvent.change(textarea, { target: { value: 'abc' } });
 
-    // Since button is disabled for < 5 chars, trigger form submit directly
     const form = textarea.closest('form');
     fireEvent.submit(form);
 
     expect(screen.getByText('La resolución debe tener al menos 5 caracteres.')).toBeInTheDocument();
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('una queja de producción abre el modal con "Producción" elegida', () => {
+    render(<ResolveModal isOpen isComplaint initialCause="produccion" />);
+    const causeSelect = screen.getByLabelText(/Causa de la queja/i);
+    expect(causeSelect).toHaveValue('produccion');
+    expect(screen.queryByText(/Al cambiar la causa se borra la confirmación de cocina/i)).not.toBeInTheDocument();
+  });
+
+  it('cambiar la causa de producción a otra muestra el aviso de confirmación de cocina', () => {
+    render(<ResolveModal isOpen isComplaint initialCause="produccion" />);
+    const causeSelect = screen.getByLabelText(/Causa de la queja/i);
+
+    fireEvent.change(causeSelect, { target: { value: 'servicio' } });
+
+    expect(
+      screen.getByText('Al cambiar la causa se borra la confirmación de cocina.')
+    ).toBeInTheDocument();
+  });
+
+  it('una queja sin causa no deja confirmar sin elegir', () => {
+    const onConfirm = vi.fn();
+    render(<ResolveModal isOpen isComplaint initialCause="" onConfirm={onConfirm} />);
+
+    const causeSelect = screen.getByLabelText(/Causa de la queja/i);
+    expect(causeSelect).toHaveValue('');
+
+    const textarea = screen.getByLabelText(/Resolución aplicada/i);
+    fireEvent.change(textarea, { target: { value: 'Resolución completa aplicada al cliente' } });
+
+    const submitBtn = screen.getByRole('button', { name: /confirmar resolución/i });
+    expect(submitBtn).toBeDisabled();
+
+    const form = textarea.closest('form');
+    fireEvent.submit(form);
+
+    expect(screen.getByText('Debes elegir la causa de la queja.')).toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    fireEvent.change(causeSelect, { target: { value: 'servicio' } });
+    expect(submitBtn).not.toBeDisabled();
+  });
+
+  it('una avería no muestra el selector de causa', () => {
+    render(<ResolveModal isOpen isComplaint={false} />);
+    expect(screen.queryByLabelText(/Causa de la queja/i)).not.toBeInTheDocument();
   });
 
   it('DiscardModal rejects reason with less than 5 chars', () => {

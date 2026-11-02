@@ -172,7 +172,7 @@ export default function IncidentDetail({ incident, user, onBack, onUpdated }) {
       </div>
 
       {activeModal === 'resolve' && (
-        <ResolveModal isOpen isComplaint={isComplaint} onClose={() => setActiveModal(null)} onConfirm={(p) => handleStatusChange('resuelta', p)} submitting={submitting} />
+        <ResolveModal isOpen isComplaint={isComplaint} initialCause={incident.cause || ''} onClose={() => setActiveModal(null)} onConfirm={(p) => handleStatusChange('resuelta', p)} submitting={submitting} />
       )}
       {activeModal === 'discard' && (
         <DiscardModal isOpen onClose={() => setActiveModal(null)} onConfirm={(reason) => handleStatusChange('descartada', { reason })} submitting={submitting} />
