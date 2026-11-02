@@ -1,22 +1,11 @@
 import React from 'react';
 import { Building2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import DobleFiloCard from './DobleFiloCard';
-import InventoryView from './InventoryView';
-import CashCloseView from './CashCloseView';
-import CashDeclarationView from './cashclose/declaration/CashDeclarationView';
-import SupplyRequestsView from './supplyRequests/SupplyRequestsView';
-import SalesView from './sales/SalesView';
-import DailyCloseView from './inventory/dailyClose/DailyCloseView';
-import WithdrawalsView from './withdrawals/WithdrawalsView';
-import OvertimeView from './overtime/OvertimeView';
-import IncidentsView from './incidents/IncidentsView';
-import AssetsView from './assets/AssetsView';
-import LotsView from './lots/LotsView';
-import ReservationsView from './reservations/ReservationsView';
 import ModuleGrid from './modules/ModuleGrid';
+import EcosystemModules from './ecosystem/EcosystemModules';
 import { getModuleBySubView } from './modules/moduleRegistry';
 import { getUser } from '../services/auth';
-import { can, canAny, ABILITIES } from '../services/permissions';
+import { canAny } from '../services/permissions';
 
 export default function EcosystemView({
   subView = 'overview',
@@ -99,85 +88,14 @@ export default function EcosystemView({
         </button>
       </div>
     );
-  } else if (currentSubTab === 'reservations') {
+  } else {
     content = (
-      <ReservationsView
-        key={negociosParams?.nav || 'reservations'}
+      <EcosystemModules
+        currentSubTab={currentSubTab}
         user={user}
-        initialId={negociosParams?.id}
-        onBack={() => handleSubTabChange('overview')}
-      />
-    );
-  } else if (currentSubTab === 'ventas') {
-    content = <SalesView onBack={() => handleSubTabChange('overview')} />;
-  } else if (currentSubTab === 'cash_declaration') {
-    content = (
-      <CashDeclarationView
-        fechaInicial={negociosParams?.fecha || negociosParams?.date}
-        onBack={() => handleSubTabChange('overview')}
-      />
-    );
-  } else if (currentSubTab === 'cashclose') {
-    content = <CashCloseView fechaInicial={negociosParams?.fecha} />;
-  } else if (currentSubTab === 'inventory') {
-    content = <InventoryView initialSubView={negociosParams?.subView} onBack={() => handleSubTabChange('overview')} />;
-  } else if (currentSubTab === 'pedidos') {
-    const openRequest = negociosParams?.id ? { id: negociosParams.id, nav: negociosParams.nav } : null;
-    const canDecide = can(user, ABILITIES.SUPPLY_DECIDE);
-    content = (
-      <SupplyRequestsView
-        canDecide={canDecide}
-        userId={user?.id}
-        openRequest={openRequest}
-        onOpenConsumed={onParamsConsumed}
-      />
-    );
-  } else if (currentSubTab === 'withdrawals') {
-    content = (
-      <WithdrawalsView
-        user={user}
-        initialId={negociosParams?.id}
-      />
-    );
-  } else if (currentSubTab === 'daily_close') {
-    content = (
-      <DailyCloseView
-        user={user}
-        initialDate={negociosParams?.date || negociosParams?.fecha}
-        onBack={() => handleSubTabChange('overview')}
-      />
-    );
-  } else if (currentSubTab === 'overtime') {
-    content = (
-      <OvertimeView
-        user={user}
-        initialMonth={negociosParams?.mes || negociosParams?.month}
-        onBack={() => handleSubTabChange('overview')}
-      />
-    );
-  } else if (currentSubTab === 'incidents') {
-    content = (
-      <IncidentsView
-        user={user}
-        initialId={negociosParams?.id}
-        onBack={() => handleSubTabChange('overview')}
-      />
-    );
-  } else if (currentSubTab === 'assets') {
-    content = (
-      <AssetsView
-        user={user}
-        initialTab={negociosParams?.tab || negociosParams?.initialTab}
-        onBack={() => handleSubTabChange('overview')}
-        onNavigateToIncident={() => handleSubTabChange('incidents')}
-      />
-    );
-  } else if (currentSubTab === 'lots') {
-    content = (
-      <LotsView
-        canManage={can(user, ABILITIES.LOTS_MANAGE)}
-        canSeeCosts={can(user, ABILITIES.INVENTORY_COSTS)}
-        onBack={() => handleSubTabChange('overview')}
+        negociosParams={negociosParams}
+        onParamsConsumed={onParamsConsumed}
+        onNavigate={handleSubTabChange}
       />
     );
   }

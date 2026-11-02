@@ -1,10 +1,4 @@
 // UALDO Local Ecosystem & Apps Orchestrator
-import { 
-  getDoblefiloTables,
-  getDoblefiloMenu,
-  getDoblefiloDailySummary
-} from './doblefiloEngine';
-
 const INITIAL_APPS = [
   {
     id: 'doblefilo_waiter_orders',
@@ -79,17 +73,4 @@ export const registerApp = (app) => {
   }
   saveRegisteredApps(updated);
   return updated;
-};
-
-export const executeLocalTool = async (toolName, params = {}) => {
-  switch (toolName) {
-    case 'doblefilo_get_tables':
-      return await getDoblefiloTables();
-    case 'doblefilo_get_menu':
-      return await getDoblefiloMenu();
-    case 'doblefilo_get_daily_summary':
-      return await getDoblefiloDailySummary();
-    default:
-      return { success: false, error: `Herramienta local no encontrada: ${toolName}` };
-  }
 };

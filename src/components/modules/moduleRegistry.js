@@ -10,6 +10,7 @@ import {
   UtensilsCrossed,
   Tags,
   CalendarDays,
+  ShoppingCart,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -27,6 +28,15 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.INVENTORY_VIEW],
     subView: 'inventory',
     roleRequiredLabel: 'personal de cocina, salón, administración o dueño',
+  },
+  {
+    id: 'purchases',
+    label: 'Compras',
+    description: 'Compras, recepción contra factura, facturas del SRI y conciliación.',
+    icon: ShoppingCart,
+    permissions: [ABILITIES.PURCHASES_MANAGE, ABILITIES.PURCHASES_RECEIVE],
+    subView: 'purchases',
+    roleRequiredLabel: 'administración, jefe de almacén o dueño',
   },
   {
     id: 'reservations',

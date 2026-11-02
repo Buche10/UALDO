@@ -1,25 +1,55 @@
 import { request } from './apiClient';
-import { checkRunfoodConnection } from './doblefiloEngine';
 import { sendMessage } from './assistantClient';
+
+export const ENGINE_HEALTH_PATH = '/health';
+
+/**
+ * Consulta la salud del motor Ualdo (GET /api/v1/health, sin token).
+ * Distingue tres estados: ok, issues (respondió con problemas) y offline.
+ *
+ * @returns {Promise<{status: 'ok'|'issues'|'offline', latency: number, version?: string, error?: string}>}
+ */
+export const checkMotorHealth = async () => {
+  const startTime = Date.now();
+  const res = await request(ENGINE_HEALTH_PATH);
+  const latency = Date.now() - startTime;
+
+  if (!res.ok) {
+    if (res.isNetworkError || res.status === 0) {
+      return { status: 'offline', latency: 0, error: res.error || 'Sin conexión con el motor.' };
+    }
+    const detail = res.data?.status || res.error || `Error ${res.status}`;
+    return { status: 'issues', latency, error: `El motor respondió con problemas (${detail}).` };
+  }
+
+  if (res.data?.status === 'ok') {
+    return { status: 'ok', latency, version: res.data.version };
+  }
+
+  return {
+    status: 'issues',
+    latency,
+    error: 'El motor respondió sin estado correcto.',
+  };
+};
 
 export const checkNodeStatus = async (ip, port, provider = 'motor') => {
   const startTime = Date.now();
   try {
     if (provider === 'motor') {
-      const rf = await checkRunfoodConnection();
-      if (rf.online) {
+      const health = await checkMotorHealth();
+      if (health.status === 'ok') {
         return {
           online: true,
-          latency: rf.latency,
-          models: [`RunFood POS (${rf.url})`],
-          businessName: 'DOBLE FILO - PRINCIPAL'
+          latency: health.latency,
+          models: [health.version ? `Motor Ualdo ${health.version}` : 'Motor Ualdo'],
         };
       }
       return {
         online: false,
         latency: 0,
         models: [],
-        error: rf.error || 'RunFood no responde en ' + rf.url
+        error: health.error || 'Sin conexión con el motor.',
       };
     }
 
