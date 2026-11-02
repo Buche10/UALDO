@@ -6,7 +6,7 @@
 
 **Construye:** el usuario (Antigravity). Audita: Claude.
 
-**Requiere** el Brief 34a del motor desplegado: `C:\laragon\www\UaldoBusiness\docs\briefs\34a_facturas-sri-xml-y-clave-de-acceso.md` y `C:\laragon\www\UaldoBusiness\docs\API-purchase-documents.md`.
+**Requiere** el Brief 34a y su fix (34a_fix) del motor desplegados: `C:\laragon\www\UaldoBusiness\docs\briefs\34a_facturas-sri-xml-y-clave-de-acceso.md` y `C:\laragon\www\UaldoBusiness\docs\API-purchase-documents.md`.
 
 **Este brief reemplaza al antiguo 34p** junto con el 34bp.
 
@@ -31,6 +31,7 @@ Desde Compras, administración sube el XML de la factura o escribe (o escanea) l
    - `uploadInvoiceXml(file)`: solo `.xml` (`text/xml` o `application/xml`), hasta 1 MB, comprobado antes de subir.
    - `submitAccessKey(key)`: quita espacios y guiones; exige 49 dígitos y valida el dígito verificador módulo 11 del SRI en el navegador (misma regla del 34a) antes de llamar a la red.
    - `getInvoiceDocument(id)`, `listInvoiceDocuments({ status, page })` y `confirmInvoice(id, { supplier_id, lines })`.
+   - En `confirmInvoice`, cada línea que viene de la factura lleva `source_index` (su posición en `extraction.lines`, Brief 34a_fix); las líneas agregadas a mano van sin él. Así el motor aprende las equivalencias aunque la persona reordene o quite líneas.
    - Desenvuelve `res.data.data` en un solo sitio, como `withdrawalsClient.js`.
 3. **Cargar** (`InvoiceSriEntry.jsx`, visible con `purchases.manage` en Compras), con dos opciones:
    - "Subir XML": `<input type="file" accept=".xml,text/xml,application/xml">`.
