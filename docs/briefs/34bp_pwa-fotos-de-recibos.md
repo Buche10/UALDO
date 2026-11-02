@@ -2,7 +2,7 @@
 
 ## Contexto
 
-**Repo:** `C:\laragon\www\UALDO` (PWA de Ualdo: React 18, Vite 5, Vitest 2, Testing Library, ESLint 9, `lucide-react`; empaquetada para Android con Capacitor según el Brief 18p). Crea la rama `feat/pwa-fotos-de-recibos` desde `main` con el Brief 34ap fusionado. No toques el motor.
+**Repo:** `C:\laragon\www\UALDO` (PWA de Ualdo: React 18, Vite 5, Vitest 2, Testing Library, ESLint 9, `lucide-react`; empaquetada para Android con Capacitor según el Brief 18p). Crea la rama `feat/pwa-fotos-de-recibos` desde `main` con los Briefs 34ap, 38p_fix, 39p y 40p fusionados. No toques el motor.
 
 **Construye:** el usuario (Antigravity). Audita: Claude.
 
@@ -30,6 +30,12 @@ Desde Compras, administración toma una foto del recibo o elige un PDF. La app l
    - `timeout` y `provider_error`: "No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano."
    - Siempre con la opción "Cargar la compra a mano".
 4. **Revisar.** Reutiliza `InvoiceReview.jsx` y añade arriba la vista previa: la imagen con `URL.createObjectURL` (liberada al desmontar) o un botón "Ver PDF" que abre el `Blob`. Si la cabecera trae "No se pudo confirmar con el SRI.", muéstralo como el resto de motivos.
+
+### Pendientes menores de las auditorías del 38p_fix, 39p y 40p
+
+- `src/components/assets/AssetCountSheet.jsx` tiene exactamente 200 líneas; el límite es menos de 200. Extrae la barra de acciones a `AssetCountSheetActions.jsx`.
+- El motivo para usar otro lote admite 300 caracteres en la app (`LOT_REASON_MAX` en `src/services/lotSelection.js`), pero el motor acepta hasta 255. Bájalo a 255 y ajusta su test.
+- `src/components/InventoryView.jsx` y `src/components/SettingsView.jsx` pasan de 200 líneas desde antes de estos briefs. Extrae al menos las secciones de lotes y de reservas a componentes propios hasta dejarlos por debajo de 200, sin cambiar el comportamiento.
 
 ## Restricciones técnicas
 
@@ -64,4 +70,5 @@ Prueba manual en Android: tomar una foto con la cámara y verificar que se sube 
 - [ ] Subir una foto o un PDF desde Compras, también con la cámara en Android.
 - [ ] Imágenes grandes reducidas antes de subir.
 - [ ] Misma revisión del 34ap, con la imagen o el PDF a la vista.
+- [ ] Pendientes menores: `AssetCountSheet.jsx`, `InventoryView.jsx` y `SettingsView.jsx` por debajo de 200 líneas; motivo de lote hasta 255.
 - [ ] Lint, tests y build en verde; cero emojis; marca Ualdo; sin colores fijos.
