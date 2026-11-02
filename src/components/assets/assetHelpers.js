@@ -105,3 +105,31 @@ export function formatPeriodLabel(period) {
   const monthName = months[idx] || month;
   return `${monthName} ${year}`;
 }
+
+/**
+ * Determina el estado, etiqueta de acción e ícono del conteo de activos.
+ *
+ * @param {object|null} count
+ * @param {boolean} canValidate
+ * @returns {{ label: string, action: string, icon: 'draft'|'warning'|'ready'|'validated' }|null}
+ */
+export function getAssetCountStatusInfo(count, canValidate) {
+  if (!count) return null;
+  if (count.status === 'draft') {
+    return { label: 'En borrador', action: 'Seguir contando', icon: 'draft' };
+  }
+  if (count.status === 'submitted') {
+    const diffLines = (count.lines || []).filter(
+      (l) => l.difference !== 0 && l.difference !== null && l.difference !== undefined
+    );
+    const hasMissing = diffLines.some((l) => !l.explanation || !l.explanation.trim());
+    if (hasMissing) {
+      return { label: 'Enviado, faltan explicaciones', action: 'Explicar diferencias', icon: 'warning' };
+    }
+    return { label: 'Listo para validar', action: canValidate ? 'Validar' : 'Ver', icon: 'ready' };
+  }
+  if (count.status === 'validated') {
+    return { label: 'Validado', action: 'Ver', icon: 'validated' };
+  }
+  return null;
+}

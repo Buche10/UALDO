@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DailyCloseView from '../DailyCloseView';
 import * as auth from '../../../../services/auth';
@@ -34,6 +34,12 @@ vi.mock('../../counts/CountSheet', () => ({
 describe('DailyCloseView component (Brief 31p / 31p_fix)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const baseSummary = {

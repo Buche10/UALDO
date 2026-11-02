@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, UploadCloud, Search } from 'lucide-react';
 import { listAssets, ASSET_CATEGORIES, ASSET_CATEGORY_LABELS } from '../../services/assetsClient';
 import AssetCatalogTable from './AssetCatalogTable';
@@ -19,7 +19,7 @@ export default function AssetCatalogTab({ canManage }) {
   const [statusAsset, setStatusAsset] = useState(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
 
-  const loadAssets = async () => {
+  const loadAssets = useCallback(async () => {
     setLoading(true);
     setError(null);
     const filter = categoryFilter !== 'all' ? { category: categoryFilter } : {};
@@ -27,11 +27,11 @@ export default function AssetCatalogTab({ canManage }) {
     setLoading(false);
     if (res.ok) setAssets(Array.isArray(res.data) ? res.data : []);
     else setError(res.error || 'Error al cargar el catálogo de activos.');
-  };
+  }, [categoryFilter]);
 
   useEffect(() => {
     loadAssets();
-  }, [categoryFilter]);
+  }, [loadAssets]);
 
   const filteredAssets = assets.filter((item) => {
     if (!searchTerm.trim()) return true;

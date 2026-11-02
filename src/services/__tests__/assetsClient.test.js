@@ -7,6 +7,8 @@ import {
   setAssetStatus,
   importAssets,
   createAssetCount,
+  getAssetCountForPeriod,
+  getAssetCount,
   saveAssetCountLines,
   submitAssetCount,
   saveAssetExplanations,
@@ -179,6 +181,45 @@ describe('assetsClient', () => {
         method: 'POST',
         body: { area: 'lounge', period: '2026-11' },
       });
+    });
+
+    it('createAssetCount unwraps data.id on 409 conflict', async () => {
+      apiClient.request.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        data: { data: { id: 42, status: 'draft' }, error: 'Ya existe' },
+      });
+
+      const res = await createAssetCount('lounge', '2026-11');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(409);
+      expect(res.data).toEqual({ id: 42, status: 'draft' });
+    });
+
+    it('getAssetCountForPeriod queries GET /asset-counts?area=&period=', async () => {
+      apiClient.request.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { data: { id: 12, area: 'lounge', period: '2026-11', status: 'draft' } },
+      });
+
+      const res = await getAssetCountForPeriod('lounge', '2026-11');
+      expect(res.ok).toBe(true);
+      expect(apiClient.request).toHaveBeenCalledWith('/asset-counts?area=lounge&period=2026-11');
+      expect(res.data).toEqual({ id: 12, area: 'lounge', period: '2026-11', status: 'draft' });
+    });
+
+    it('getAssetCount queries GET /asset-counts/{id}', async () => {
+      apiClient.request.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { data: { id: 12, lines: [] } },
+      });
+
+      const res = await getAssetCount(12);
+      expect(res.ok).toBe(true);
+      expect(apiClient.request).toHaveBeenCalledWith('/asset-counts/12');
+      expect(res.data).toEqual({ id: 12, lines: [] });
     });
 
     it('saveAssetCountLines validates lines and sends PUT', async () => {

@@ -1,7 +1,7 @@
 import { request } from './apiClient';
 
 /**
- * Cliente de activos, vajilla y conteo mensual (Brief 38 / 38p).
+ * Cliente de activos, vajilla y conteo mensual (Brief 38 / 38p / 38p_fix).
  */
 
 export const ASSET_CATEGORIES = Object.freeze([
@@ -50,7 +50,7 @@ function normalizeAssetResponse(res) {
       ok: false,
       status: res.status,
       error: res.error || 'Error al procesar la solicitud.',
-      data: res.data || null,
+      data: res.data?.data !== undefined ? res.data.data : (res.data || null),
     };
   }
   return {
@@ -223,6 +223,35 @@ export async function importAssets(rows = []) {
     method: 'POST',
     body: { rows },
   });
+  return normalizeAssetResponse(res);
+}
+
+/**
+ * GET /api/v1/asset-counts?area=&period=
+ */
+export async function getAssetCountForPeriod(area, period = '') {
+  if (!ASSET_AREAS.includes(area)) {
+    return { ok: false, status: 400, error: 'El área debe ser cocina o salón.' };
+  }
+  const params = new URLSearchParams({ area });
+  if (period && typeof period === 'string' && PERIOD_REGEX.test(period.trim())) {
+    params.set('period', period.trim());
+  }
+
+  const res = await request(`/asset-counts?${params.toString()}`);
+  return normalizeAssetResponse(res);
+}
+
+/**
+ * GET /api/v1/asset-counts/{id}
+ */
+export async function getAssetCount(id) {
+  const validId = validateId(id);
+  if (!validId) {
+    return { ok: false, status: 400, error: 'Identificador de conteo no válido.' };
+  }
+
+  const res = await request(`/asset-counts/${validId}`);
   return normalizeAssetResponse(res);
 }
 

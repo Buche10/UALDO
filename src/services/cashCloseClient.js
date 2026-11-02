@@ -4,7 +4,7 @@ import { normalizeAmount } from './money';
 const DECLARATION_ALIASES = new Set(['hoy', 'ayer', 'today', 'yesterday']);
 
 /**
- * Valida si la fecha es valida para la declaracion del jefe (hoy, ayer o YYYY-MM-DD).
+ * Valida si la fecha es válida para la declaración del jefe (hoy, ayer o YYYY-MM-DD).
  *
  * @param {string} fecha
  * @returns {boolean}
@@ -34,7 +34,7 @@ export const DIFFERENCE_CAUSE_LABELS = Object.freeze({
 });
 
 /**
- * Valida si una fecha tiene formato YYYY-MM-DD y corresponde a un dia de calendario real.
+ * Valida si una fecha tiene formato YYYY-MM-DD y corresponde a un día de calendario real.
  *
  * @param {string} fecha
  * @returns {boolean}
@@ -83,14 +83,14 @@ const NETOS_WHITELIST = new Set([
 ]);
 
 /**
- * Consulta la lista de los cierres mas recientes (hasta 60).
+ * Consulta la lista de los cierres más recientes (hasta 60).
  */
 export async function listCloses() {
   return request('/restaurant/cash-close');
 }
 
 /**
- * Consulta el cierre de una fecha especifica.
+ * Consulta el cierre de una fecha específica.
  *
  * @param {string} fecha
  */
@@ -99,7 +99,7 @@ export async function getClose(fecha) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
     };
   }
 
@@ -118,7 +118,7 @@ export async function reviewClose(fecha, data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
     };
   }
 
@@ -128,7 +128,7 @@ export async function reviewClose(fecha, data = {}) {
         return {
           ok: false,
           status: 400,
-          error: `Clave no permitida en revision: ${key}`
+          error: `Clave no permitida en revisión: ${key}`
         };
       }
     }
@@ -141,7 +141,7 @@ export async function reviewClose(fecha, data = {}) {
 }
 
 /**
- * Carga los netos reales acreditados por el banco para un dia cerrado.
+ * Carga los netos reales acreditados por el banco para un día cerrado.
  *
  * @param {string} fecha
  * @param {Object} netos
@@ -151,7 +151,7 @@ export async function setNetosReales(fecha, netos = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
     };
   }
 
@@ -194,7 +194,7 @@ export async function setNetosReales(fecha, netos = {}) {
 }
 
 /**
- * Reabre un cierre que se encuentra cerrado, pasandolo a revision.
+ * Reabre un cierre que se encuentra cerrado, pasándolo a revisión.
  *
  * @param {string} fecha
  * @param {string} motivo
@@ -204,7 +204,7 @@ export async function reopenClose(fecha, motivo) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
     };
   }
 
@@ -232,7 +232,7 @@ export async function createManualClose(data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida para el cierre manual.'
+      error: 'Fecha inválida para el cierre manual.'
     };
   }
 
@@ -253,7 +253,7 @@ export async function reevaluateClose(fecha) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
+      error: 'Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.'
     };
   }
 
@@ -263,7 +263,7 @@ export async function reevaluateClose(fecha) {
 }
 
 /**
- * Consulta la declaracion del cierre de caja para el jefe de salon.
+ * Consulta la declaración del cierre de caja para el jefe de salón.
  *
  * @param {string} fecha
  * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
@@ -273,7 +273,7 @@ export async function getDeclaration(fecha) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
+      error: 'Fecha inválida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
     };
   }
 
@@ -281,7 +281,7 @@ export async function getDeclaration(fecha) {
 }
 
 /**
- * Envia la declaracion del cierre de caja por el jefe de salon.
+ * Envía la declaración del cierre de caja por el jefe de salón.
  *
  * @param {string} fecha
  * @param {Object} data
@@ -292,7 +292,7 @@ export async function submitDeclaration(fecha, data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'Fecha invalida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
+      error: 'Fecha inválida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.'
     };
   }
 
@@ -301,7 +301,7 @@ export async function submitDeclaration(fecha, data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'El monto de efectivo contado es obligatorio y debe ser valido.'
+      error: 'El monto de efectivo contado es obligatorio y debe ser válido.'
     };
   }
 
@@ -317,7 +317,7 @@ export async function submitDeclaration(fecha, data = {}) {
         return {
           ok: false,
           status: 400,
-          error: 'Cada medio de pago debe incluir un identificador y un monto valido.'
+          error: 'Cada medio de pago debe incluir un identificador y un monto válido.'
         };
       }
       cleanMedios.push({ medio: m.medio, monto: normalizedMonto });
@@ -330,7 +330,7 @@ export async function submitDeclaration(fecha, data = {}) {
       return {
         ok: false,
         status: 400,
-        error: 'Causa de diferencia invalida.'
+        error: 'Causa de diferencia inválida.'
       };
     }
     payload.difference_cause = data.difference_cause;
@@ -345,7 +345,7 @@ export async function submitDeclaration(fecha, data = {}) {
       return {
         ok: false,
         status: 400,
-        error: 'La explicacion debe ser texto de hasta 500 caracteres sin etiquetas HTML.'
+        error: 'La explicación debe ser texto de hasta 500 caracteres sin etiquetas HTML.'
       };
     }
     if (data.difference_explanation.trim()) {
@@ -376,7 +376,7 @@ export async function submitDeclaration(fecha, data = {}) {
 }
 
 /**
- * Consulta la configuracion de cierre de caja (jefe de salon, recordatorio y escalamiento).
+ * Consulta la configuración de cierre de caja (jefe de salón, recordatorio y escalamiento).
  *
  * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
  */
@@ -385,7 +385,7 @@ export async function getCashCloseSettings() {
 }
 
 /**
- * Actualiza la configuracion de cierre de caja.
+ * Actualiza la configuración de cierre de caja.
  *
  * @param {Object} data
  * @returns {Promise<{ok: boolean, status: number, data?: any, error?: string}>}
@@ -395,7 +395,7 @@ export async function updateCashCloseSettings(data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'Datos de configuracion invalidos.'
+      error: 'Datos de configuración inválidos.'
     };
   }
 
@@ -417,7 +417,7 @@ export async function updateCashCloseSettings(data = {}) {
       return {
         ok: false,
         status: 400,
-        error: 'reminder_time debe tener formato HH:MM y ser como maximo 23:45.'
+        error: 'La hora del recordatorio debe tener formato HH:MM y ser como máximo 23:45.'
       };
     }
     payload.reminder_time = data.reminder_time;
@@ -428,7 +428,7 @@ export async function updateCashCloseSettings(data = {}) {
       return {
         ok: false,
         status: 400,
-        error: 'escalation_time debe tener formato HH:MM y ser como maximo 23:45.'
+        error: 'La hora límite debe tener formato HH:MM y ser como máximo 23:45.'
       };
     }
     payload.escalation_time = data.escalation_time;
@@ -438,7 +438,7 @@ export async function updateCashCloseSettings(data = {}) {
     return {
       ok: false,
       status: 400,
-      error: 'No se enviaron campos de configuracion para actualizar.'
+      error: 'No se enviaron campos de configuración para actualizar.'
     };
   }
 

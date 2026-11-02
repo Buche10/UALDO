@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { ClipboardCheck, CheckCircle2 } from 'lucide-react';
-import { createAssetCount } from '../../services/assetsClient';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ClipboardCheck, CheckCircle2, Clock, AlertTriangle, Eye } from 'lucide-react';
+import { createAssetCount, getAssetCountForPeriod, getAssetCount } from '../../services/assetsClient';
 import {
   getUserAssetAreas,
+  canValidateAssetArea,
   getCurrentPeriod,
   getPreviousPeriod,
   ASSET_AREA_LABELS,
   formatPeriodLabel,
+  getAssetCountStatusInfo,
 } from './assetHelpers';
 import AssetCountSheet from './AssetCountSheet';
 import AssetExplanationsForm from './AssetExplanationsForm';
@@ -16,33 +18,32 @@ export default function AssetCountTab({ user }) {
   const [selectedArea, setSelectedArea] = useState(allowedAreas[0] || 'lounge');
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod);
   const [activeCount, setActiveCount] = useState(null);
+  const [loadingCount, setLoadingCount] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
 
-  const getStorageKey = (area, period) => `ualdo_asset_count_${area}_${period}`;
+  const canValidate = canValidateAssetArea(user, selectedArea);
+
+  const loadCount = useCallback(async (area, period) => {
+    setLoadingCount(true);
+    setError(null);
+    const res = await getAssetCountForPeriod(area, period);
+    setLoadingCount(false);
+    if (res.ok) {
+      setActiveCount(res.data || null);
+    } else if (res.status === 404) {
+      setActiveCount(null);
+    } else {
+      setActiveCount(null);
+      setError(res.error || 'Error al consultar el conteo.');
+    }
+  }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(getStorageKey(selectedArea, selectedPeriod));
-      if (saved) {
-        setActiveCount(JSON.parse(saved));
-      } else {
-        setActiveCount(null);
-      }
-    } catch {
-      setActiveCount(null);
-    }
-    setError(null);
-  }, [selectedArea, selectedPeriod]);
-
-  const updateCountState = (count) => {
-    setActiveCount(count);
-    try {
-      if (count) {
-        localStorage.setItem(getStorageKey(count.area, count.period), JSON.stringify(count));
-      }
-    } catch {}
-  };
+    setIsViewing(false);
+    loadCount(selectedArea, selectedPeriod);
+  }, [selectedArea, selectedPeriod, loadCount]);
 
   const handleStartCount = async () => {
     setStarting(true);
@@ -51,36 +52,64 @@ export default function AssetCountTab({ user }) {
     setStarting(false);
 
     if (res.ok) {
-      updateCountState(res.data);
+      setActiveCount(res.data);
+      setIsViewing(true);
     } else if (res.status === 409) {
-      setError('Ya existe un conteo registrado para esta área y periodo. Revisa el reporte del mes.');
+      const existingId = res.data?.id;
+      if (existingId) {
+        setLoadingCount(true);
+        const existingRes = await getAssetCount(existingId);
+        setLoadingCount(false);
+        if (existingRes.ok) {
+          setActiveCount(existingRes.data);
+          setIsViewing(true);
+          return;
+        }
+      }
+      setError('Ya existe un conteo registrado para esta área y periodo.');
     } else {
       setError(res.error || 'Error al iniciar el conteo.');
     }
   };
 
-  if (activeCount && activeCount.status === 'draft') {
-    return (
-      <AssetCountSheet
-        count={activeCount}
-        onBack={() => setActiveCount(null)}
-        onSubmitted={updateCountState}
-        onCountUpdated={updateCountState}
-      />
-    );
-  }
-
-  if (activeCount && activeCount.status === 'submitted') {
+  if (isViewing && activeCount) {
+    if (activeCount.status === 'draft') {
+      return (
+        <AssetCountSheet
+          count={activeCount}
+          onBack={() => {
+            setIsViewing(false);
+            loadCount(selectedArea, selectedPeriod);
+          }}
+          onSubmitted={(updated) => setActiveCount(updated)}
+          onCountUpdated={(updated) => setActiveCount(updated)}
+        />
+      );
+    }
     return (
       <AssetExplanationsForm
         count={activeCount}
         user={user}
-        onBack={() => setActiveCount(null)}
-        onValidated={updateCountState}
-        onExplanationsSaved={updateCountState}
+        onBack={() => {
+          setIsViewing(false);
+          loadCount(selectedArea, selectedPeriod);
+        }}
+        onValidated={(updated) => {
+          setActiveCount(updated);
+          setIsViewing(false);
+          loadCount(selectedArea, selectedPeriod);
+        }}
+        onExplanationsSaved={(updated) => setActiveCount(updated)}
       />
     );
   }
+
+  const statusInfo = getAssetCountStatusInfo(activeCount, canValidate);
+  const StatusIcon = statusInfo?.icon === 'ready' || statusInfo?.icon === 'validated'
+    ? CheckCircle2
+    : statusInfo?.icon === 'warning'
+      ? AlertTriangle
+      : Clock;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -106,7 +135,6 @@ export default function AssetCountTab({ user }) {
               ))}
             </select>
           </div>
-
           <div>
             <label htmlFor="count-period-select" style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Periodo</label>
             <select
@@ -123,36 +151,36 @@ export default function AssetCountTab({ user }) {
 
         {error && <div role="alert" style={{ padding: '8px 10px', borderRadius: '6px', background: 'var(--error-soft)', color: 'var(--error)', fontSize: '12px' }}>{error}</div>}
 
-        {activeCount && activeCount.status === 'validated' ? (
-          <div style={{ padding: '12px', borderRadius: '8px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success)', fontWeight: 600, fontSize: '13px' }}>
-              <CheckCircle2 size={16} /> Conteo del periodo validado
+        {loadingCount ? (
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '6px 0' }}>Consultando estado del conteo...</div>
+        ) : activeCount && statusInfo ? (
+          <div style={{ padding: '12px', borderRadius: '8px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                <StatusIcon size={16} /> Estado: <span>{statusInfo.label}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsViewing(true)}
+                style={{ padding: '6px 14px', borderRadius: '9999px', background: 'var(--primary)', color: 'var(--on-primary)', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                {statusInfo.action === 'Ver' ? <Eye size={13} /> : <ClipboardCheck size={13} />} {statusInfo.action}
+              </button>
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Validado por: <strong>{activeCount.validated_by || 'Jefe de área'}</strong>
-            </div>
+            {activeCount.validated_by && (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Validado por: <strong>{activeCount.validated_by}</strong>
+              </div>
+            )}
           </div>
         ) : (
           <button
             type="button"
             onClick={handleStartCount}
             disabled={starting}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '9999px',
-              background: 'var(--primary)',
-              color: 'var(--on-primary)',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: starting ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-            }}
+            style={{ padding: '10px 18px', borderRadius: '9999px', background: 'var(--primary)', color: 'var(--on-primary)', border: 'none', fontWeight: 600, fontSize: '13px', cursor: starting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            <ClipboardCheck size={16} /> {starting ? 'Iniciando...' : 'Empezar conteo'}
+            <ClipboardCheck size={16} /> {starting ? 'Iniciando...' : 'Empezar'}
           </button>
         )}
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getAssetReport } from '../../services/assetsClient';
 import {
   getUserAssetAreas,
@@ -19,7 +19,7 @@ export default function AssetReportTab({ user, onNavigateToIncident }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     setError(null);
     const res = await getAssetReport(period, selectedArea || undefined);
@@ -29,11 +29,11 @@ export default function AssetReportTab({ user, onNavigateToIncident }) {
     } else {
       setError(res.error || 'Error al cargar el reporte de activos.');
     }
-  };
+  }, [period, selectedArea]);
 
   useEffect(() => {
     loadReport();
-  }, [period, selectedArea]);
+  }, [loadReport]);
 
   const activos = reportData?.activos || [];
   const porReponer = reportData?.por_reponer || [];

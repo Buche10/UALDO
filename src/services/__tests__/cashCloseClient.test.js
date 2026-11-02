@@ -75,6 +75,7 @@ describe('cashCloseClient', () => {
 
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -106,96 +107,89 @@ describe('cashCloseClient', () => {
   });
 
   describe('reviewClose', () => {
-    it('rechaza claves fuera de la lista blanca sin llamar a la API', async () => {
-      const requestSpy = vi.spyOn(apiClient, 'request');
-      const res = await reviewClose('2026-10-05', {
-        efectivo_contado: '150.00',
-        clave_prohibida: 'hack'
-      });
-
+    it('rechaza fecha invalida', async () => {
+      const res = await reviewClose('invalid');
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
-      expect(res.error).toContain('Clave no permitida');
-      expect(requestSpy).not.toHaveBeenCalled();
+      expect(res.error).toBe('Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.');
     });
 
-    it('rechaza fecha invalida sin llamar a la API', async () => {
-      const requestSpy = vi.spyOn(apiClient, 'request');
-      const res = await reviewClose('bad-date', { efectivo_contado: '100' });
-
+    it('rechaza claves no permitidas en la revision', async () => {
+      const res = await reviewClose('2026-10-05', { invalid_key: 123 });
       expect(res.ok).toBe(false);
-      expect(requestSpy).not.toHaveBeenCalled();
+      expect(res.status).toBe(400);
+      expect(res.error).toContain('Clave no permitida en revisión: invalid_key');
     });
 
-    it('envia claves de la lista blanca con fecha codificada en la ruta', async () => {
+    it('permite claves validas y llama con PUT', async () => {
       const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 200,
         data: { fecha: '2026-10-05' }
       });
 
-      const res = await reviewClose('2026-10-05', {
-        efectivo_contado: '150.00',
-        observacion: 'Revisado por dueño'
-      });
-
+      const res = await reviewClose('2026-10-05', { efectivo_contado: 100 });
       expect(res.ok).toBe(true);
       expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/2026-10-05', {
         method: 'PUT',
-        body: {
-          efectivo_contado: '150.00',
-          observacion: 'Revisado por dueño'
-        }
+        body: { efectivo_contado: 100 }
       });
     });
   });
 
   describe('setNetosReales', () => {
-    it('requiere al menos un neto real y rechaza claves ajenas', async () => {
-      const requestSpy = vi.spyOn(apiClient, 'request');
-      const resEmpty = await setNetosReales('2026-10-05', {});
-      expect(resEmpty.ok).toBe(false);
-      expect(requestSpy).not.toHaveBeenCalled();
-
-      const resInvalidKey = await setNetosReales('2026-10-05', { clave_falsa: '10' });
-      expect(resInvalidKey.ok).toBe(false);
-      expect(requestSpy).not.toHaveBeenCalled();
+    it('rechaza fechas invalidas', async () => {
+      const res = await setNetosReales('invalid');
+      expect(res.ok).toBe(false);
+      expect(res.error).toBe('Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.');
     });
 
-    it('envia los netos reales si son validos', async () => {
+    it('rechaza payload sin claves validas de netos', async () => {
+      const res = await setNetosReales('2026-10-05', {});
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain('Debes incluir al menos un neto real');
+    });
+
+    it('rechaza claves no permitidas', async () => {
+      const res = await setNetosReales('2026-10-05', { bad_key: 10 });
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain('Clave no permitida en netos reales: bad_key');
+    });
+
+    it('envia netos reales validos con POST', async () => {
       const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 200,
         data: { fecha: '2026-10-05' }
       });
 
-      const res = await setNetosReales('2026-10-05', { tarjeta_neto: '120.50' });
+      const res = await setNetosReales('2026-10-05', { tarjeta_neto: 50.5 });
       expect(res.ok).toBe(true);
       expect(requestSpy).toHaveBeenCalledWith('/restaurant/cash-close/2026-10-05/netos-reales', {
         method: 'POST',
-        body: { tarjeta_neto: '120.50' }
+        body: { tarjeta_neto: 50.5 }
       });
     });
   });
 
   describe('reopenClose', () => {
-    it('exige motivo no vacio de hasta 300 caracteres', async () => {
-      const requestSpy = vi.spyOn(apiClient, 'request');
-      const resEmpty = await reopenClose('2026-10-05', '');
-      expect(resEmpty.ok).toBe(false);
-      expect(requestSpy).not.toHaveBeenCalled();
-
-      const longReason = 'a'.repeat(301);
-      const resLong = await reopenClose('2026-10-05', longReason);
-      expect(resLong.ok).toBe(false);
-      expect(requestSpy).not.toHaveBeenCalled();
+    it('valida la fecha', async () => {
+      const res = await reopenClose('invalid', 'motivo');
+      expect(res.ok).toBe(false);
+      expect(res.error).toBe('Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.');
     });
 
-    it('envia motivo valido a /reabrir', async () => {
+    it('exige motivo no vacio de hasta 300 caracteres', async () => {
+      const res = await reopenClose('2026-10-05', '   ');
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain('El motivo de reapertura es obligatorio');
+    });
+
+    it('llama a POST /restaurant/cash-close/{fecha}/reabrir con el motivo recortado', async () => {
       const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 200,
-        data: { fecha: '2026-10-05' }
+        data: { fecha: '2026-10-05', status: 'en_revision' }
       });
 
       const res = await reopenClose('2026-10-05', 'Correccion de arqueo');
@@ -212,6 +206,7 @@ describe('cashCloseClient', () => {
       const requestSpy = vi.spyOn(apiClient, 'request');
       const res = await createManualClose({ fecha: 'invalid' });
       expect(res.ok).toBe(false);
+      expect(res.error).toBe('Fecha inválida para el cierre manual.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -237,6 +232,7 @@ describe('cashCloseClient', () => {
       const res = await reevaluateClose('invalid-date');
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Fecha inválida. Debe tener formato AAAA-MM-DD y ser una fecha real.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -261,6 +257,7 @@ describe('cashCloseClient', () => {
       const res = await getDeclaration('2026-02-31');
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Fecha inválida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -283,6 +280,7 @@ describe('cashCloseClient', () => {
       const res = await submitDeclaration('bad-date', { efectivo_contado: '150.00' });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Fecha inválida. Debe ser hoy, ayer o tener formato AAAA-MM-DD.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -291,6 +289,7 @@ describe('cashCloseClient', () => {
       const res = await submitDeclaration('hoy', { efectivo_contado: 'invalido' });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('El monto de efectivo contado es obligatorio y debe ser válido.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -302,6 +301,7 @@ describe('cashCloseClient', () => {
       });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Cada medio de pago debe incluir un identificador y un monto válido.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -313,6 +313,7 @@ describe('cashCloseClient', () => {
       });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('Causa de diferencia inválida.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -324,6 +325,7 @@ describe('cashCloseClient', () => {
       });
       expect(res.ok).toBe(false);
       expect(res.status).toBe(400);
+      expect(res.error).toBe('La explicación debe ser texto de hasta 500 caracteres sin etiquetas HTML.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -391,9 +393,15 @@ describe('cashCloseClient', () => {
 
     it('updateCashCloseSettings rechaza payload invalido sin campos', async () => {
       const requestSpy = vi.spyOn(apiClient, 'request');
-      const res = await updateCashCloseSettings({});
-      expect(res.ok).toBe(false);
-      expect(res.status).toBe(400);
+      const resNull = await updateCashCloseSettings(null);
+      expect(resNull.ok).toBe(false);
+      expect(resNull.status).toBe(400);
+      expect(resNull.error).toBe('Datos de configuración inválidos.');
+
+      const resEmpty = await updateCashCloseSettings({});
+      expect(resEmpty.ok).toBe(false);
+      expect(resEmpty.status).toBe(400);
+      expect(resEmpty.error).toBe('No se enviaron campos de configuración para actualizar.');
       expect(requestSpy).not.toHaveBeenCalled();
     });
 
@@ -404,9 +412,16 @@ describe('cashCloseClient', () => {
 
       const resBadTime = await updateCashCloseSettings({ reminder_time: '25:00' });
       expect(resBadTime.ok).toBe(false);
+      expect(resBadTime.error).toBe('La hora del recordatorio debe tener formato HH:MM y ser como máximo 23:45.');
 
       const resOverLimit = await updateCashCloseSettings({ reminder_time: '23:50' });
       expect(resOverLimit.ok).toBe(false);
+      expect(resOverLimit.error).toBe('La hora del recordatorio debe tener formato HH:MM y ser como máximo 23:45.');
+
+      const resBadEscalation = await updateCashCloseSettings({ escalation_time: '24:00' });
+      expect(resBadEscalation.ok).toBe(false);
+      expect(resBadEscalation.error).toBe('La hora límite debe tener formato HH:MM y ser como máximo 23:45.');
+
       expect(requestSpy).not.toHaveBeenCalled();
     });
 

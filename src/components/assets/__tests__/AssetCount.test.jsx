@@ -9,6 +9,8 @@ vi.mock('../../../services/assetsClient', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
+    getAssetCountForPeriod: vi.fn(),
+    getAssetCount: vi.fn(),
     createAssetCount: vi.fn(),
     saveAssetCountLines: vi.fn(),
     submitAssetCount: vi.fn(),
@@ -17,7 +19,7 @@ vi.mock('../../../services/assetsClient', async (importOriginal) => {
   };
 });
 
-describe('AssetCountTab (Brief 38p)', () => {
+describe('AssetCountTab (Brief 38p / 38p_fix)', () => {
   const loungeHeadUser = {
     id: 10,
     role: 'lounge_head',
@@ -42,18 +44,18 @@ describe('AssetCountTab (Brief 38p)', () => {
     period: '2026-11',
     status: 'draft',
     lines: [
-      { id: 101, asset_id: 1, asset_name: 'Copa de agua', expected_quantity: 40, counted_quantity: null },
-      { id: 102, asset_id: 2, asset_name: 'Plato llano', expected_quantity: 20, counted_quantity: null },
+      { id: 101, asset_id: 1, asset_name: 'Copa de agua', expected_quantity: null, counted_quantity: null },
+      { id: 102, asset_id: 2, asset_name: 'Plato llano', expected_quantity: null, counted_quantity: null },
     ],
   };
 
-  const mockSubmittedCount = {
+  const mockSubmittedCountWithExplanations = {
     id: 5,
     area: 'lounge',
     period: '2026-11',
     status: 'submitted',
     lines: [
-      { id: 101, asset_id: 1, asset_name: 'Copa de agua', expected_quantity: 40, counted_quantity: 38, difference: -2, explanation: null },
+      { id: 101, asset_id: 1, asset_name: 'Copa de agua', expected_quantity: 40, counted_quantity: 38, difference: -2, explanation: 'Rotura en servicio' },
       { id: 102, asset_id: 2, asset_name: 'Plato llano', expected_quantity: 20, counted_quantity: 20, difference: 0, explanation: null },
     ],
   };
@@ -63,17 +65,45 @@ describe('AssetCountTab (Brief 38p)', () => {
     localStorage.clear();
   });
 
-  it('starts count and does NOT display expected quantity before submitting to prevent bias', async () => {
-    assetsClient.createAssetCount.mockResolvedValueOnce({
+  it('sin conteo muestra "Empezar"', async () => {
+    assetsClient.getAssetCountForPeriod.mockResolvedValueOnce({
       ok: true,
-      data: mockDraftCount,
+      status: 200,
+      data: null,
     });
-    assetsClient.saveAssetCountLines.mockResolvedValue({ ok: true, data: mockDraftCount });
 
     render(<AssetCountTab user={loungeStaffUser} />);
 
-    // Click "Empezar conteo"
-    fireEvent.click(screen.getByText('Empezar conteo'));
+    expect(await screen.findByRole('button', { name: /Empezar/i })).toBeInTheDocument();
+    expect(screen.queryByText('Seguir contando')).not.toBeInTheDocument();
+    expect(screen.queryByText('En borrador')).not.toBeInTheDocument();
+  });
+
+  it('con conteo en borrador muestra "Seguir contando" y estado "En borrador"', async () => {
+    assetsClient.getAssetCountForPeriod.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: mockDraftCount,
+    });
+
+    render(<AssetCountTab user={loungeStaffUser} />);
+
+    expect(await screen.findByText('En borrador')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Seguir contando/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Empezar$/i })).not.toBeInTheDocument();
+  });
+
+  it('quien cuenta no ve el esperado en draft en la planilla', async () => {
+    assetsClient.getAssetCountForPeriod.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: mockDraftCount,
+    });
+
+    render(<AssetCountTab user={loungeStaffUser} />);
+
+    const continueBtn = await screen.findByRole('button', { name: /Seguir contando/i });
+    fireEvent.click(continueBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/Planilla de conteo: Salón/i)).toBeInTheDocument();
@@ -81,89 +111,145 @@ describe('AssetCountTab (Brief 38p)', () => {
       expect(screen.getByText('Plato llano')).toBeInTheDocument();
     });
 
-    // Verify expected quantities (40 and 20) are NOT displayed on the sheet
+    // La columna esperado no debe existir en draft
+    expect(screen.queryByText('Esperado')).not.toBeInTheDocument();
     expect(screen.queryByText('40')).not.toBeInTheDocument();
     expect(screen.queryByText('20')).not.toBeInTheDocument();
-
-    // Type counted quantity
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.change(inputs[0], { target: { value: '38' } });
-    fireEvent.change(inputs[1], { target: { value: '20' } });
-
-    // Submit count
-    assetsClient.submitAssetCount.mockResolvedValueOnce({
-      ok: true,
-      data: mockSubmittedCount,
-    });
-
-    fireEvent.click(screen.getByText(/Enviar conteo/i));
-
-    await waitFor(() => {
-      expect(assetsClient.submitAssetCount).toHaveBeenCalledWith(5);
-    });
   });
 
-  it('requires explanation for differences and allows only area head to validate', async () => {
-    // Put submitted count into storage
-    localStorage.setItem('ualdo_asset_count_lounge_2026-11', JSON.stringify(mockSubmittedCount));
-
-    // Render for staff (has no ASSETS_VALIDATE_LOUNGE)
-    const { rerender } = render(<AssetCountTab user={loungeStaffUser} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Conteo enviado: Salón/i)).toBeInTheDocument();
-      expect(screen.getByText(/Diferencia: -2/i)).toBeInTheDocument();
-      expect(screen.getByText('Exacto')).toBeInTheDocument();
+  it('el 409 con data.id abre el conteo existente sin mostrar error', async () => {
+    assetsClient.getAssetCountForPeriod.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: null,
     });
 
-    // Staff cannot validate: no "Validar conteo" button
-    expect(screen.queryByText(/Validar conteo/i)).not.toBeInTheDocument();
+    assetsClient.createAssetCount.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      data: { id: 77, status: 'draft' },
+      error: 'Ya existe un conteo',
+    });
 
-    // Rerender for area head
-    rerender(<AssetCountTab user={loungeHeadUser} />);
-
-    const validateBtn = screen.getByText('Validar conteo');
-    expect(validateBtn).toBeInTheDocument();
-    expect(validateBtn).toBeDisabled(); // Disabled because difference is not explained yet
-
-    // Provide explanation
-    const expInput = screen.getByPlaceholderText(/Motivo de la diferencia/i);
-    fireEvent.change(expInput, { target: { value: 'Dos copas se rompieron durante el turno del viernes.' } });
-
-    // Validate button should become enabled
-    expect(validateBtn).not.toBeDisabled();
-
-    assetsClient.saveAssetExplanations.mockResolvedValueOnce({
+    assetsClient.getAssetCount.mockResolvedValueOnce({
       ok: true,
+      status: 200,
       data: {
-        ...mockSubmittedCount,
+        id: 77,
+        area: 'lounge',
+        period: '2026-11',
+        status: 'draft',
         lines: [
-          { ...mockSubmittedCount.lines[0], explanation: 'Dos copas se rompieron durante el turno del viernes.' },
-          mockSubmittedCount.lines[1],
+          { id: 201, asset_id: 3, asset_name: 'Tenedor de mesa', expected_quantity: null, counted_quantity: null },
         ],
       },
     });
 
+    render(<AssetCountTab user={loungeStaffUser} />);
+
+    const startBtn = await screen.findByRole('button', { name: /Empezar/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(assetsClient.createAssetCount).toHaveBeenCalledWith('lounge', '2026-11');
+      expect(assetsClient.getAssetCount).toHaveBeenCalledWith(77);
+      expect(screen.getByText('Tenedor de mesa')).toBeInTheDocument();
+    });
+
+    // No debe mostrar banner de error
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('el jefe de salón abre el conteo enviado por otra persona y lo valida', async () => {
+    const validatedCount = {
+      ...mockSubmittedCountWithExplanations,
+      status: 'validated',
+      validated_by: 'Jefe Salón',
+    };
+
+    assetsClient.getAssetCountForPeriod
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: mockSubmittedCountWithExplanations,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: validatedCount,
+      });
+
+    assetsClient.saveAssetExplanations.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: mockSubmittedCountWithExplanations,
+    });
     assetsClient.validateAssetCount.mockResolvedValueOnce({
       ok: true,
-      data: {
-        ...mockSubmittedCount,
-        status: 'validated',
-        validated_by: 'Lucía',
-      },
+      status: 200,
+      data: validatedCount,
     });
+
+    render(<AssetCountTab user={loungeHeadUser} />);
+
+    expect(await screen.findByText('Listo para validar')).toBeInTheDocument();
+    const validateBtn = screen.getByRole('button', { name: /Validar/i });
+    expect(validateBtn).toBeInTheDocument();
 
     fireEvent.click(validateBtn);
 
     await waitFor(() => {
+      expect(screen.getByText(/Conteo enviado: Salón/i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Rotura en servicio')).toBeInTheDocument();
+    });
+
+    const confirmValidationBtn = screen.getByRole('button', { name: /Validar conteo/i });
+    fireEvent.click(confirmValidationBtn);
+
+    await waitFor(() => {
       expect(assetsClient.saveAssetExplanations).toHaveBeenCalledWith(
         5,
-        expect.arrayContaining([
-          expect.objectContaining({ asset_id: 1, explanation: 'Dos copas se rompieron durante el turno del viernes.' }),
-        ])
+        expect.arrayContaining([expect.objectContaining({ asset_id: 1, explanation: 'Rotura en servicio' })])
       );
       expect(assetsClient.validateAssetCount).toHaveBeenCalledWith(5);
-      expect(screen.getByText(/Conteo del periodo validado/i)).toBeInTheDocument();
+    });
+
+    // Retorna a la pestaña y muestra el estado validado
+    expect(await screen.findByText('Validado')).toBeInTheDocument();
+    expect(screen.getByText('Jefe Salón')).toBeInTheDocument();
+  });
+
+  it('AssetCountSheet guarda borrador local por count.id y lo limpia al guardar', async () => {
+    assetsClient.getAssetCountForPeriod.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: mockDraftCount,
+    });
+    assetsClient.saveAssetCountLines.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: mockDraftCount,
+    });
+
+    render(<AssetCountTab user={loungeStaffUser} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Seguir contando/i }));
+
+    const inputs = await screen.findAllByPlaceholderText('0');
+    fireEvent.change(inputs[0], { target: { value: '15' } });
+
+    // Se guarda en localStorage con la clave ualdo_asset_draft_5
+    expect(localStorage.getItem('ualdo_asset_draft_5')).toBeTruthy();
+
+    const saveDraftBtn = screen.getByRole('button', { name: /Guardar borrador/i });
+    fireEvent.click(saveDraftBtn);
+
+    await waitFor(() => {
+      expect(assetsClient.saveAssetCountLines).toHaveBeenCalledWith(
+        5,
+        expect.arrayContaining([expect.objectContaining({ asset_id: 1, counted_quantity: 15 })])
+      );
+      expect(localStorage.getItem('ualdo_asset_draft_5')).toBeNull();
     });
   });
 });

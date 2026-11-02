@@ -1,10 +1,12 @@
 import React from 'react';
 
-export default function AssetCountSheetRow({ line, countedValue, onChange, disabled }) {
+export default function AssetCountSheetRow({ line, countedValue, value, onChange, disabled }) {
   const handleChange = (e) => {
     const val = e.target.value;
-    onChange(line.asset_id, val);
+    onChange?.(val, line.asset_id);
   };
+
+  const displayVal = countedValue !== undefined ? countedValue : (value ?? '');
 
   return (
     <div
@@ -36,7 +38,7 @@ export default function AssetCountSheetRow({ line, countedValue, onChange, disab
           id={`asset-count-input-${line.asset_id}`}
           type="number"
           min="0"
-          value={countedValue ?? ''}
+          value={displayVal}
           onChange={handleChange}
           disabled={disabled}
           placeholder="0"
