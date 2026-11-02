@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { INCIDENT_CAUSES, INCIDENT_CAUSE_LABELS } from '../../services/incidentsClient';
 
-export function ResolveModal({ isOpen, isComplaint, onClose, onConfirm, submitting = false }) {
+export function ResolveModal({ isOpen, isComplaint, initialCause = '', onClose, onConfirm, submitting = false }) {
   const [resolution, setResolution] = useState('');
-  const [cause, setCause] = useState('servicio');
+  const [cause, setCause] = useState(initialCause || '');
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
@@ -15,9 +15,16 @@ export function ResolveModal({ isOpen, isComplaint, onClose, onConfirm, submitti
       setError('La resolución debe tener al menos 5 caracteres.');
       return;
     }
+    if (isComplaint && !cause) {
+      setError('Debes elegir la causa de la queja.');
+      return;
+    }
     setError(null);
     onConfirm({ resolution: resolution.trim(), ...(isComplaint ? { cause } : {}) });
   };
+
+  const showKitchenWarning = isComplaint && initialCause === 'produccion' && Boolean(cause) && cause !== 'produccion';
+  const isSubmitDisabled = submitting || resolution.trim().length < 5 || (isComplaint && !cause);
 
   return (
     <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--overlay)', zIndex: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
@@ -32,8 +39,14 @@ export function ResolveModal({ isOpen, isComplaint, onClose, onConfirm, submitti
             <div>
               <label htmlFor="res-cause" style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Causa de la queja</label>
               <select id="res-cause" value={cause} onChange={(e) => setCause(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', color: 'var(--text-main)', fontSize: '13px' }}>
+                <option value="">Elige la causa</option>
                 {INCIDENT_CAUSES.map((c) => <option key={c} value={c}>{INCIDENT_CAUSE_LABELS[c]}</option>)}
               </select>
+            </div>
+          )}
+          {showKitchenWarning && (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', padding: '6px 8px', borderRadius: '4px' }}>
+              Al cambiar la causa se borra la confirmación de cocina.
             </div>
           )}
           <div>
@@ -42,7 +55,7 @@ export function ResolveModal({ isOpen, isComplaint, onClose, onConfirm, submitti
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
             <button type="button" onClick={onClose} disabled={submitting} style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--chip-bg)', border: '1px solid var(--border-glass)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}>Cancelar</button>
-            <button type="submit" disabled={submitting || resolution.trim().length < 5} style={{ padding: '8px 14px', borderRadius: '6px', background: 'var(--success)', border: 'none', color: 'var(--on-primary)', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
+            <button type="submit" disabled={isSubmitDisabled} style={{ padding: '8px 14px', borderRadius: '6px', background: 'var(--success)', border: 'none', color: 'var(--on-primary)', fontWeight: 600, cursor: isSubmitDisabled ? 'not-allowed' : 'pointer', fontSize: '12px' }}>
               {submitting ? 'Guardando...' : 'Confirmar resolución'}
             </button>
           </div>
