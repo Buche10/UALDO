@@ -12,7 +12,7 @@ describe('lotSelection (Brief 40p)', () => {
     expect(lotSelectionError(emptyLotSelection())).toBeNull();
     expect(lotSelectionError({ lotId: 3, needsJustification: false })).toBeNull();
     expect(lotSelectionError({ lotId: 3, needsJustification: true, justification: '' })).toContain('Indica el motivo');
-    expect(lotSelectionError({ lotId: 3, needsJustification: true, justification: 'abc' })).toContain('5 a 300');
+    expect(lotSelectionError({ lotId: 3, needsJustification: true, justification: 'abc' })).toContain('5 a 255');
     expect(lotSelectionError({ lotId: 3, needsJustification: true, justification: 'Reservado para evento' })).toBeNull();
   });
 

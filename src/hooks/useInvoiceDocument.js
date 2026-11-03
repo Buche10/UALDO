@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getInvoiceDocument } from '../services/purchaseDocumentsClient';
 
 /**
- * Consulta una factura del SRI mientras el motor la lee (Brief 34ap).
+ * Consulta una factura del SRI o recibo mientras el motor lo lee (Brief 34ap / 34bp).
  * Sondea cada 3 segundos, retrocede ante fallos de red y se detiene a los
  * 2 minutos, al desmontar o cuando el documento termina.
  */
@@ -15,6 +15,10 @@ export const INVOICE_ERROR_MESSAGES = {
   not_authorized: 'El SRI no tiene esa factura como autorizada. Revisa la clave.',
   sri_unavailable: 'El SRI no responde. Prueba en unos minutos o sube el XML.',
   invalid_xml: 'Ese archivo no es una factura electrónica válida.',
+  unreadable: 'No se pudo leer la foto. Prueba con más luz o sube el PDF.',
+  timeout: 'No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.',
+  provider_error: 'No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.',
+  duplicate: 'Esta factura ya se cargó antes.',
 };
 
 const TIMEOUT_MESSAGE = 'La consulta tardó más de 2 minutos. Revisa la factura cargada o inténtalo otra vez.';

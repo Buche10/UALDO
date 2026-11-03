@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Check, AlertCircle, Send, Save } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import AssetCountSheetRow from './AssetCountSheetRow';
+import AssetCountSheetActions from './AssetCountSheetActions';
 import { saveAssetCountLines, submitAssetCount } from '../../services/assetsClient';
 import { ASSET_AREA_LABELS, formatPeriodLabel } from './assetHelpers';
 
@@ -150,23 +151,11 @@ export default function AssetCountSheet({ count, onBack, onSubmitted, onCountUpd
             Periodo: {formatPeriodLabel(count?.period)} ({lines.length} activos)
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={saveLinesNow}
-            style={{ padding: '8px 14px', borderRadius: '9999px', background: 'var(--chip-bg)', color: 'var(--text-main)', border: '1px solid var(--border-glass)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <Save size={13} /> Guardar borrador
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{ padding: '8px 16px', borderRadius: '9999px', background: 'var(--primary)', color: 'var(--on-primary)', border: 'none', fontSize: '12px', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Send size={13} /> {submitting ? 'Enviando...' : 'Enviar conteo'}
-          </button>
-        </div>
+        <AssetCountSheetActions
+          onSaveDraft={saveLinesNow}
+          onSubmit={handleSubmit}
+          submitting={submitting}
+        />
       </div>
 
       {errorMessage && (

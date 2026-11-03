@@ -37,7 +37,7 @@ function documentOf(overrides = {}) {
   return { id: 12, status: 'extracted', extraction, purchase_id: null, confirmed_at: null, ...overrides };
 }
 
-describe('InvoiceReview (Brief 34ap)', () => {
+describe('InvoiceReview (Brief 34ap / 34bp)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier]));
@@ -118,6 +118,37 @@ describe('InvoiceReview (Brief 34ap)', () => {
     expect(payload.item_id).toBeUndefined();
   });
 
+  it('muestra el texto Leyendo el recibo cuando source es image', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 14, status: 'processing', source: 'image' },
+    });
+    render(<InvoiceReview documentId={14} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Leyendo el recibo')).toBeInTheDocument());
+    expect(screen.getByText('Estamos leyendo los datos del recibo. No cierres esta pantalla.')).toBeInTheDocument();
+  });
+
+  it('muestra el error unreadable y permite cargar la compra a mano', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 12, status: 'failed', error_code: 'unreadable' },
+    });
+    const onManualEntry = vi.fn();
+    render(<InvoiceReview documentId={12} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={onManualEntry} />);
+
+    await waitFor(() => expect(screen.getByText('No se pudo leer la foto. Prueba con más luz o sube el PDF.')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar la compra a mano' }));
+    expect(onManualEntry).toHaveBeenCalled();
+  });
+
+  it('muestra el error timeout o provider_error y la salida a carga manual', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 12, status: 'failed', error_code: 'provider_error' },
+    });
+    render(<InvoiceReview documentId={12} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.')).toBeInTheDocument());
+  });
+
   it('muestra el error del SRI y la salida a carga manual', async () => {
     vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
       ok: true, data: { id: 12, status: 'failed', error_code: 'not_authorized' },
@@ -138,5 +169,29 @@ describe('InvoiceReview (Brief 34ap)', () => {
     render(<InvoiceReview documentId={12} duplicate onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText('Esta factura ya se cargó')).toBeInTheDocument());
+  });
+
+  it('muestra el error duplicate y el botón para ver la factura cargada original', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true,
+      data: { id: 15, status: 'failed', error_code: 'duplicate', duplicate_of_id: 11 },
+    });
+    const onOpenInvoice = vi.fn();
+    render(
+      <InvoiceReview
+        documentId={15}
+        onBack={vi.fn()}
+        onConfirmed={vi.fn()}
+        onManualEntry={vi.fn()}
+        onOpenInvoice={onOpenInvoice}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('Esta factura ya se cargó antes.')).toBeInTheDocument());
+    const button = screen.getByRole('button', { name: 'Ver la factura cargada' });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onOpenInvoice).toHaveBeenCalledWith({ id: 11 });
+    expect(screen.getByRole('button', { name: 'Cargar la compra a mano' })).toBeInTheDocument();
   });
 });

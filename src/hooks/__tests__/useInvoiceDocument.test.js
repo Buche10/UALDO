@@ -7,7 +7,7 @@ async function flush() {
   await act(async () => { await Promise.resolve(); });
 }
 
-describe('useInvoiceDocument (Brief 34ap)', () => {
+describe('useInvoiceDocument (Brief 34ap / 34bp)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.restoreAllMocks();
@@ -49,6 +49,12 @@ describe('useInvoiceDocument (Brief 34ap)', () => {
     expect(spy).toHaveBeenCalledTimes(2);
     await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('muestra mensajes específicos para unreadable, timeout y provider_error', () => {
+    expect(invoiceErrorMessage('unreadable')).toBe('No se pudo leer la foto. Prueba con más luz o sube el PDF.');
+    expect(invoiceErrorMessage('timeout')).toBe('No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.');
+    expect(invoiceErrorMessage('provider_error')).toBe('No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.');
   });
 
   it('respeta el máximo de 2 minutos y deja de consultar', async () => {

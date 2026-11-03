@@ -5,10 +5,12 @@ import {
   buildConfirmLines,
   confirmInvoice,
   getInvoiceDocument,
+  invoiceFileBlob,
   isValidSriAccessKey,
   listInvoiceDocuments,
   normalizeAccessKey,
   submitAccessKey,
+  uploadInvoiceFile,
   uploadInvoiceXml,
 } from '../purchaseDocumentsClient';
 
@@ -27,7 +29,7 @@ function keyWithVerifier(base) {
   return `${base}${digit}`;
 }
 
-describe('purchaseDocumentsClient (Brief 34ap)', () => {
+describe('purchaseDocumentsClient (Brief 34ap / 34bp)', () => {
   let requestSpy;
   let uploadSpy;
 
@@ -54,6 +56,58 @@ describe('purchaseDocumentsClient (Brief 34ap)', () => {
       expect(uploadSpy).toHaveBeenCalledWith('/purchase-documents', file);
       expect(res.data.id).toBe(12);
       expect(res.duplicate).toBe(false);
+    });
+  });
+
+  describe('uploadInvoiceFile', () => {
+    it('rechaza archivos que no son imagen ni PDF o más de 10 MB sin llamar a la red', async () => {
+      const txt = await uploadInvoiceFile({ name: 'recibo.txt', type: 'text/plain', size: 10 });
+      expect(txt.status).toBe(422);
+      expect(txt.error).toContain('JPG, PNG o WEBP');
+      const big = await uploadInvoiceFile({ name: 'recibo.jpg', type: 'image/jpeg', size: 10 * 1024 * 1024 + 1 });
+      expect(big.status).toBe(422);
+      expect(big.error).toContain('10 MB');
+      expect(uploadSpy).not.toHaveBeenCalled();
+    });
+
+    it('sube una imagen válida y desenvuelve la respuesta', async () => {
+      const file = { name: 'recibo.jpg', type: 'image/jpeg', size: 2000 };
+      const res = await uploadInvoiceFile(file);
+      expect(uploadSpy).toHaveBeenCalledWith('/purchase-documents', file);
+      expect(res.data.id).toBe(12);
+      expect(res.duplicate).toBe(false);
+    });
+
+    it('sube un PDF válido', async () => {
+      const file = { name: 'recibo.pdf', type: 'application/pdf', size: 50000 };
+      const res = await uploadInvoiceFile(file);
+      expect(uploadSpy).toHaveBeenCalledWith('/purchase-documents', file);
+      expect(res.data.id).toBe(12);
+    });
+  });
+
+  describe('invoiceFileBlob', () => {
+    it('devuelve null si el id es inválido', async () => {
+      expect(await invoiceFileBlob(null)).toBeNull();
+      expect(await invoiceFileBlob('abc')).toBeNull();
+    });
+
+    it('descarga el blob pasando por apiClient.requestBlob', async () => {
+      const fakeBlob = new Blob(['contenido'], { type: 'image/jpeg' });
+      const blobSpy = vi.spyOn(apiClient, 'requestBlob').mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: fakeBlob,
+      });
+
+      const result = await invoiceFileBlob(12);
+      expect(blobSpy).toHaveBeenCalledWith('/purchase-documents/12/file');
+      expect(result).toBe(fakeBlob);
+    });
+
+    it('devuelve null si la respuesta de red falla', async () => {
+      vi.spyOn(apiClient, 'requestBlob').mockResolvedValue({ ok: false, status: 403, error: 'Forbidden' });
+      expect(await invoiceFileBlob(12)).toBeNull();
     });
   });
 
@@ -98,9 +152,28 @@ describe('purchaseDocumentsClient (Brief 34ap)', () => {
 
       requestSpy.mockResolvedValueOnce({ ok: true, data: { data: [{ id: 5 }], meta: { current_page: 1, last_page: 2 } } });
       const list = await listInvoiceDocuments({ status: 'extracted', page: 2 });
-      expect(requestSpy).toHaveBeenLastCalledWith('/purchase-documents?status=extracted&page=2');
       expect(list.data).toEqual([{ id: 5 }]);
-      expect(list.meta.last_page).toBe(2);
+      expect(list.meta).toEqual({ current_page: 1, last_page: 2 });
+      expect(requestSpy).toHaveBeenCalledWith('/purchase-documents?status=extracted&page=2');
+    });
+
+    it('confirma validando insumos y líneas', async () => {
+      expect((await confirmInvoice(null)).status).toBe(400);
+      expect((await confirmInvoice(5, { supplier_id: null })).status).toBe(422);
+      expect((await confirmInvoice(5, { supplier_id: 3, lines: [] })).status).toBe(422);
+
+      const res = await confirmInvoice(5, {
+        supplier_id: 3,
+        lines: [{ item_id: 10, quantity: '2.000', line_total: '20.00', source_index: 0 }],
+      });
+      expect(requestSpy).toHaveBeenCalledWith('/purchase-documents/5/confirm', {
+        method: 'POST',
+        body: {
+          supplier_id: 3,
+          lines: [{ item_id: 10, quantity: '2.000', line_total: '20.00', source_index: 0 }],
+        },
+      });
+      expect(res.data.id).toBe(12);
     });
 
     it('envía source_index solo en las líneas de la factura y conserva la compra', async () => {
@@ -136,6 +209,31 @@ describe('purchaseDocumentsClient (Brief 34ap)', () => {
       expect(requestSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('buildConfirmLines', () => {
+    it('rechaza líneas vacías, cantidades o totales inválidos', () => {
+      expect(buildConfirmLines([]).error).toBe('Agrega al menos una línea.');
+      expect(buildConfirmLines([{ quantity: '0', line_total: '10' }]).error).toContain('cantidad');
+      expect(buildConfirmLines([{ quantity: '1', line_total: 'abc' }]).error).toContain('total');
+      expect(buildConfirmLines([{ quantity: '1', line_total: '10', source_index: -1 }]).error).toContain('factura');
+      expect(buildConfirmLines([{ quantity: '1', line_total: '10', unit_factor: '0' }]).error).toContain('factor');
+      expect(buildConfirmLines([{ quantity: '1', line_total: '10', item_id: null }]).error).toContain('insumo');
+      expect(buildConfirmLines([{ quantity: '1', line_total: '10', is_other: true, free_text_name: '' }]).error).toContain('nombre');
+      expect(buildConfirmLines([{ quantity: '1', line_total: '10', is_other: true, free_text_name: 'Hielo', note: '' }]).error).toContain('motivo');
+    });
+
+    it('arma líneas válidas con insumo y como otra compra', () => {
+      const built = buildConfirmLines([
+        { quantity: '1.5', line_total: '12.50', item_id: 4, source_index: 0, unit_factor: '1.0' },
+        { quantity: '2', line_total: '5.00', is_other: true, free_text_name: 'Carbón', note: 'De paso', unit: 'bolsa' },
+      ]);
+      expect(built.error).toBeNull();
+      expect(built.lines).toEqual([
+        { quantity: '1.5', line_total: '12.50', item_id: 4, source_index: 0, unit_factor: '1.0' },
+        { quantity: '2', line_total: '5.00', is_other: true, free_text_name: 'Carbón', note: 'De paso', unit: 'bolsa' },
+      ]);
+    });
+  });
 });
 
 describe('uploadFile', () => {
@@ -169,5 +267,71 @@ describe('uploadFile', () => {
     expect(options.body.get('file')).toBe(file);
     expect(options.headers.Authorization).toBe('Bearer token-prueba');
     expect(options.headers['Content-Type']).toBeUndefined();
+  });
+});
+
+describe('requestBlob', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('devuelve el blob con Authorization en la cabecera', async () => {
+    localStorage.setItem('ualdo_token', 'token-blob');
+    const fakeBlob = new Blob(['archivo binario'], { type: 'application/pdf' });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => fakeBlob,
+    });
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file');
+
+    expect(res.ok).toBe(true);
+    expect(res.blob).toBe(fakeBlob);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/purchase-documents/12/file');
+    expect(options.headers.Authorization).toBe('Bearer token-blob');
+  });
+
+  it('un 401 dispara ualdo:unauthorized y limpia la sesión', async () => {
+    localStorage.setItem('ualdo_token', 'token-expirado');
+    localStorage.setItem('ualdo_user', JSON.stringify({ name: 'Usuario' }));
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: { get: () => 'text/plain' },
+      text: async () => 'Unauthorized',
+    });
+
+    const unauthorizedListener = vi.fn();
+    window.addEventListener('ualdo:unauthorized', unauthorizedListener);
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file');
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(401);
+    expect(unauthorizedListener).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('ualdo_token')).toBeNull();
+    window.removeEventListener('ualdo:unauthorized', unauthorizedListener);
+  });
+
+  it('el tiempo máximo aborta la petición', async () => {
+    const abortErr = new Error('The user aborted a request.');
+    abortErr.name = 'AbortError';
+    global.fetch = vi.fn().mockRejectedValue(abortErr);
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file', { timeout: 10 });
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(0);
+    expect(res.error).toContain('Tiempo de espera agotado');
   });
 });
