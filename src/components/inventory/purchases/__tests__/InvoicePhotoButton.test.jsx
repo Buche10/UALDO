@@ -10,16 +10,24 @@ describe('InvoicePhotoButton (Brief 34bp)', () => {
     vi.restoreAllMocks();
   });
 
-  it('muestra el texto de ayuda y el input con capture=environment', () => {
+  it('muestra el texto de ayuda y los dos inputs: solo foto con capture=environment', () => {
     render(<InvoicePhotoButton onDocument={vi.fn()} />);
 
     expect(screen.getByText('Foto o PDF del recibo')).toBeInTheDocument();
     expect(screen.getByText('Si es factura electrónica, mejor usa la clave de acceso: los datos salen exactos del SRI.')).toBeInTheDocument();
 
-    const input = document.getElementById('invoice-photo-file-input');
-    expect(input).toBeInTheDocument();
-    expect(input).toHaveAttribute('accept', 'image/*,application/pdf');
-    expect(input).toHaveAttribute('capture', 'environment');
+    const cameraInput = document.getElementById('invoice-photo-camera-input');
+    expect(cameraInput).toBeInTheDocument();
+    expect(cameraInput).toHaveAttribute('accept', 'image/*');
+    expect(cameraInput).toHaveAttribute('capture', 'environment');
+
+    const fileInput = document.getElementById('invoice-photo-file-input');
+    expect(fileInput).toBeInTheDocument();
+    expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,application/pdf');
+    expect(fileInput).not.toHaveAttribute('capture');
+
+    expect(screen.getByRole('button', { name: 'Tomar foto' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Elegir foto o PDF' })).toBeInTheDocument();
   });
 
   it('reduce la imagen y llama a uploadInvoiceFile y onDocument', async () => {

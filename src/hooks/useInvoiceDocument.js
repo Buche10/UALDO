@@ -18,6 +18,7 @@ export const INVOICE_ERROR_MESSAGES = {
   unreadable: 'No se pudo leer la foto. Prueba con más luz o sube el PDF.',
   timeout: 'No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.',
   provider_error: 'No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.',
+  duplicate: 'Esta factura ya se cargó antes.',
 };
 
 const TIMEOUT_MESSAGE = 'La consulta tardó más de 2 minutos. Revisa la factura cargada o inténtalo otra vez.';

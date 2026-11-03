@@ -1,4 +1,4 @@
-import { getApiBaseUrl, getAuthToken, request, uploadFile } from './apiClient';
+import { request, requestBlob, uploadFile } from './apiClient';
 import { normalizeAmount } from './money';
 import { normalizePurchaseQuantity, parseId } from './purchasesClient';
 
@@ -143,30 +143,12 @@ export const uploadInvoiceFile = async (file) => {
   return unwrap(await uploadFile('/purchase-documents', file));
 };
 
-/** GET /purchase-documents/{id}/file (descarga streaming como Blob). */
+/** GET /purchase-documents/{id}/file (descarga streaming como Blob pasando por apiClient). */
 export const invoiceFileBlob = async (documentId) => {
   const id = parseId(documentId);
   if (!id) return null;
-
-  let baseUrl = '';
-  try {
-    baseUrl = getApiBaseUrl();
-  } catch {
-    return null;
-  }
-
-  const url = `${baseUrl}/purchase-documents/${id}/file`;
-  const token = getAuthToken();
-  const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
-    return await res.blob();
-  } catch {
-    return null;
-  }
+  const res = await requestBlob(`/purchase-documents/${id}/file`);
+  return res.ok && res.blob ? res.blob : null;
 };
 
 /** POST /purchase-documents/access-key. */

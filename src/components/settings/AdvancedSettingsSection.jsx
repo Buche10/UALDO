@@ -152,7 +152,7 @@ export default function AdvancedSettingsSection({ settings, onSaveSettings, onCl
               style={{ width: '100%', padding: '10px', fontSize: '12px', color: 'var(--error)', border: '1px solid rgba(244,63,94,0.3)', background: 'rgba(244,63,94,0.1)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               <Trash2 size={14} />
-              <span>Limpiar Todos los Datos Locales</span>
+              <span>Restablecer Datos Locales</span>
             </button>
           </div>
         </div>

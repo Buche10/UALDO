@@ -7,17 +7,24 @@ import { styles } from './purchaseUi';
 const HELP_TEXT = 'Si es factura electrónica, mejor usa la clave de acceso: los datos salen exactos del SRI.';
 
 /**
- * Carga de foto o PDF de un recibo con reducción en el navegador (Brief 34bp).
+ * Carga de foto o PDF de un recibo con reducción en el navegador (Brief 34bp / 34bp_fix).
  */
 export default function InvoicePhotoButton({ onDocument }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const inputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const filePickerRef = useRef(null);
 
-  const handleSelectFile = () => {
+  const handleTriggerCamera = () => {
     if (busy) return;
     setError(null);
-    inputRef.current?.click();
+    cameraInputRef.current?.click();
+  };
+
+  const handleTriggerFilePicker = () => {
+    if (busy) return;
+    setError(null);
+    filePickerRef.current?.click();
   };
 
   const handleFileChange = async (event) => {
@@ -59,34 +66,65 @@ export default function InvoicePhotoButton({ onDocument }) {
       </p>
 
       <input
-        ref={inputRef}
-        id="invoice-photo-file-input"
+        ref={cameraInputRef}
+        id="invoice-photo-camera-input"
         type="file"
-        accept="image/*,application/pdf"
+        accept="image/*"
         capture="environment"
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={handleSelectFile}
-        className="btn-primary"
-        style={{ padding: '10px', borderRadius: '9999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-      >
-        {busy ? (
-          <>
-            <Loader2 size={14} className="spin" />
-            <span>Subiendo recibo...</span>
-          </>
-        ) : (
-          <>
-            <FileText size={14} />
-            <span>Tomar foto o elegir PDF</span>
-          </>
-        )}
-      </button>
+      <input
+        ref={filePickerRef}
+        id="invoice-photo-file-input"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleTriggerCamera}
+          className="btn-primary"
+          style={{ padding: '10px', borderRadius: '9999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
+        >
+          {busy ? (
+            <>
+              <Loader2 size={14} className="spin" />
+              <span>Subiendo...</span>
+            </>
+          ) : (
+            <>
+              <Camera size={14} />
+              <span>Tomar foto</span>
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleTriggerFilePicker}
+          className="btn-secondary"
+          style={{ ...styles.secondary, padding: '10px', borderRadius: '9999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
+        >
+          {busy ? (
+            <>
+              <Loader2 size={14} className="spin" />
+              <span>Subiendo...</span>
+            </>
+          ) : (
+            <>
+              <FileText size={14} />
+              <span>Elegir foto o PDF</span>
+            </>
+          )}
+        </button>
+      </div>
 
       <div aria-live="polite">
         {error && <div role="alert" style={styles.errorBox}>{error}</div>}

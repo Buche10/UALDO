@@ -33,7 +33,7 @@ function Waiting({ error, source }) {
   );
 }
 
-function Failure({ message, onRetry, onManualEntry }) {
+function Failure({ message, duplicateOfId, onRetry, onManualEntry, onOpenInvoice }) {
   return (
     <div style={{ ...styles.card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error)' }}>
@@ -41,9 +41,20 @@ function Failure({ message, onRetry, onManualEntry }) {
         <span style={{ fontSize: '14px', fontWeight: 700 }}>No se pudo leer la factura</span>
       </div>
       <div role="alert" style={styles.errorBox}>{message}</div>
-      <button type="button" onClick={onRetry} className="btn-secondary" style={{ ...styles.secondary, padding: '10px', fontSize: '13px' }}>
-        Reintentar
-      </button>
+      {duplicateOfId && onOpenInvoice ? (
+        <button
+          type="button"
+          onClick={() => onOpenInvoice({ id: duplicateOfId })}
+          className="btn-primary"
+          style={{ padding: '10px', borderRadius: '9999px', fontWeight: 600, fontSize: '13px' }}
+        >
+          Ver la factura cargada
+        </button>
+      ) : (
+        <button type="button" onClick={onRetry} className="btn-secondary" style={{ ...styles.secondary, padding: '10px', fontSize: '13px' }}>
+          Reintentar
+        </button>
+      )}
       <ManualEntryButton onManualEntry={onManualEntry} />
     </div>
   );
@@ -52,7 +63,15 @@ function Failure({ message, onRetry, onManualEntry }) {
 /**
  * Espera y revisión de una factura o recibo cargado (Brief 34ap / 34bp).
  */
-export default function InvoiceReview({ documentId, duplicate, onBack, onConfirmed, onManualEntry, onOpenPurchase }) {
+export default function InvoiceReview({
+  documentId,
+  duplicate,
+  onBack,
+  onConfirmed,
+  onManualEntry,
+  onOpenPurchase,
+  onOpenInvoice,
+}) {
   const invoice = useInvoiceDocument(documentId);
   const document = invoice.document;
   const waiting = ['loading', 'queued', 'processing'].includes(invoice.status);
@@ -61,7 +80,15 @@ export default function InvoiceReview({ documentId, duplicate, onBack, onConfirm
   if (waiting) {
     content = <Waiting error={invoice.networkError ? invoice.error : null} source={document?.source} />;
   } else if (invoice.status === 'failed' || invoice.status === 'timeout' || invoice.status === 'error') {
-    content = <Failure message={invoice.error} onRetry={invoice.retry} onManualEntry={onManualEntry} />;
+    content = (
+      <Failure
+        message={invoice.error}
+        duplicateOfId={document?.duplicate_of_id}
+        onRetry={invoice.retry}
+        onManualEntry={onManualEntry}
+        onOpenInvoice={onOpenInvoice}
+      />
+    );
   } else if (document?.confirmed_at) {
     content = (
       <div style={{ ...styles.card, display: 'flex', flexDirection: 'column', gap: '10px' }}>

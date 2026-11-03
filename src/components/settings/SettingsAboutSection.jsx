@@ -32,7 +32,7 @@ export default function SettingsAboutSection({ googleSheetsWebhookUrl }) {
             <div style={{ fontWeight: 600, fontSize: '14px' }}>Tema Visual Oficial</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Teal Oscuro Premium (#1d1d1b / #00737f)</div>
           </div>
-          <span style={{ padding: '4px 10px', borderRadius: '12px', background: 'rgba(0,115,127,0.2)', border: '1px solid var(--border-glass)', fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>
+          <span style={{ padding: '4px 10px', borderRadius: '12px', background: 'var(--primary-soft)', border: '1px solid var(--border-glass)', fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>
             Activo
           </span>
         </div>

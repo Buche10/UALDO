@@ -170,4 +170,28 @@ describe('InvoiceReview (Brief 34ap / 34bp)', () => {
 
     await waitFor(() => expect(screen.getByText('Esta factura ya se cargó')).toBeInTheDocument());
   });
+
+  it('muestra el error duplicate y el botón para ver la factura cargada original', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true,
+      data: { id: 15, status: 'failed', error_code: 'duplicate', duplicate_of_id: 11 },
+    });
+    const onOpenInvoice = vi.fn();
+    render(
+      <InvoiceReview
+        documentId={15}
+        onBack={vi.fn()}
+        onConfirmed={vi.fn()}
+        onManualEntry={vi.fn()}
+        onOpenInvoice={onOpenInvoice}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('Esta factura ya se cargó antes.')).toBeInTheDocument());
+    const button = screen.getByRole('button', { name: 'Ver la factura cargada' });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onOpenInvoice).toHaveBeenCalledWith({ id: 11 });
+    expect(screen.getByRole('button', { name: 'Cargar la compra a mano' })).toBeInTheDocument();
+  });
 });

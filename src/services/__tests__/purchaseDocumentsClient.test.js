@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as apiClient from '../apiClient';
 import {
   accessKeyError,
@@ -92,25 +92,21 @@ describe('purchaseDocumentsClient (Brief 34ap / 34bp)', () => {
       expect(await invoiceFileBlob('abc')).toBeNull();
     });
 
-    it('descarga el blob pasando Bearer token y base url', async () => {
-      vi.spyOn(apiClient, 'getApiBaseUrl').mockReturnValue('http://ualbusiness.test/api/v1');
-      vi.spyOn(apiClient, 'getAuthToken').mockReturnValue('token-123');
+    it('descarga el blob pasando por apiClient.requestBlob', async () => {
       const fakeBlob = new Blob(['contenido'], { type: 'image/jpeg' });
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      const blobSpy = vi.spyOn(apiClient, 'requestBlob').mockResolvedValue({
         ok: true,
-        blob: vi.fn().mockResolvedValue(fakeBlob),
+        status: 200,
+        blob: fakeBlob,
       });
 
       const result = await invoiceFileBlob(12);
-      expect(fetchSpy).toHaveBeenCalledWith('http://ualbusiness.test/api/v1/purchase-documents/12/file', {
-        headers: { Authorization: 'Bearer token-123' },
-      });
+      expect(blobSpy).toHaveBeenCalledWith('/purchase-documents/12/file');
       expect(result).toBe(fakeBlob);
     });
 
     it('devuelve null si la respuesta de red falla', async () => {
-      vi.spyOn(apiClient, 'getApiBaseUrl').mockReturnValue('http://ualbusiness.test/api/v1');
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 403 });
+      vi.spyOn(apiClient, 'requestBlob').mockResolvedValue({ ok: false, status: 403, error: 'Forbidden' });
       expect(await invoiceFileBlob(12)).toBeNull();
     });
   });
@@ -179,6 +175,39 @@ describe('purchaseDocumentsClient (Brief 34ap / 34bp)', () => {
       });
       expect(res.data.id).toBe(12);
     });
+
+    it('envía source_index solo en las líneas de la factura y conserva la compra', async () => {
+      requestSpy.mockResolvedValueOnce({ ok: true, data: { data: { id: 12 }, purchase: { id: 9, status: 'draft' } } });
+      const res = await confirmInvoice(12, {
+        supplier_id: 3,
+        lines: [
+          { source_index: 1, item_id: 8, quantity: '3', line_total: '30.00' },
+          { item_id: 7, quantity: '5,000', line_total: '100.00', unit_factor: '12' },
+          { source_index: 0, is_other: true, free_text_name: 'Fundas', note: 'No está en el catálogo', quantity: '2', line_total: '10.00' },
+        ],
+      });
+
+      expect(requestSpy).toHaveBeenCalledWith('/purchase-documents/12/confirm', {
+        method: 'POST',
+        body: {
+          supplier_id: 3,
+          lines: [
+            { quantity: '3', line_total: '30.00', source_index: 1, item_id: 8 },
+            { quantity: '5.000', line_total: '100.00', unit_factor: '12', item_id: 7 },
+            { quantity: '2', line_total: '10.00', source_index: 0, is_other: true, free_text_name: 'Fundas', note: 'No está en el catálogo', unit: 'unidad' },
+          ],
+        },
+      });
+      expect(res.purchase).toEqual({ id: 9, status: 'draft' });
+    });
+
+    it('valida proveedor, líneas y datos obligatorios antes de la red', async () => {
+      expect((await confirmInvoice(12, { supplier_id: null, lines: [] })).status).toBe(422);
+      expect((await confirmInvoice(12, { supplier_id: 3, lines: [] })).status).toBe(422);
+      expect(buildConfirmLines([{ item_id: 3, quantity: '0', line_total: '1' }]).error).toBeDefined();
+      expect(buildConfirmLines([{ is_other: true, source_index: 0, quantity: '1', line_total: '1' }]).error).toContain('nombre');
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('buildConfirmLines', () => {
@@ -204,5 +233,105 @@ describe('purchaseDocumentsClient (Brief 34ap / 34bp)', () => {
         { quantity: '2', line_total: '5.00', is_other: true, free_text_name: 'Carbón', note: 'De paso', unit: 'bolsa' },
       ]);
     });
+  });
+});
+
+describe('uploadFile', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('usa FormData, mantiene el token y no fija Content-Type', async () => {
+    localStorage.setItem('ualdo_token', 'token-prueba');
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ data: { id: 12 } }),
+    });
+
+    const file = new File(['<xml/>'], 'factura.xml', { type: 'text/xml' });
+    const res = await apiClient.uploadFile('/purchase-documents', file);
+
+    expect(res.ok).toBe(true);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/purchase-documents');
+    expect(options.body).toBeInstanceOf(FormData);
+    expect(options.body.get('file')).toBe(file);
+    expect(options.headers.Authorization).toBe('Bearer token-prueba');
+    expect(options.headers['Content-Type']).toBeUndefined();
+  });
+});
+
+describe('requestBlob', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('devuelve el blob con Authorization en la cabecera', async () => {
+    localStorage.setItem('ualdo_token', 'token-blob');
+    const fakeBlob = new Blob(['archivo binario'], { type: 'application/pdf' });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => fakeBlob,
+    });
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file');
+
+    expect(res.ok).toBe(true);
+    expect(res.blob).toBe(fakeBlob);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/purchase-documents/12/file');
+    expect(options.headers.Authorization).toBe('Bearer token-blob');
+  });
+
+  it('un 401 dispara ualdo:unauthorized y limpia la sesión', async () => {
+    localStorage.setItem('ualdo_token', 'token-expirado');
+    localStorage.setItem('ualdo_user', JSON.stringify({ name: 'Usuario' }));
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: { get: () => 'text/plain' },
+      text: async () => 'Unauthorized',
+    });
+
+    const unauthorizedListener = vi.fn();
+    window.addEventListener('ualdo:unauthorized', unauthorizedListener);
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file');
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(401);
+    expect(unauthorizedListener).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('ualdo_token')).toBeNull();
+    window.removeEventListener('ualdo:unauthorized', unauthorizedListener);
+  });
+
+  it('el tiempo máximo aborta la petición', async () => {
+    const abortErr = new Error('The user aborted a request.');
+    abortErr.name = 'AbortError';
+    global.fetch = vi.fn().mockRejectedValue(abortErr);
+
+    const res = await apiClient.requestBlob('/purchase-documents/12/file', { timeout: 10 });
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(0);
+    expect(res.error).toContain('Tiempo de espera agotado');
   });
 });

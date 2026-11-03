@@ -67,7 +67,8 @@ export default function PurchasesView({ onBack }) {
   const backToList = () => { setNotice(null); setScreen('list'); };
 
   const openInvoice = (document, duplicate = false) => {
-    setReview({ id: document.id, duplicate });
+    const docId = typeof document === 'object' && document !== null ? document.id : document;
+    setReview({ id: docId, duplicate });
     setNotice(null);
     setScreen('invoice');
   };
@@ -110,6 +111,7 @@ export default function PurchasesView({ onBack }) {
         onConfirmed={handleInvoiceConfirmed}
         onManualEntry={() => { setReview(null); setScreen('new'); setNotice(null); }}
         onOpenPurchase={(id) => openDetail(id, null)}
+        onOpenInvoice={openInvoice}
       />
     );
   } else {
