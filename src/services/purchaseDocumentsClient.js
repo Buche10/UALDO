@@ -1,15 +1,18 @@
-﻿import { request, uploadFile } from './apiClient';
+import { getApiBaseUrl, getAuthToken, request, uploadFile } from './apiClient';
 import { normalizeAmount } from './money';
 import { normalizePurchaseQuantity, parseId } from './purchasesClient';
 
 /**
- * Cliente de facturas electrónicas del SRI (Brief 34ap).
+ * Cliente de facturas electrónicas del SRI y recibos con visión (Brief 34ap / 34bp).
  * Contrato: UaldoBusiness/docs/API-purchase-documents.md.
  */
 
 const MAX_XML_BYTES = 1024 * 1024;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCESS_KEY_LENGTH = 49;
 const XML_MIME_TYPES = new Set(['text/xml', 'application/xml']);
+const ALLOWED_FILE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const ALLOWED_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
 const DOCUMENT_STATUSES = ['queued', 'processing', 'extracted', 'failed'];
 
 const invalid = (status, error) => ({ ok: false, status, error, isNetworkError: false });
@@ -109,7 +112,7 @@ export function buildConfirmLines(lines) {
   return { lines: normalized, error: null };
 }
 
-/** POST /purchase-documents (multipart, campo file). */
+/** POST /purchase-documents (multipart, campo file con XML). */
 export const uploadInvoiceXml = async (file) => {
   if (!file || typeof file.name !== 'string') return invalid(422, 'Elige un archivo XML.');
   const extension = file.name.toLowerCase();
@@ -121,6 +124,49 @@ export const uploadInvoiceXml = async (file) => {
     return invalid(422, 'El archivo XML no puede superar 1 MB.');
   }
   return unwrap(await uploadFile('/purchase-documents', file));
+};
+
+/** POST /purchase-documents (multipart, campo file con foto o PDF). */
+export const uploadInvoiceFile = async (file) => {
+  if (!file || typeof file.name !== 'string') return invalid(422, 'Elige una foto o un PDF.');
+  const extension = file.name.toLowerCase();
+  const mime = String(file.type || '').toLowerCase();
+  const hasValidExt = ALLOWED_FILE_EXTENSIONS.some((ext) => extension.endsWith(ext));
+  const hasValidMime = mime ? ALLOWED_FILE_MIMES.has(mime) : hasValidExt;
+
+  if (!hasValidExt || !hasValidMime) {
+    return invalid(422, 'El archivo debe ser una foto (JPG, PNG o WEBP) o un PDF.');
+  }
+  if (Number(file.size) > MAX_FILE_BYTES) {
+    return invalid(422, 'El archivo no puede superar 10 MB.');
+  }
+  return unwrap(await uploadFile('/purchase-documents', file));
+};
+
+/** GET /purchase-documents/{id}/file (descarga streaming como Blob). */
+export const invoiceFileBlob = async (documentId) => {
+  const id = parseId(documentId);
+  if (!id) return null;
+
+  let baseUrl = '';
+  try {
+    baseUrl = getApiBaseUrl();
+  } catch {
+    return null;
+  }
+
+  const url = `${baseUrl}/purchase-documents/${id}/file`;
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(url, { headers });
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch {
+    return null;
+  }
 };
 
 /** POST /purchase-documents/access-key. */
@@ -163,5 +209,3 @@ export const confirmInvoice = async (documentId, { supplier_id, lines } = {}) =>
     body: { supplier_id: supplierId, lines: built.lines },
   }));
 };
-
-

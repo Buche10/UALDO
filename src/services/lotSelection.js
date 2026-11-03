@@ -4,7 +4,7 @@
  */
 
 export const LOT_REASON_MIN = 5;
-export const LOT_REASON_MAX = 300;
+export const LOT_REASON_MAX = 255;
 
 /** Texto del motivo de un salto de FIFO, sin espacios sobrantes. */
 export function normalizeLotJustification(raw) {

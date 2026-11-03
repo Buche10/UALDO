@@ -37,7 +37,7 @@ function documentOf(overrides = {}) {
   return { id: 12, status: 'extracted', extraction, purchase_id: null, confirmed_at: null, ...overrides };
 }
 
-describe('InvoiceReview (Brief 34ap)', () => {
+describe('InvoiceReview (Brief 34ap / 34bp)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(purchasesClient, 'listSuppliers').mockResolvedValue(pageOf([supplier]));
@@ -116,6 +116,37 @@ describe('InvoiceReview (Brief 34ap)', () => {
     expect(payload.is_other).toBe(true);
     expect(payload.source_index).toBe(0);
     expect(payload.item_id).toBeUndefined();
+  });
+
+  it('muestra el texto Leyendo el recibo cuando source es image', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 14, status: 'processing', source: 'image' },
+    });
+    render(<InvoiceReview documentId={14} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Leyendo el recibo')).toBeInTheDocument());
+    expect(screen.getByText('Estamos leyendo los datos del recibo. No cierres esta pantalla.')).toBeInTheDocument();
+  });
+
+  it('muestra el error unreadable y permite cargar la compra a mano', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 12, status: 'failed', error_code: 'unreadable' },
+    });
+    const onManualEntry = vi.fn();
+    render(<InvoiceReview documentId={12} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={onManualEntry} />);
+
+    await waitFor(() => expect(screen.getByText('No se pudo leer la foto. Prueba con más luz o sube el PDF.')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar la compra a mano' }));
+    expect(onManualEntry).toHaveBeenCalled();
+  });
+
+  it('muestra el error timeout o provider_error y la salida a carga manual', async () => {
+    vi.spyOn(purchaseDocumentsClient, 'getInvoiceDocument').mockResolvedValue({
+      ok: true, data: { id: 12, status: 'failed', error_code: 'provider_error' },
+    });
+    render(<InvoiceReview documentId={12} onBack={vi.fn()} onConfirmed={vi.fn()} onManualEntry={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('No pudimos leer el recibo ahora. Prueba en unos minutos o carga la compra a mano.')).toBeInTheDocument());
   });
 
   it('muestra el error del SRI y la salida a carga manual', async () => {
