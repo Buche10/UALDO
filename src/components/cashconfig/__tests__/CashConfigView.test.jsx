@@ -61,7 +61,7 @@ describe('CashConfigView component', () => {
     render(<CashConfigView onBack={() => {}} initialTab="mappings" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Formas de Pago de RunFood')).toBeInTheDocument();
+      expect(screen.getByText('Formas de pago de RunFood')).toBeInTheDocument();
     });
 
     const commTabBtn = screen.getByRole('button', { name: /Comisiones/i });
@@ -114,7 +114,7 @@ describe('CashConfigView component', () => {
     render(<CashConfigView onBack={onBackMock} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Formas de Pago de RunFood')).toBeInTheDocument();
+      expect(screen.getByText('Formas de pago de RunFood')).toBeInTheDocument();
     });
 
     const backBtn = screen.getByRole('button', { name: /Volver a la caja/i });

@@ -1,9 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   listPaymentMappings,
   assignBucket,
   acceptSuggestion
 } from '../services/cashConfigClient';
+
+const porFormaPago = (a, b) => Number(a.runfood_forma_pago_id || 0) - Number(b.runfood_forma_pago_id || 0);
+
+/** Una forma está en uso si cobró algo en los últimos días o ya tiene casilla. */
+const estaEnUso = (m) => m.ultimo_arqueo != null || m.bucket !== 'sin_mapear';
+
+/** Prioridad dentro de "Con cobros": primero lo que pide acción, luego las sugerencias. */
+const prioridad = (m) => {
+  if (m.bucket === 'sin_mapear' && m.ultimo_arqueo != null) return 0;
+  if (m.suggested_bucket && !m.confirmado) return 1;
+  return 2;
+};
+
+/**
+ * Separa las formas de pago en las que el local usa (con cobros recientes o con
+ * casilla) y el resto del catálogo de RunFood (Brief 43p). Función pura.
+ *
+ * @param {Array<Object>} mappings
+ * @returns {{ enUso: Array<Object>, otras: Array<Object> }}
+ */
+export function groupMappings(mappings) {
+  const lista = Array.isArray(mappings) ? mappings : [];
+
+  const enUso = lista
+    .filter(estaEnUso)
+    .sort((a, b) => prioridad(a) - prioridad(b) || porFormaPago(a, b));
+
+  const otras = lista
+    .filter((m) => !estaEnUso(m))
+    .sort(porFormaPago);
+
+  return { enUso, otras };
+}
 
 /**
  * Hook para manejar la lista y actualizacion de mapeos de formas de pago de RunFood.
@@ -38,12 +71,7 @@ export function usePaymentMappings() {
     fetchMappings();
   }, [fetchMappings]);
 
-  const sortedMappings = [...mappings].sort((a, b) => {
-    const aUnmapped = a.bucket === 'sin_mapear' ? 1 : 0;
-    const bUnmapped = b.bucket === 'sin_mapear' ? 1 : 0;
-    if (aUnmapped !== bUnmapped) return bUnmapped - aUnmapped;
-    return Number(a.runfood_forma_pago_id || 0) - Number(b.runfood_forma_pago_id || 0);
-  });
+  const { enUso, otras } = useMemo(() => groupMappings(mappings), [mappings]);
 
   const handleAcceptSuggestion = async (mapping) => {
     setError(null);
@@ -115,7 +143,9 @@ export function usePaymentMappings() {
   };
 
   return {
-    mappings: sortedMappings,
+    mappings,
+    enUso,
+    otras,
     loading,
     error,
     setError,

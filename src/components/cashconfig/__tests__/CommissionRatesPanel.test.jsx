@@ -68,7 +68,7 @@ describe('CommissionRatesPanel component', () => {
     expect(pendingBadges.length).toBe(2); // debito y diners
 
     // Comprobar la nota fija
-    expect(screen.getByText(/La retención se calcula sobre el bruto\. Confírmalo con tu contador\./i)).toBeInTheDocument();
+    expect(screen.getByText('La comisión incluye el IVA. La retención del 2 % se calcula sobre lo que queda después de la comisión.')).toBeInTheDocument();
 
     // Abrir "Nueva tasa" para Débito
     const newRateButtons = screen.getAllByRole('button', { name: /Nueva tasa/i });
