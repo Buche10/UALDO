@@ -63,7 +63,7 @@ export default function CommissionRatesPanel() {
 
       <div style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
         <Info size={14} color="var(--accent)" />
-        <span>La retención se calcula sobre el bruto. Confírmalo con tu contador.</span>
+        <span>La comisión incluye el IVA. La retención del 2 % se calcula sobre lo que queda después de la comisión.</span>
       </div>
 
       {successBanner && (
