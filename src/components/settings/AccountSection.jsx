@@ -51,7 +51,7 @@ export default function AccountSection() {
                 flexShrink: 0,
               }}
             >
-              <User size={20} color="#ffffff" />
+              <User size={20} color="var(--on-primary)" />
             </div>
             <div>
               {currentUser.name && (
@@ -91,8 +91,8 @@ export default function AccountSection() {
                   padding: '6px 10px',
                   fontSize: '12px',
                   color: 'var(--error)',
-                  border: '1px solid rgba(244,63,94,0.3)',
-                  background: 'rgba(244,63,94,0.1)',
+                  border: '1px solid var(--border-error)',
+                  background: 'var(--error-soft-strong)',
                   cursor: loggingOut ? 'not-allowed' : 'pointer',
                   borderRadius: '8px',
                   opacity: loggingOut ? 0.6 : 1,
@@ -124,8 +124,8 @@ export default function AccountSection() {
                 padding: '8px 12px',
                 fontSize: '12px',
                 color: 'var(--error)',
-                border: '1px solid rgba(244,63,94,0.3)',
-                background: 'rgba(244,63,94,0.1)',
+                border: '1px solid var(--border-error)',
+                background: 'var(--error-soft-strong)',
                 cursor: 'pointer',
                 borderRadius: '10px',
                 display: 'flex',

@@ -135,7 +135,7 @@ export default function SalesHoursChart({ data, loading, error, onRetry }) {
                   gap: '4px',
                   padding: '6px 8px',
                   borderRadius: '8px',
-                  background: isPeak ? 'rgba(98, 201, 200, 0.08)' : 'transparent',
+                  background: isPeak ? 'var(--accent-soft)' : 'transparent',
                   border: isPeak ? '1px solid var(--border-glow)' : '1px solid transparent'
                 }}
               >
@@ -181,7 +181,7 @@ export default function SalesHoursChart({ data, loading, error, onRetry }) {
                     height: '8px',
                     width: '100%',
                     borderRadius: '9999px',
-                    background: 'rgba(255, 255, 255, 0.06)',
+                    background: 'var(--track-bg)',
                     overflow: 'hidden'
                   }}
                 >

@@ -46,7 +46,7 @@ export default function StaffAliasRow({
             borderRadius: '9999px',
             border: isClearing ? 'none' : undefined,
             background: isClearing ? 'var(--error)' : undefined,
-            color: isClearing ? 'var(--on-primary)' : 'white',
+            color: isClearing ? 'var(--on-primary)' : 'var(--on-primary)',
             fontSize: '11px',
             fontWeight: 600,
             cursor: 'pointer',

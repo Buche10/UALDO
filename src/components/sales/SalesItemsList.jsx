@@ -154,7 +154,7 @@ export default function SalesItemsList({
                 alignItems: 'center',
                 padding: '10px 12px',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'var(--card-subtle-bg)',
                 border: '1px solid var(--border-glass)',
                 gap: '10px'
               }}

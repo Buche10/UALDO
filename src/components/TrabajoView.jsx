@@ -255,9 +255,9 @@ export default function TrabajoView({ onLogout }) {
               onClick={() => setSelectedTaskId(t.id)}
             >
               <div style={{ marginTop: 2 }}>
-                {t.status === "done" ? <CheckCircle2 size={18} color="#10b981" />
-                  : t.status === "in_progress" ? <Clock size={18} color="#f59e0b" />
-                  : <Circle size={18} color="#94a3b8" />}
+                {t.status === "done" ? <CheckCircle2 size={18} color="var(--success)" />
+                  : t.status === "in_progress" ? <Clock size={18} color="var(--warning)" />
+                  : <Circle size={18} color="var(--text-subtle)" />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, textDecoration: t.status === "done" ? "line-through" : "none", opacity: t.status === "done" ? 0.6 : 1 }}>
@@ -266,7 +266,7 @@ export default function TrabajoView({ onLogout }) {
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
                   {t.project && <span style={{ ...S.chip, background: (t.project_color || "var(--primary)") + "22", color: t.project_color || "var(--accent)" }}>{t.project}</span>}
                   {t.assignee && <span style={S.muted}>{t.assignee}</span>}
-                  {t.due_date && <span style={{ ...S.muted, color: t.overdue ? "#f43f5e" : undefined }}>
+                  {t.due_date && <span style={{ ...S.muted, color: t.overdue ? "var(--error)" : undefined }}>
                     {t.overdue && <AlertTriangle size={11} style={{ verticalAlign: -1 }} />} {t.due_date}
                   </span>}
                 </div>
@@ -282,9 +282,9 @@ export default function TrabajoView({ onLogout }) {
         <div>
           <div style={S.statRow}>
             <Stat label="Total" value={progress.total} />
-            <Stat label="Hechas" value={progress.by_status?.done ?? 0} color="#10b981" />
-            <Stat label="En curso" value={progress.by_status?.in_progress ?? 0} color="#f59e0b" />
-            <Stat label="Atrasadas" value={progress.overdue ?? 0} color="#f43f5e" />
+            <Stat label="Hechas" value={progress.by_status?.done ?? 0} color="var(--success)" />
+            <Stat label="En curso" value={progress.by_status?.in_progress ?? 0} color="var(--warning)" />
+            <Stat label="Atrasadas" value={progress.overdue ?? 0} color="var(--error)" />
           </div>
           <ProgressBar pct={progress.pct_done ?? 0} label={`${progress.pct_done ?? 0}% completado`} />
 
@@ -317,7 +317,7 @@ export default function TrabajoView({ onLogout }) {
           {notifs.length === 0 && !loading && <div style={S.muted}>Sin avisos.</div>}
           {notifs.map(n => (
             <div key={n.id} style={{ ...S.notifRow, opacity: n.read ? 0.55 : 1 }} onClick={() => !n.read && handleReadNotif(n.id)}>
-              <Bell size={16} color={n.read ? "#94a3b8" : "var(--accent)"} style={{ marginTop: 2 }} />
+              <Bell size={16} color={n.read ? "var(--text-subtle)" : "var(--accent)"} style={{ marginTop: 2 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13 }}>{n.data?.message || n.data?.title || n.type}</div>
                 <div style={S.muted}>{new Date(n.created_at).toLocaleString()}</div>
@@ -343,7 +343,7 @@ function Stat({ label, value, color }) {
 function ProgressBar({ pct, color = "var(--primary-2)", label, small }) {
   return (
     <div style={{ margin: small ? "2px 0" : "10px 0" }}>
-      <div style={{ height: small ? 6 : 10, background: "rgba(98, 201, 200, 0.15)", borderRadius: 999, overflow: "hidden" }}>
+      <div style={{ height: small ? 6 : 10, background: "var(--accent-soft)", borderRadius: 999, overflow: "hidden" }}>
         <div style={{ width: `${Math.min(100, pct)}%`, height: "100%", background: color, borderRadius: 999, transition: "width .3s" }} />
       </div>
       {label && <div style={{ ...S.muted, marginTop: 4 }}>{label}</div>}
@@ -354,14 +354,14 @@ function ProgressBar({ pct, color = "var(--primary-2)", label, small }) {
 const S = {
   wrap: { padding: 16, maxWidth: 640, margin: "0 auto" },
   muted: { color: "var(--text-muted)", fontSize: 12 },
-  err: { background: "rgba(244,63,94,0.12)", color: "var(--error)", padding: "8px 10px", borderRadius: 8, fontSize: 12, margin: "8px 0" },
+  err: { background: "var(--error-soft-strong)", color: "var(--error)", padding: "8px 10px", borderRadius: 8, fontSize: 12, margin: "8px 0" },
   topbar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   title: { fontSize: 18, fontWeight: 700 },
   iconBtn: { padding: 8, borderRadius: 8, border: "1px solid var(--border-glass)", background: "transparent", color: "var(--text-muted)", cursor: "pointer" },
   tabs: { display: "flex", gap: 6, marginBottom: 14 },
-  tab: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "rgba(98,201,200,0.08)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" },
-  tabActive: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  badge: { background: "var(--error)", color: "#fff", borderRadius: 999, fontSize: 10, padding: "1px 6px", marginLeft: 4 },
+  tab: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--accent-soft)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" },
+  tabActive: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "var(--on-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  badge: { background: "var(--error)", color: "var(--on-primary)", borderRadius: 999, fontSize: 10, padding: "1px 6px", marginLeft: 4 },
   statRow: { display: "flex", gap: 8, marginBottom: 8 },
   stat: { flex: 1, background: "var(--bg-card)", borderRadius: 10, padding: "10px 6px", textAlign: "center", border: "1px solid var(--border-glass)" },
   sectionTitle: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", margin: "16px 0 8px", letterSpacing: 0.5 },
@@ -371,8 +371,8 @@ const S = {
   notifRow: { display: "flex", gap: 10, padding: "10px 12px", background: "var(--bg-card)", borderRadius: 10, marginBottom: 8, cursor: "pointer", border: "1px solid var(--border-glass)" },
   chip: { fontSize: 11, padding: "1px 7px", borderRadius: 999, fontWeight: 600 },
   dot: { display: "inline-block", width: 8, height: 8, borderRadius: 999, marginRight: 4 },
-  newBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "10px", borderRadius: 10, border: "1px dashed var(--border-glass)", background: "rgba(98,201,200,0.08)", color: "var(--accent)", fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 12 },
+  newBtn: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "10px", borderRadius: 10, border: "1px dashed var(--border-glass)", background: "var(--accent-soft)", color: "var(--accent)", fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 12 },
   formCard: { display: "flex", flexDirection: "column", gap: 8, background: "var(--bg-card)", borderRadius: 12, padding: 14, marginBottom: 12, border: "1px solid var(--border-glass)" },
-  input: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "rgba(255,255,255,0.03)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box" },
-  primaryBtn: { width: "100%", padding: "11px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 2 },
+  input: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "var(--card-subtle-bg)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box" },
+  primaryBtn: { width: "100%", padding: "11px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "var(--on-primary)", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 2 },
 };

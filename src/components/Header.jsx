@@ -67,7 +67,7 @@ export default function Header({
     <header className="app-header">
       <div className="brand-section">
         <img
-          src="/brand/ualdo-claro.png"
+          src="/brand/ualdo-fondo-claro.png"
           alt="Ualdo"
           className="brand-logo-img"
           style={{ height: '32px', width: 'auto' }}

@@ -72,7 +72,7 @@ export default function NotificationPreferencesSection({ authenticated }) {
       </p>
 
       {prefsError && (
-        <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid var(--error)', color: 'var(--error)', fontSize: '12px', marginBottom: '12px' }}>
+        <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'var(--error-soft)', border: '1px solid var(--error)', color: 'var(--error)', fontSize: '12px', marginBottom: '12px' }}>
           {prefsError}
         </div>
       )}
@@ -96,7 +96,7 @@ export default function NotificationPreferencesSection({ authenticated }) {
                 justifyContent: 'space-between',
                 padding: '10px 12px',
                 borderRadius: '10px',
-                background: 'rgba(32, 45, 47, 0.5)',
+                background: 'var(--surface-soft)',
                 border: '1px solid var(--border-glass)',
               }}
             >
@@ -121,7 +121,7 @@ export default function NotificationPreferencesSection({ authenticated }) {
                   height: '24px',
                   borderRadius: '9999px',
                   border: 'none',
-                  background: p.enabled ? 'var(--primary)' : 'rgba(255, 255, 255, 0.2)',
+                  background: p.enabled ? 'var(--primary)' : 'var(--toggle-off)',
                   position: 'relative',
                   cursor: 'pointer',
                   transition: 'background 0.2s ease',
@@ -134,7 +134,7 @@ export default function NotificationPreferencesSection({ authenticated }) {
                     width: '20px',
                     height: '20px',
                     borderRadius: '50%',
-                    background: '#ffffff',
+                    background: 'var(--on-primary)',
                     transform: p.enabled ? 'translateX(20px)' : 'translateX(0)',
                     transition: 'transform 0.2s ease',
                   }}
