@@ -23,7 +23,7 @@ describe('Android version calculation', () => {
     const pkgPath = resolve(__dirname, '../../package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     const code = calculateAndroidVersionCode(pkg.version);
-    expect(code).toBe(calculateAndroidVersionCode('1.2.0'));
+    expect(code).toBe(calculateAndroidVersionCode('1.3.0'));
   });
 
   it('throws for invalid version format', () => {

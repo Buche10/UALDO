@@ -134,8 +134,8 @@ export default function TaskDetailView({ taskId, onBack }) {
  <h2 style={S.taskTitle}>{task.title}</h2>
  <span style={{
  ...S.statusChip,
- background: task.status === "done" ? "rgba(16,185,129,0.15)" : task.status === "in_progress" ? "rgba(245,158,11,0.15)" : "rgba(148,163,184,0.15)",
- color: task.status === "done" ? "#10b981" : task.status === "in_progress" ? "#f59e0b" : "#94a3b8"
+ background: task.status === "done" ? "var(--success-tint)" : task.status === "in_progress" ? "var(--warning-tint)" : "var(--neutral-tint)",
+ color: task.status === "done" ? "var(--success)" : task.status === "in_progress" ? "var(--warning)" : "var(--text-subtle)"
  }}>
  {task.status === "done" ? "Hecho" : task.status === "in_progress" ? "En progreso" : "Por hacer"}
  </span>
@@ -153,7 +153,7 @@ export default function TaskDetailView({ taskId, onBack }) {
  </span>
  )}
  {task.due_date && (
- <span style={{ ...S.muted, color: task.overdue ? "#f43f5e" : undefined }}>
+ <span style={{ ...S.muted, color: task.overdue ? "var(--error)" : undefined }}>
  <Clock size={12} style={{ verticalAlign: -1, marginRight: 2 }} /> {task.due_date}
  </span>
  )}
@@ -165,7 +165,7 @@ export default function TaskDetailView({ taskId, onBack }) {
  {pinnedNotes.length > 0 && (
  <div style={S.pinnedSection}>
  <div style={S.sectionTitle}>
- <Star size={14} color="#f59e0b" fill="#f59e0b" style={{ marginRight: 4 }} />
+ <Star size={14} color="var(--warning)" fill="var(--warning)" style={{ marginRight: 4 }} />
  Notas clave fijadas
  </div>
  {pinnedNotes.map((pn) => (
@@ -192,11 +192,11 @@ export default function TaskDetailView({ taskId, onBack }) {
  <div key={item.type + "-" + item.id + "-" + idx} style={S.timelineItem}>
  <div style={S.timelineIcon}>
  {item.type === "activity" ? (
- <Clock size={15} color="#94a3b8" />
+ <Clock size={15} color="var(--text-subtle)" />
  ) : item.kind === "handoff" ? (
- <FileText size={15} color="#6366f1" />
+ <FileText size={15} color="var(--primary-2)" />
  ) : item.is_key ? (
- <Star size={15} color="#f59e0b" fill="#f59e0b" />
+ <Star size={15} color="var(--warning)" fill="var(--warning)" />
  ) : (
  <FileText size={15} color="var(--accent)" />
  )}
@@ -217,28 +217,28 @@ export default function TaskDetailView({ taskId, onBack }) {
  <div style={S.handoffBadge}> Traspaso de turno</div>
  {item.meta?.done && (
  <div style={S.handoffField}>
- <span style={{ color: "#10b981", fontWeight: 600 }}> Qué se hizo:</span> {item.meta.done}
+ <span style={{ color: "var(--success)", fontWeight: 600 }}> Qué se hizo:</span> {item.meta.done}
  </div>
  )}
  {item.meta?.pending && (
  <div style={S.handoffField}>
- <span style={{ color: "#f59e0b", fontWeight: 600 }}>⏳ Qué falta:</span> {item.meta.pending}
+ <span style={{ color: "var(--warning)", fontWeight: 600 }}>Qué falta:</span> {item.meta.pending}
  </div>
  )}
  {item.meta?.avoid && (
  <div style={S.handoffField}>
- <span style={{ color: "#f43f5e", fontWeight: 600 }}> Qué NO hacer:</span> {item.meta.avoid}
+ <span style={{ color: "var(--error)", fontWeight: 600 }}> Qué NO hacer:</span> {item.meta.avoid}
  </div>
  )}
  {item.meta?.contact && (
  <div style={S.handoffField}>
- <span style={{ color: "#6366f1", fontWeight: 600 }}> Contacto:</span> {item.meta.contact}
+ <span style={{ color: "var(--primary-2)", fontWeight: 600 }}> Contacto:</span> {item.meta.contact}
  </div>
  )}
  </div>
  ) : (
  <div style={{ fontSize: 13, whiteSpace: "pre-wrap", marginTop: 2 }}>
- {item.is_key && <span style={{ color: "#f59e0b", marginRight: 4 }}></span>}
+ {item.is_key && <span style={{ color: "var(--warning)", marginRight: 4 }}></span>}
  {item.content}
  </div>
  )}
@@ -306,7 +306,7 @@ export default function TaskDetailView({ taskId, onBack }) {
  </div>
 
  <div>
- <label style={S.fieldLabel}>⏳ ¿Qué pendiente queda para el siguiente?</label>
+ <label style={S.fieldLabel}>¿Qué pendiente queda para el siguiente?</label>
  <textarea
  style={S.textarea}
  placeholder="Paso siguiente o tarea pendiente..."
@@ -358,26 +358,26 @@ const S = {
  chip: { fontSize: 11, padding: "1px 7px", borderRadius: 999, fontWeight: 600 },
  muted: { color: "var(--text-muted)", fontSize: 12 },
  mutedDate: { color: "var(--text-muted)", fontSize: 11 },
- err: { background: "rgba(244,63,94,0.12)", color: "var(--error)", padding: "10px", borderRadius: 8, fontSize: 13, margin: "12px 0" },
+ err: { background: "var(--error-soft-strong)", color: "var(--error)", padding: "10px", borderRadius: 8, fontSize: 13, margin: "12px 0" },
  sectionTitle: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", margin: "16px 0 8px", letterSpacing: 0.5, display: "flex", alignItems: "center" },
  pinnedSection: { marginBottom: 16 },
- pinnedCard: { background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: 10, padding: 12, marginBottom: 8 },
+ pinnedCard: { background: "var(--warning-soft)", border: "1px solid var(--border-warning)", borderRadius: 10, padding: 12, marginBottom: 8 },
  noteMeta: { display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)", marginBottom: 4 },
  noteText: { fontSize: 13, fontWeight: 500 },
  timelineItem: { display: "flex", gap: 10, marginBottom: 12 },
- timelineIcon: { width: 28, height: 28, borderRadius: 999, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },
+ timelineIcon: { width: 28, height: 28, borderRadius: 999, background: "var(--track-bg)", border: "1px solid var(--border-glass)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },
  timelineContent: { flex: 1, background: "var(--bg-card)", borderRadius: 10, padding: "10px 12px", border: "1px solid var(--border-glass)" },
  timelineHeader: { display: "flex", justifyContent: "space-between", marginBottom: 4 },
- handoffBox: { background: "rgba(99, 102, 241, 0.06)", border: "1px solid rgba(99, 102, 241, 0.2)", borderRadius: 8, padding: 10, marginTop: 4 },
- handoffBadge: { fontSize: 11, fontWeight: 700, color: "#6366f1", marginBottom: 6 },
+ handoffBox: { background: "var(--primary-soft)", border: "1px solid var(--border-glow)", borderRadius: 8, padding: 10, marginTop: 4 },
+ handoffBadge: { fontSize: 11, fontWeight: 700, color: "var(--primary-2)", marginBottom: 6 },
  handoffField: { fontSize: 12, marginBottom: 4, lineHeight: 1.4 },
  actionCard: { background: "var(--bg-card)", borderRadius: 12, padding: 16, border: "1px solid var(--border-glass)", marginTop: 20 },
  formTabs: { display: "flex", gap: 8, marginBottom: 12 },
- formTab: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.05)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" },
- formTabActive: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
- textarea: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "rgba(255,255,255,0.04)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box", fontFamily: "inherit" },
- input: { width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "rgba(255,255,255,0.04)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box", fontFamily: "inherit" },
+ formTab: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--track-bg)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" },
+ formTabActive: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "var(--on-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+ textarea: { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "var(--card-subtle-bg)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box", fontFamily: "inherit" },
+ input: { width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-glass)", background: "var(--card-subtle-bg)", color: "var(--text-main)", fontSize: 13, boxSizing: "border-box", fontFamily: "inherit" },
  fieldLabel: { fontSize: 12, fontWeight: 600, color: "var(--text-main)", marginBottom: 3, display: "block" },
- btnSubmit: { padding: "8px 16px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center" },
- btnSubmitFull: { width: "100%", padding: "11px", marginTop: 8, borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" },
+ btnSubmit: { padding: "8px 16px", borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "var(--on-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center" },
+ btnSubmitFull: { width: "100%", padding: "11px", marginTop: 8, borderRadius: 8, border: "none", background: "var(--grad-primary)", color: "var(--on-primary)", fontSize: 14, fontWeight: 600, cursor: "pointer" },
 };

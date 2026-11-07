@@ -38,7 +38,7 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '20px',
-      background: 'radial-gradient(circle at top right, rgba(0, 115, 127, 0.2), transparent 45%), radial-gradient(circle at bottom left, rgba(98, 201, 200, 0.15), transparent 45%)'
+      background: 'radial-gradient(circle at top right, var(--primary-glow), transparent 45%), radial-gradient(circle at bottom left, var(--accent-soft), transparent 45%)'
     }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '400px', padding: '36px 24px 28px 24px', borderRadius: '24px', textAlign: 'center' }}>
         {/* Header Branding: Mascota + Logo Claro */}
@@ -46,10 +46,10 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
           <img 
             src="/brand/mascota.png" 
             alt="Mascota Ualdo" 
-            style={{ width: '96px', height: 'auto', marginBottom: '12px', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }} 
+            style={{ width: '96px', height: 'auto', marginBottom: '12px', filter: 'drop-shadow(var(--shadow-logo))' }} 
           />
           <img 
-            src="/brand/ualdo-claro.png" 
+            src="/brand/ualdo-fondo-claro.png" 
             alt="Ualdo" 
             style={{ height: '36px', width: 'auto', marginBottom: '8px' }} 
           />
@@ -65,8 +65,8 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
             gap: '10px',
             padding: '12px 14px',
             borderRadius: '12px',
-            background: 'rgba(244, 63, 94, 0.12)',
-            border: '1px solid rgba(244, 63, 94, 0.3)',
+            background: 'var(--error-soft-strong)',
+            border: '1px solid var(--border-error)',
             color: 'var(--error)',
             fontSize: '13px',
             marginBottom: '20px',

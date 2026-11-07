@@ -69,7 +69,7 @@ export default function AdvancedSettingsSection({ settings, onSaveSettings, onCl
 
       {showAdvanced && (
         <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-glass)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'var(--card-subtle-bg)', border: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: '13px' }}>Servidor Ualdo</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{apiBaseUrl}</div>
@@ -79,7 +79,7 @@ export default function AdvancedSettingsSection({ settings, onSaveSettings, onCl
               className="glass-card-interactive"
               onClick={handleTestConnection}
               disabled={testing}
-              style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'rgba(0,115,127,0.15)', color: 'var(--text-main)', cursor: 'pointer' }}
+              style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--border-glass)', background: 'var(--primary-tint)', color: 'var(--text-main)', cursor: 'pointer' }}
             >
               <RefreshCw size={12} className={testing ? 'spin' : ''} style={{ verticalAlign: -1, marginRight: 4 }} />
               <span>{testing ? 'Comprobando...' : 'Probar Conexión'}</span>
@@ -91,8 +91,8 @@ export default function AdvancedSettingsSection({ settings, onSaveSettings, onCl
               style={{
                 padding: '10px 12px',
                 borderRadius: '10px',
-                background: testResult.online ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-                border: `1px solid ${testResult.online ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                background: testResult.online ? 'var(--success-soft)' : 'var(--error-soft)',
+                border: `1px solid ${testResult.online ? 'var(--border-success)' : 'var(--border-error)'}`,
                 fontSize: '11px',
               }}
             >
@@ -149,7 +149,7 @@ export default function AdvancedSettingsSection({ settings, onSaveSettings, onCl
             <button
               type="button"
               onClick={onClearAllData}
-              style={{ width: '100%', padding: '10px', fontSize: '12px', color: 'var(--error)', border: '1px solid rgba(244,63,94,0.3)', background: 'rgba(244,63,94,0.1)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ width: '100%', padding: '10px', fontSize: '12px', color: 'var(--error)', border: '1px solid var(--border-error)', background: 'var(--error-soft-strong)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               <Trash2 size={14} />
               <span>Restablecer Datos Locales</span>

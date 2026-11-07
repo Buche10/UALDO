@@ -19,7 +19,7 @@ describe('capacitor.config.ts', () => {
     expect(config.appId).toBe('com.ualdo.ecosystem');
     expect(config.appName).toBe('UALDO');
     expect(config.webDir).toBe('dist');
-    expect(config.plugins?.SplashScreen?.backgroundColor).toBe('#1d1d1b');
+    expect(config.plugins?.SplashScreen).toBeUndefined();
   });
 
   it('sets cleartext and allowMixedContent to true when CAP_DEV is "1"', async () => {

@@ -30,7 +30,7 @@ export default function SettingsAboutSection({ googleSheetsWebhookUrl }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontWeight: 600, fontSize: '14px' }}>Tema Visual Oficial</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Teal Oscuro Premium (#1d1d1b / #00737f)</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tema claro de Ualdo</div>
           </div>
           <span style={{ padding: '4px 10px', borderRadius: '12px', background: 'var(--primary-soft)', border: '1px solid var(--border-glass)', fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>
             Activo
@@ -46,7 +46,7 @@ export default function SettingsAboutSection({ googleSheetsWebhookUrl }) {
           <img src="/brand/isotipo.png" alt="Isotipo Ualdo" style={{ width: '48px', height: 'auto' }} />
           <div>
             <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-main)' }}>UALDO Mobile</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Versión 1.0.0 (Capacitor Native)</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Versión 1.3.0 (Capacitor Native)</div>
             <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px' }}>© 2026 Ualdo Corp. Todos los derechos reservados.</div>
           </div>
         </div>

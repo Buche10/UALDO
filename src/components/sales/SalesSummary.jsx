@@ -179,7 +179,7 @@ export default function SalesSummary({ data, loading, error, onRetry }) {
                       alignItems: 'center',
                       padding: '8px 10px',
                       borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
+                      background: 'var(--card-subtle-bg)',
                       fontSize: '12px'
                     }}
                   >

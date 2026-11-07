@@ -53,10 +53,10 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
 
       {/* Active User Card */}
       {currentUser && (
-        <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12))' }}>
+        <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--grad-glow)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <User size={22} color="#ffffff" />
+              <User size={22} color="var(--on-primary)" />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '14px' }}>{currentUser.name} ({currentUser.role})</div>
@@ -71,7 +71,7 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
           <button
             className="glass-card-interactive"
             onClick={handleLogoutClick}
-            style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--error)', border: '1px solid rgba(244,63,94,0.3)', background: 'rgba(244,63,94,0.1)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--error)', border: '1px solid var(--border-error)', background: 'var(--error-soft-strong)', cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
             <LogOut size={14} />
             <span>Salir</span>
@@ -82,7 +82,7 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
       {/* Status Card */}
       <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: nodeStatus.online ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: nodeStatus.online ? 'var(--success-tint)' : 'var(--error-soft-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Server size={22} color={nodeStatus.online ? 'var(--success)' : 'var(--error)'} />
           </div>
           <div>
@@ -166,8 +166,8 @@ export default function NetworkView({ settings, onSaveSettings, nodeStatus, onRe
             marginTop: '12px',
             padding: '12px',
             borderRadius: '12px',
-            background: testResult.online ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-            border: `1px solid ${testResult.online ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+            background: testResult.online ? 'var(--success-soft)' : 'var(--error-soft)',
+            border: `1px solid ${testResult.online ? 'var(--border-success)' : 'var(--border-error)'}`,
             fontSize: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: testResult.online ? 'var(--success)' : 'var(--error)' }}>
