@@ -93,6 +93,9 @@ describe('OvertimeForm (Brief 36p / 37p_fix)', () => {
         }),
         expect.any(String)
       );
+
+      expect(screen.getByRole('status')).toHaveTextContent('Quedó pendiente de aprobación del dueño.');
+
     });
   });
 

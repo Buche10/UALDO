@@ -33,6 +33,8 @@ export default function OvertimeSummary({ initialMonth }) {
   const workers = summary?.workers || [];
   const totalHours = summary?.total_hours ?? 0;
   const peopleCount = summary?.people ?? workers.length;
+  const pendingCount = summary?.pending_count ?? 0;
+  const pendingHours = summary?.pending_hours ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -105,6 +107,23 @@ export default function OvertimeSummary({ initialMonth }) {
           </div>
         </div>
       </div>
+
+      {pendingCount > 0 && (
+        <div
+          role="status"
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            background: 'var(--warning-soft)',
+            border: '1px solid var(--border-warning)',
+            color: 'var(--warning)',
+            fontSize: '13px',
+            fontWeight: 500,
+          }}
+        >
+          Pendientes de aprobar: {pendingCount} registros, {pendingHours} h
+        </div>
+      )}
 
       {error && (
         <div role="alert" style={{ padding: '10px 12px', borderRadius: '6px', background: 'var(--error-soft)', color: 'var(--error)', fontSize: '13px' }}>

@@ -21,6 +21,12 @@ export default function EcosystemView({
   const user = getUser();
 
   const handleSubTabChange = (newSubTab) => {
+    if (typeof newSubTab === 'object' && newSubTab !== null) {
+      if (newSubTab.subView && onSubViewChange) {
+        onSubViewChange(newSubTab.subView, newSubTab.params);
+      }
+      return;
+    }
     if (onSubViewChange) {
       onSubViewChange(newSubTab);
     }

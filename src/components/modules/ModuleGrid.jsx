@@ -3,6 +3,7 @@ import ModuleCard from './ModuleCard';
 import { getVisibleModules } from './moduleRegistry';
 import { can, ABILITIES } from '../../services/permissions';
 import { listWithdrawals } from '../../services/withdrawalsClient';
+import { pendingOvertimeCount } from '../../services/overtimeClient';
 import { useReservationsTodayCount } from '../../hooks/useReservations';
 import { countMyPendingWithdrawals } from '../withdrawals/withdrawalHelpers';
 import { useLotItems } from '../../hooks/useLotItems';
@@ -13,6 +14,7 @@ import { useLotItems } from '../../hooks/useLotItems';
 export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
   const visibleModules = getVisibleModules(user);
   const [openWithdrawalsCount, setOpenWithdrawalsCount] = useState(badges.withdrawals || 0);
+  const [pendingOvertime, setPendingOvertime] = useState(badges.overtime || 0);
   const hasLotModule = visibleModules.some((module) => module.requiresLotItems);
   const { hasLotItems, loading: lotsLoading } = useLotItems({ enabled: hasLotModule });
   const displayedModules = visibleModules.filter((module) => (
@@ -22,6 +24,7 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
   const userId = user?.id;
   const canDeclare = can(user, ABILITIES.WITHDRAWALS_DECLARE);
   const canSeeReservations = can(user, ABILITIES.RESERVATIONS_VIEW);
+  const canApproveOvertime = can(user, ABILITIES.OVERTIME_APPROVE);
   const todayReservations = useReservationsTodayCount(canSeeReservations);
 
   useEffect(() => {
@@ -44,6 +47,27 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
       mounted = false;
     };
   }, [userId, canDeclare, badges.withdrawals]);
+
+  useEffect(() => {
+    if (badges.overtime !== undefined) {
+      setPendingOvertime(badges.overtime);
+      return;
+    }
+    if (!canApproveOvertime) return;
+
+    let mounted = true;
+    pendingOvertimeCount()
+      .then((res) => {
+        if (!mounted || !res.ok) return;
+        const count = res.data?.count ?? res.count ?? 0;
+        setPendingOvertime(count);
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, [canApproveOvertime, badges.overtime]);
 
   if (displayedModules.length === 0) {
     return (
@@ -78,6 +102,8 @@ export default function ModuleGrid({ user, onSelectModule, badges = {} }) {
           badgeValue = openWithdrawalsCount;
         } else if (module.id === 'reservations') {
           badgeValue = todayReservations;
+        } else if (module.id === 'overtime') {
+          badgeValue = pendingOvertime;
         }
         const moduleWithBadge = badgeValue ? { ...module, badge: badgeValue } : module;
 

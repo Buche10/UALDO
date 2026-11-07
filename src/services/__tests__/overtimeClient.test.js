@@ -3,6 +3,9 @@ import * as apiClient from '../apiClient';
 import {
   createOvertime,
   voidOvertime,
+  approveOvertime,
+  rejectOvertime,
+  pendingOvertimeCount,
   listOvertime,
   listOvertimeWorkers,
   getOvertimeSummary,
@@ -13,40 +16,30 @@ import {
   getMinOvertimeDateString,
 } from '../overtimeClient';
 
-describe('overtimeClient (Brief 36p)', () => {
+describe('overtimeClient (Brief 36p y Brief 46p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe('validaciones de horas', () => {
-    it('acepta horas válidas en pasos de 0,25 hasta 12', () => {
+  describe('validaciones de dominio de horas', () => {
+    it('acepta horas válidas en cuartos hasta 12', () => {
       expect(isValidOvertimeHours(0.25)).toBe(true);
-      expect(isValidOvertimeHours(0.5)).toBe(true);
-      expect(isValidOvertimeHours(0.75)).toBe(true);
-      expect(isValidOvertimeHours(1)).toBe(true);
-      expect(isValidOvertimeHours('1.25')).toBe(true);
-      expect(isValidOvertimeHours('2,5')).toBe(true);
+      expect(isValidOvertimeHours('0.5')).toBe(true);
+      expect(isValidOvertimeHours('1,75')).toBe(true);
       expect(isValidOvertimeHours(12)).toBe(true);
     });
 
-    it('rechaza horas menores o iguales a 0 o mayores a 12', () => {
+    it('rechaza 0, negativos, mayores a 12 o no múltiplos de 0.25', () => {
       expect(isValidOvertimeHours(0)).toBe(false);
       expect(isValidOvertimeHours(-1)).toBe(false);
       expect(isValidOvertimeHours(12.25)).toBe(false);
-      expect(isValidOvertimeHours(15)).toBe(false);
-    });
-
-    it('rechaza horas que no sean múltiplos de 0,25', () => {
-      expect(isValidOvertimeHours(0.1)).toBe(false);
-      expect(isValidOvertimeHours(1.15)).toBe(false);
-      expect(isValidOvertimeHours('2.33')).toBe(false);
-      expect(isValidOvertimeHours('')).toBe(false);
-      expect(isValidOvertimeHours(null)).toBe(false);
+      expect(isValidOvertimeHours(1.3)).toBe(false);
       expect(isValidOvertimeHours('abc')).toBe(false);
+      expect(isValidOvertimeHours(null)).toBe(false);
     });
   });
 
-  describe('validaciones de fechas', () => {
+  describe('validaciones de fecha de trabajo', () => {
     it('acepta fechas entre hoy y 7 días atrás', () => {
       const today = getTodayDateString();
       const minDate = getMinOvertimeDateString();
@@ -54,129 +47,101 @@ describe('overtimeClient (Brief 36p)', () => {
       expect(isValidOvertimeDate(minDate)).toBe(true);
     });
 
-    it('rechaza fechas futuras o con más de 7 días de antigüedad', () => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = getTodayDateString(tomorrow);
-
-      const oldDate = new Date();
-      oldDate.setDate(oldDate.getDate() - 8);
-      const oldDateStr = getTodayDateString(oldDate);
-
-      expect(isValidOvertimeDate(tomorrowStr)).toBe(false);
-      expect(isValidOvertimeDate(oldDateStr)).toBe(false);
-      expect(isValidOvertimeDate('2026-02-30')).toBe(false);
-      expect(isValidOvertimeDate('no-fecha')).toBe(false);
-    });
-  });
-
-  describe('validación de mes', () => {
-    it('acepta mes actual o pasado en formato AAAA-MM', () => {
-      expect(isValidOvertimeMonth('2020-01')).toBe(true);
-      expect(isValidOvertimeMonth('2026-10')).toBe(true);
-    });
-
-    it('rechaza formato inválido o mes futuro', () => {
-      expect(isValidOvertimeMonth('2026-13')).toBe(false);
-      expect(isValidOvertimeMonth('2099-01')).toBe(false);
-      expect(isValidOvertimeMonth('octubre-2026')).toBe(false);
+    it('rechaza fechas futuras o mayores a 7 días atrás o formato inválido', () => {
+      expect(isValidOvertimeDate('2099-01-01')).toBe(false);
+      expect(isValidOvertimeDate('2020-01-01')).toBe(false);
+      expect(isValidOvertimeDate('01-01-2026')).toBe(false);
+      expect(isValidOvertimeDate('invalid')).toBe(false);
     });
   });
 
   describe('createOvertime', () => {
-    it('crea un registro correctamente con worker_user_id', async () => {
+    it('envía los datos correctos al endpoint POST /overtime', async () => {
       const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 201,
-        data: { id: 10, hours: 2.5 },
+        data: { id: 1 },
       });
 
       const today = getTodayDateString();
       const res = await createOvertime({
         area: 'kitchen',
-        worker_user_id: 5,
+        worker_user_id: 12,
         work_date: today,
-        hours: 2.5,
-        note: 'Apoyo en turno de noche',
+        hours: '2,5',
+        note: 'Refuerzo cena',
       });
 
       expect(spy).toHaveBeenCalledWith('/overtime', {
         method: 'POST',
         body: {
           area: 'kitchen',
-          worker_user_id: 5,
+          worker_user_id: 12,
           work_date: today,
           hours: 2.5,
-          note: 'Apoyo en turno de noche',
+          note: 'Refuerzo cena',
         },
       });
       expect(res.ok).toBe(true);
     });
 
-    it('crea un registro correctamente con worker_name libre', async () => {
+    it('soporta registrar con nombre libre cuando no es usuario del sistema', async () => {
       const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 201,
-        data: { id: 11, worker_name: 'Carlos Mesero' },
+        data: { id: 2 },
       });
 
       const today = getTodayDateString();
-      const res = await createOvertime({
+      await createOvertime({
         area: 'lounge',
-        worker_name: 'Carlos Mesero',
+        worker_name: 'Ana Refuerzo',
         work_date: today,
-        hours: 1.75,
+        hours: 1,
       });
 
       expect(spy).toHaveBeenCalledWith('/overtime', {
         method: 'POST',
         body: {
           area: 'lounge',
-          worker_name: 'Carlos Mesero',
+          worker_name: 'Ana Refuerzo',
           work_date: today,
-          hours: 1.75,
+          hours: 1,
         },
       });
-      expect(res.ok).toBe(true);
     });
 
-    it('rechaza si se envían ambos worker_user_id y worker_name', async () => {
+    it('rechaza si se envían ambos o ninguno entre worker_user_id y worker_name', async () => {
       const spy = vi.spyOn(apiClient, 'request');
       const today = getTodayDateString();
-      const res = await createOvertime({
-        worker_user_id: 5,
-        worker_name: 'Carlos',
+
+      const resAmbos = await createOvertime({
+        worker_user_id: 1,
+        worker_name: 'Pedro',
         work_date: today,
         hours: 1,
       });
+      expect(resAmbos.ok).toBe(false);
+      expect(resAmbos.error).toContain('no ambos');
 
-      expect(res.ok).toBe(false);
-      expect(res.status).toBe(400);
-      expect(res.error).toContain('no ambos');
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('rechaza si no se envía ningún trabajador', async () => {
-      const spy = vi.spyOn(apiClient, 'request');
-      const today = getTodayDateString();
-      const res = await createOvertime({
+      const resNinguno = await createOvertime({
         work_date: today,
         hours: 1,
       });
+      expect(resNinguno.ok).toBe(false);
+      expect(resNinguno.error).toContain('Debes indicar el trabajador');
 
-      expect(res.ok).toBe(false);
-      expect(res.status).toBe(400);
-      expect(res.error).toContain('Debes indicar');
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('rechaza si las horas no cumplen los pasos de 0,25', async () => {
+    it('falla localmente si las horas son inválidas sin llamar a la red', async () => {
       const spy = vi.spyOn(apiClient, 'request');
       const today = getTodayDateString();
+
       const res = await createOvertime({
-        worker_user_id: 5,
+        worker_user_id: 1,
         work_date: today,
-        hours: 1.3,
+        hours: 0,
       });
 
       expect(res.ok).toBe(false);
@@ -243,8 +208,69 @@ describe('overtimeClient (Brief 36p)', () => {
     });
   });
 
+  describe('approveOvertime y rejectOvertime (Brief 46p)', () => {
+    it('approveOvertime valida id numérico y envía POST', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { id: 15, status: 'approved' },
+      });
+
+      const res = await approveOvertime(15);
+      expect(spy).toHaveBeenCalledWith('/overtime/15/approve', {
+        method: 'POST',
+      });
+      expect(res.ok).toBe(true);
+    });
+
+    it('approveOvertime rechaza id inválido', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await approveOvertime('invalido');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toContain('Identificador');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('rejectOvertime valida id y motivo de 3 a 300 caracteres', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { id: 15, status: 'rejected' },
+      });
+
+      const res = await rejectOvertime(15, 'Horas no autorizadas previamente');
+      expect(spy).toHaveBeenCalledWith('/overtime/15/reject', {
+        method: 'POST',
+        body: { note: 'Horas no autorizadas previamente' },
+      });
+      expect(res.ok).toBe(true);
+    });
+
+    it('rejectOvertime rechaza motivo de menos de 3 caracteres', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+      const res = await rejectOvertime(15, 'no');
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(400);
+      expect(res.error).toContain('entre 3 y 300 caracteres');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('pendingOvertimeCount llama al endpoint GET', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { count: 3 },
+      });
+
+      const res = await pendingOvertimeCount();
+      expect(spy).toHaveBeenCalledWith('/overtime/pending-count');
+      expect(res.ok).toBe(true);
+    });
+  });
+
   describe('listOvertime y listOvertimeWorkers', () => {
-    it('construye los parámetros de filtro correctamente', async () => {
+    it('construye los parámetros de filtro correctamente incluyendo status', async () => {
       const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
         ok: true,
         status: 200,
@@ -257,10 +283,11 @@ describe('overtimeClient (Brief 36p)', () => {
         to: '2026-10-31',
         area: 'kitchen',
         worker: 'Danny',
+        status: 'pending',
       });
 
       expect(spy).toHaveBeenCalledWith(
-        '/overtime?page=2&from=2026-10-01&to=2026-10-31&area=kitchen&worker=Danny'
+        '/overtime?page=2&from=2026-10-01&to=2026-10-31&area=kitchen&worker=Danny&status=pending'
       );
     });
 

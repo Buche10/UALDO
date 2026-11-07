@@ -181,7 +181,7 @@ export async function voidOvertime(id, reason) {
 }
 
 /**
- * GET /api/v1/overtime?from=&to=&area=&worker=&page=
+ * GET /api/v1/overtime?from=&to=&area=&worker=&status=&page=
  */
 export async function listOvertime(filters = {}) {
   const params = new URLSearchParams();
@@ -200,6 +200,9 @@ export async function listOvertime(filters = {}) {
   }
   if (filters.worker && String(filters.worker).trim()) {
     params.set('worker', String(filters.worker).trim());
+  }
+  if (filters.status && (filters.status === 'pending' || filters.status === 'approved' || filters.status === 'rejected')) {
+    params.set('status', filters.status);
   }
 
   const qs = params.toString();
@@ -239,4 +242,57 @@ export async function getOvertimeSummary(month) {
     return { ...res, data: res.data.data };
   }
   return res;
+}
+
+/**
+ * GET /api/v1/overtime/pending-count
+ */
+export async function pendingOvertimeCount() {
+  return request('/overtime/pending-count');
+}
+
+/**
+ * POST /api/v1/overtime/{id}/approve
+ */
+export async function approveOvertime(id) {
+  const idStr = String(id ?? '').trim();
+  if (!ID_REGEX.test(idStr) || parseInt(idStr, 10) <= 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Identificador de registro inválido.',
+    };
+  }
+
+  return request(`/overtime/${idStr}/approve`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * POST /api/v1/overtime/{id}/reject
+ */
+export async function rejectOvertime(id, note) {
+  const idStr = String(id ?? '').trim();
+  if (!ID_REGEX.test(idStr) || parseInt(idStr, 10) <= 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Identificador de registro inválido.',
+    };
+  }
+
+  const trimmedNote = typeof note === 'string' ? note.trim() : '';
+  if (trimmedNote.length < 3 || trimmedNote.length > 300) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'El motivo de rechazo es obligatorio y debe tener entre 3 y 300 caracteres.',
+    };
+  }
+
+  return request(`/overtime/${idStr}/reject`, {
+    method: 'POST',
+    body: { note: trimmedNote },
+  });
 }

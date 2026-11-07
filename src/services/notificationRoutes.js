@@ -39,6 +39,7 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents', 'assets']);
 const ALLOWED_TABS = new Set(['catalog', 'catalogo', 'count', 'conteo', 'report', 'reporte']);
+const ALLOWED_OVERTIME_STATUSES = new Set(['pending', 'approved', 'rejected']);
 
 /**
  * Valida y filtra los parámetros de una acción de aviso.
@@ -66,6 +67,8 @@ export const sanitizeActionParams = (params) => {
         clean.subView = trimmed.toLowerCase() === 'retiros' ? 'withdrawals' : trimmed.toLowerCase();
       } else if (key === 'tab' && ALLOWED_TABS.has(trimmed.toLowerCase())) {
         clean.tab = trimmed.toLowerCase();
+      } else if (key === 'status' && ALLOWED_OVERTIME_STATUSES.has(trimmed.toLowerCase())) {
+        clean.status = trimmed.toLowerCase();
       }
     }
   }

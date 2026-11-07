@@ -28,7 +28,7 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('incidencias')).toBe(true);
       expect(ALLOWED_SCREENS.has('assets')).toBe(true);
       expect(ALLOWED_SCREENS.has('activos')).toBe(true);
-            expect(ALLOWED_SCREENS.has('reserva')).toBe(true);
+      expect(ALLOWED_SCREENS.has('reserva')).toBe(true);
       expect(ALLOWED_SCREENS.size).toBe(15);
     });
   });
@@ -63,6 +63,13 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ subView: 'incidents' })).toEqual({ subView: 'incidents' });
       expect(sanitizeActionParams({ subView: 'assets' })).toEqual({ subView: 'assets' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
+    });
+
+    it('allows valid overtime status in whitelist and ignores invalid status (Brief 46p)', () => {
+      expect(sanitizeActionParams({ status: 'pending' })).toEqual({ status: 'pending' });
+      expect(sanitizeActionParams({ status: 'approved' })).toEqual({ status: 'approved' });
+      expect(sanitizeActionParams({ status: 'rejected' })).toEqual({ status: 'rejected' });
+      expect(sanitizeActionParams({ status: 'malicious' })).toEqual({});
     });
 
     it('never allows arbitrary URLs or script injections', () => {
@@ -137,6 +144,19 @@ describe('notificationRoutes security and routing', () => {
         params: { mes: '2026-10' },
       });
       expect(resolveNotificationRoute('horas_extra')).toEqual({
+        tab: 'mas',
+        subView: 'overtime',
+        params: {},
+      });
+    });
+
+    it('resolves overtime with pending status and ignores invalid status (Brief 46p)', () => {
+      expect(resolveNotificationRoute('overtime', { status: 'pending' })).toEqual({
+        tab: 'mas',
+        subView: 'overtime',
+        params: { status: 'pending' },
+      });
+      expect(resolveNotificationRoute('horas_extra', { status: 'inyeccion_no_permitida' })).toEqual({
         tab: 'mas',
         subView: 'overtime',
         params: {},

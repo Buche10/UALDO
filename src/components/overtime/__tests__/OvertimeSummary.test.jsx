@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import OvertimeSummary from '../OvertimeSummary';
 import * as overtimeClient from '../../../services/overtimeClient';
 
-describe('OvertimeSummary (Brief 36p)', () => {
+describe('OvertimeSummary (Brief 36p y Brief 46p)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -13,6 +13,8 @@ describe('OvertimeSummary (Brief 36p)', () => {
     month: '2026-10',
     total_hours: 12.5,
     people: 2,
+    pending_count: 3,
+    pending_hours: 5.5,
     workers: [
       {
         worker_user_id: 12,
@@ -49,6 +51,17 @@ describe('OvertimeSummary (Brief 36p)', () => {
 
     expect(screen.getByText('12.5 h')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('muestra "Pendientes de aprobar: {n} registros, {h} h" si pending_count > 0', async () => {
+    vi.spyOn(overtimeClient, 'getOvertimeSummary').mockResolvedValue({
+      ok: true,
+      data: mockSummary,
+    });
+
+    render(<OvertimeSummary initialMonth="2026-10" />);
+
+    expect(await screen.findByText('Pendientes de aprobar: 3 registros, 5.5 h')).toBeInTheDocument();
   });
 
   it('al pulsar la tarjeta del trabajador se abre el desglose por día', async () => {
