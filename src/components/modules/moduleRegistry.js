@@ -11,6 +11,7 @@ import {
   Tags,
   CalendarDays,
   ShoppingCart,
+  Activity,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -118,6 +119,7 @@ export const MODULE_REGISTRY = [
       ABILITIES.OVERTIME_REGISTER_KITCHEN,
       ABILITIES.OVERTIME_REGISTER_LOUNGE,
       ABILITIES.OVERTIME_REPORT,
+      ABILITIES.OVERTIME_APPROVE,
     ],
     subView: 'overtime',
     roleRequiredLabel: 'jefe de cocina, salón, administración o dueño',
@@ -155,6 +157,15 @@ export const MODULE_REGISTRY = [
     subView: 'lots',
     requiresLotItems: true,
     roleRequiredLabel: 'personal de cocina, administración o dueño',
+  },
+  {
+    id: 'activity',
+    label: 'Actividad del equipo',
+    description: 'Quién hizo cada cambio',
+    icon: Activity,
+    permissions: [ABILITIES.AUDIT_VIEW],
+    subView: 'activity',
+    roleRequiredLabel: 'dueño o administración',
   },
 ];
 

@@ -13,6 +13,7 @@ import IncidentsView from '../incidents/IncidentsView';
 import AssetsView from '../assets/AssetsView';
 import LotsView from '../lots/LotsView';
 import ReservationsView from '../reservations/ReservationsView';
+import ActivityView from '../activity/ActivityView';
 import { can, ABILITIES } from '../../services/permissions';
 
 const renderPurchases = ({ user, onNavigate }) => (
@@ -74,6 +75,7 @@ const RENDERERS = {
     <OvertimeView
       user={user}
       initialMonth={negociosParams?.mes || negociosParams?.month}
+      initialStatus={negociosParams?.status}
       onBack={() => onNavigate('overview')}
     />
   ),
@@ -97,6 +99,12 @@ const RENDERERS = {
       canManage={can(user, ABILITIES.LOTS_MANAGE)}
       canSeeCosts={can(user, ABILITIES.INVENTORY_COSTS)}
       onBack={() => onNavigate('overview')}
+    />
+  ),
+  activity: ({ onNavigate }) => (
+    <ActivityView
+      onBack={() => onNavigate('overview')}
+      onNavigate={onNavigate}
     />
   ),
 };

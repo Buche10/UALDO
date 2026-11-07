@@ -128,8 +128,15 @@ export default function App() {
     setShowNotifications(false);
   };
 
-  const handleNegociosSubViewChange = (newSubView) => {
+  const handleNegociosSubViewChange = (newSubView, params = null) => {
     setNegociosSubView(newSubView);
+
+    if (params) {
+      navSequenceRef.current += 1;
+      setNegociosParams({ ...(params || {}), nav: navSequenceRef.current });
+      return;
+    }
+
     if (newSubView !== 'cashclose') {
       setNegociosParams(null);
     }

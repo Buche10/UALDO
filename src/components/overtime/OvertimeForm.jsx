@@ -67,7 +67,7 @@ export default function OvertimeForm({ user, onRegistered }) {
     setSubmitting(false);
 
     if (res.ok) {
-      setSuccess('Horas extra registradas correctamente.');
+      setSuccess('Quedó pendiente de aprobación del dueño.');
       setNote('');
       renewUuid();
       onRegistered?.(res.data);
@@ -106,7 +106,7 @@ export default function OvertimeForm({ user, onRegistered }) {
     setSubmitting(false);
 
     if (res.ok) {
-      setSuccess('Registro anulado y nuevas horas guardadas correctamente.');
+      setSuccess('Registro anulado y nuevas horas guardadas correctamente. Quedó pendiente de aprobación del dueño.');
       setNote('');
       renewUuid();
       onRegistered?.(res.data);

@@ -28,6 +28,7 @@ export const ABILITIES = Object.freeze({
   OVERTIME_REGISTER_KITCHEN: 'overtime.register.kitchen',
   OVERTIME_REGISTER_LOUNGE: 'overtime.register.lounge',
   OVERTIME_REPORT: 'overtime.report',
+  OVERTIME_APPROVE: 'overtime.approve',
   INCIDENTS_REPORT: 'incidents.report',
   INCIDENTS_MANAGE: 'incidents.manage',
   ASSETS_COUNT_KITCHEN: 'assets.count.kitchen',
@@ -37,6 +38,7 @@ export const ABILITIES = Object.freeze({
   RESERVATIONS_VIEW: 'reservations.view',
   RESERVATIONS_MANAGE: 'reservations.manage',
   LOTS_MANAGE: 'lots.manage',
+  AUDIT_VIEW: 'audit.view',
 });
 
 export const ROLES = Object.freeze({
