@@ -178,4 +178,33 @@ describe('TeamSection component (Brief 30p)', () => {
       expect(screen.getByText('El negocio debe tener al menos un dueño.')).toBeInTheDocument();
     });
   });
+
+  it('filtra por activas, desactivadas y todas (Brief 45p)', async () => {
+    const listSpy = vi.spyOn(teamClient, 'listTeam').mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        data: sampleMembers,
+        meta: { current_page: 1, last_page: 1 },
+      },
+    });
+
+    render(<TeamSection />);
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(1, 'activos');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Desactivadas' }));
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(1, 'inactivos');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Todas' }));
+
+    await waitFor(() => {
+      expect(listSpy).toHaveBeenCalledWith(1, 'todos');
+    });
+  });
 });

@@ -5,12 +5,13 @@ import AssistantChat from './components/assistant/AssistantChat';
 import MasView from './components/MasView';
 import SettingsView from './components/SettingsView';
 import LoginView from './components/LoginView';
+import ChangePasswordView from './components/ChangePasswordView';
 import NotificationsPanel from './components/notifications/NotificationsPanel';
 
 import { getSettings, saveSettings } from './services/storage';
 import { getRegisteredApps, saveRegisteredApps } from './services/appEcosystem';
-import { isAuthenticated, fetchMe, getUser } from './services/auth';
-import { UNAUTHORIZED_SESSION_MESSAGE } from './services/apiClient';
+import { isAuthenticated, fetchMe, getUser, logout } from './services/auth';
+import { UNAUTHORIZED_SESSION_MESSAGE, PASSWORD_CHANGE_REQUIRED_EVENT } from './services/apiClient';
 import { useUnreadCount } from './hooks/useUnreadCount';
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [authChecking, setAuthChecking] = useState(true);
   const [sessionNotice, setSessionNotice] = useState(null);
+  const [forcePasswordChange, setForcePasswordChange] = useState(false);
 
   const { unreadCount, refreshUnreadCount } = useUnreadCount({
     enabled: authenticated,
@@ -59,9 +61,15 @@ export default function App() {
       setSessionNotice(event?.detail?.message || UNAUTHORIZED_SESSION_MESSAGE);
     };
 
+    const handlePasswordChangeRequired = () => {
+      setForcePasswordChange(true);
+    };
+
     window.addEventListener('ualdo:unauthorized', handleUnauthorized);
+    window.addEventListener(PASSWORD_CHANGE_REQUIRED_EVENT, handlePasswordChangeRequired);
     return () => {
       window.removeEventListener('ualdo:unauthorized', handleUnauthorized);
+      window.removeEventListener(PASSWORD_CHANGE_REQUIRED_EVENT, handlePasswordChangeRequired);
     };
   }, []);
 
@@ -69,7 +77,29 @@ export default function App() {
     setUser(userData);
     setAuthenticated(true);
     setSessionNotice(null);
+    setForcePasswordChange(Boolean(userData?.must_change_password));
     refreshUnreadCount();
+  };
+
+  const handlePasswordChanged = async () => {
+    const refreshed = await fetchMe();
+    if (refreshed) {
+      setUser(refreshed);
+    } else {
+      setUser((prev) => (prev ? { ...prev, must_change_password: false } : prev));
+    }
+    setForcePasswordChange(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } finally {
+      setUser(null);
+      setAuthenticated(false);
+      setForcePasswordChange(false);
+      setSessionNotice(null);
+    }
   };
 
   const handleSaveSettings = (newSettings) => {
@@ -110,6 +140,17 @@ export default function App() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', color: 'var(--text-muted)', fontSize: '13px' }}>
         Iniciando UALDO Mobile...
       </div>
+    );
+  }
+
+  if (authenticated && (user?.must_change_password === true || forcePasswordChange)) {
+    return (
+      <ChangePasswordView
+        forced
+        fullScreen
+        onSuccess={handlePasswordChanged}
+        onLogout={handleSignOut}
+      />
     );
   }
 

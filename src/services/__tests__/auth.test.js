@@ -107,6 +107,18 @@ describe('auth service', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('No hay conexión con Ualdo');
     });
+
+    it('propaga el mensaje del motor cuando la cuenta está desactivada (403)', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        error: 'Tu cuenta está desactivada. Pide al dueño que la reactive.'
+      });
+
+      const result = await login('maria@doblefilo.ec', 'Temp1234');
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Tu cuenta está desactivada. Pide al dueño que la reactive.');
+    });
   });
 
   describe('logout and cleanup', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as apiClient from '../apiClient';
-import { listTeam, updateRole } from '../teamClient';
+import { listTeam, updateRole, createMember, deactivateMember, reactivateMember, resetMemberPassword } from '../teamClient';
 import { ROLES } from '../permissions';
 
 describe('teamClient service (Brief 30p)', () => {
@@ -59,7 +59,7 @@ describe('teamClient service (Brief 30p)', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('valida que el cargo pertenezca a la lista cerrada de siete roles', async () => {
+    it('valida que el cargo pertenezca a la lista cerrada de cargos', async () => {
       const spy = vi.spyOn(apiClient, 'request');
 
       const res = await updateRole(12, 'superadmin');
@@ -96,6 +96,115 @@ describe('teamClient service (Brief 30p)', () => {
       });
 
       const res = await updateRole(1, ROLES.ADMIN);
+      expect(res.ok).toBe(false);
+      expect(res.status).toBe(422);
+      expect(res.error).toBe('El negocio debe tener al menos un dueño.');
+    });
+  });
+
+  describe('listTeam con estado (Brief 45p)', () => {
+    it('añade estado activos, inactivos o todos a la consulta', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, status: 200, data: { data: [] } });
+
+      await listTeam(2, 'inactivos');
+      expect(spy).toHaveBeenCalledWith('/team?page=2&estado=inactivos');
+
+      await listTeam(1, 'todos');
+      expect(spy).toHaveBeenCalledWith('/team?page=1&estado=todos');
+    });
+
+    it('normaliza un estado desconocido a todos', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, status: 200, data: { data: [] } });
+
+      await listTeam(1, 'otro');
+      expect(spy).toHaveBeenCalledWith('/team?page=1&estado=todos');
+    });
+  });
+
+  describe('createMember (Brief 45p)', () => {
+    it('valida el nombre entre 2 y 80 caracteres', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+
+      const shortName = await createMember({ name: 'A', email: 'ana@rest.com', role: ROLES.LOUNGE_STAFF });
+      expect(shortName.ok).toBe(false);
+      expect(shortName.error).toContain('entre 2 y 80');
+
+      const longName = await createMember({ name: 'A'.repeat(81), email: 'ana@rest.com', role: ROLES.LOUNGE_STAFF });
+      expect(longName.ok).toBe(false);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('valida el correo y el cargo antes de enviar', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+
+      const badEmail = await createMember({ name: 'Ana', email: 'sin-arroba', role: ROLES.LOUNGE_STAFF });
+      expect(badEmail.ok).toBe(false);
+      expect(badEmail.error).toContain('correo');
+
+      const badRole = await createMember({ name: 'Ana', email: 'ana@rest.com', role: 'superadmin' });
+      expect(badRole.ok).toBe(false);
+      expect(badRole.error).toContain('Cargo inválido');
+      expect(badRole.error).not.toContain('siete');
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('envía POST /team con nombre y correo limpios', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: true,
+        status: 201,
+        data: { data: { id: 21, name: 'Ana' }, temporary_password: 'Temp1234' },
+      });
+
+      const res = await createMember({ name: '  Ana  ', email: ' ana@rest.com ', role: ROLES.LOUNGE_STAFF });
+      expect(spy).toHaveBeenCalledWith('/team', {
+        method: 'POST',
+        body: { name: 'Ana', email: 'ana@rest.com', role: ROLES.LOUNGE_STAFF },
+      });
+      expect(res.ok).toBe(true);
+      expect(res.data.temporary_password).toBe('Temp1234');
+    });
+  });
+
+  describe('acciones de cuenta (Brief 45p)', () => {
+    it('valida identificadores no numéricos sin llamar al motor', async () => {
+      const spy = vi.spyOn(apiClient, 'request');
+
+      const results = await Promise.all([
+        deactivateMember('abc'),
+        reactivateMember(''),
+        resetMemberPassword(null),
+      ]);
+
+      results.forEach((res) => {
+        expect(res.ok).toBe(false);
+        expect(res.status).toBe(400);
+        expect(res.error).toContain('Identificador de usuario inválido');
+      });
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('usa POST en las rutas de desactivar, reactivar y restablecer', async () => {
+      const spy = vi.spyOn(apiClient, 'request').mockResolvedValue({ ok: true, status: 200, data: { data: {} } });
+
+      await deactivateMember(15);
+      expect(spy).toHaveBeenCalledWith('/team/15/deactivate', { method: 'POST' });
+
+      await reactivateMember(15);
+      expect(spy).toHaveBeenCalledWith('/team/15/reactivate', { method: 'POST' });
+
+      await resetMemberPassword(15);
+      expect(spy).toHaveBeenCalledWith('/team/15/reset-password', { method: 'POST' });
+    });
+
+    it('propaga el 422 del último dueño tal cual', async () => {
+      vi.spyOn(apiClient, 'request').mockResolvedValue({
+        ok: false,
+        status: 422,
+        error: 'El negocio debe tener al menos un dueño.',
+        data: { message: 'El negocio debe tener al menos un dueño.' },
+      });
+
+      const res = await deactivateMember(1);
       expect(res.ok).toBe(false);
       expect(res.status).toBe(422);
       expect(res.error).toBe('El negocio debe tener al menos un dueño.');

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { UserCheck, ShieldAlert, Loader2 } from 'lucide-react';
+import { UserCheck, UserX, ShieldAlert, Loader2 } from 'lucide-react';
 import { updateRole } from '../../services/teamClient';
 import { ROLES, ROLE_LABELS, AREA_LABELS } from '../../services/permissions';
+import TeamMemberActions from './TeamMemberActions';
 
 const ROLE_OPTIONS = [
   { value: ROLES.OWNER, label: ROLE_LABELS.owner },
@@ -13,16 +14,26 @@ const ROLE_OPTIONS = [
   { value: ROLES.STAFF, label: ROLE_LABELS.staff },
 ];
 
-export default function TeamMemberRow({ member, onRoleUpdated }) {
+const BADGE_STYLE = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '2px 8px',
+  borderRadius: '9999px',
+  fontSize: '10px',
+  fontWeight: 600,
+};
+
+export default function TeamMemberRow({ member, onRoleUpdated, onMemberUpdated }) {
   const [pendingRole, setPendingRole] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [rowError, setRowError] = useState(null);
 
   const currentRole = member.role;
   const currentArea = member.area ? (AREA_LABELS[member.area] || member.area) : 'Todas las áreas';
+  const isActive = member.is_active !== false;
 
-  const handleSelectChange = (e) => {
-    const nextRole = e.target.value;
+  const handleSelectChange = (event) => {
+    const nextRole = event.target.value;
     setRowError(null);
     setPendingRole(nextRole !== currentRole ? nextRole : null);
   };
@@ -52,15 +63,27 @@ export default function TeamMemberRow({ member, onRoleUpdated }) {
   const pendingLabel = pendingRole ? (ROLE_LABELS[pendingRole] || pendingRole) : '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'var(--surface-soft)', border: '1px solid var(--border-glass)', opacity: isActive ? 1 : 0.85 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
-            <UserCheck size={18} aria-hidden="true" />
+            {isActive ? <UserCheck size={18} aria-hidden="true" /> : <UserX size={18} aria-hidden="true" />}
           </div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{member.name}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{member.email} · {currentArea}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+              {!isActive && (
+                <span style={{ ...BADGE_STYLE, background: 'var(--badge-inactive-bg)', color: 'var(--text-muted)' }}>
+                  Desactivada
+                </span>
+              )}
+              {member.must_change_password && (
+                <span style={{ ...BADGE_STYLE, background: 'var(--warning-soft)', color: 'var(--warning)' }}>
+                  Debe cambiar contraseña
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -78,6 +101,7 @@ export default function TeamMemberRow({ member, onRoleUpdated }) {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <TeamMemberActions member={member} onMemberUpdated={onMemberUpdated || onRoleUpdated} />
         </div>
       </div>
 
