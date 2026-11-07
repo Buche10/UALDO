@@ -1,6 +1,8 @@
 import { getSettings } from './storage';
 
 export const UNAUTHORIZED_SESSION_MESSAGE = 'Tu sesión terminó o tu cargo cambió. Inicia sesión otra vez.';
+export const PASSWORD_CHANGE_REQUIRED_EVENT = 'ualdo:password_change_required';
+export const PASSWORD_CHANGE_REQUIRED_MESSAGE = 'Cambia tu contraseña temporal para continuar.';
 
 export const getAuthToken = () => {
   try {
@@ -80,6 +82,14 @@ const handleUnauthorized = () => {
   }
 };
 
+const handlePasswordChangeRequired = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(PASSWORD_CHANGE_REQUIRED_EVENT, {
+      detail: { message: PASSWORD_CHANGE_REQUIRED_MESSAGE },
+    }));
+  }
+};
+
 const withAuthHeader = (headers = {}) => {
   const token = getAuthToken();
   if (!token) return { ...headers };
@@ -136,6 +146,16 @@ export const request = async (path, options = {}) => {
     } else {
       const text = await response.text();
       data = text ? { message: text } : null;
+    }
+
+    if (response.status === 403 && data?.code === 'password_change_required') {
+      handlePasswordChangeRequired();
+      return {
+        ok: false,
+        status: 403,
+        error: data?.message || PASSWORD_CHANGE_REQUIRED_MESSAGE,
+        data,
+      };
     }
 
     if (!response.ok) {
@@ -264,6 +284,16 @@ export const uploadFile = async (path, file, fieldName = 'file', options = {}) =
     } else {
       const text = await response.text();
       data = text ? { message: text } : null;
+    }
+
+    if (response.status === 403 && data?.code === 'password_change_required') {
+      handlePasswordChangeRequired();
+      return {
+        ok: false,
+        status: 403,
+        error: data?.message || PASSWORD_CHANGE_REQUIRED_MESSAGE,
+        data,
+      };
     }
 
     if (!response.ok) {

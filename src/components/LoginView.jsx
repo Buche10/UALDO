@@ -59,7 +59,7 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
         </div>
 
         {(error || notice) && (
-          <div style={{
+          <div role="alert" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
@@ -91,6 +91,7 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              autoComplete="email"
               style={{ fontSize: '14px', padding: '12px 14px' }}
             />
           </div>
@@ -108,6 +109,7 @@ export default function LoginView({ onLoginSuccess, notice = null }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              autoComplete="current-password"
               style={{ fontSize: '14px', padding: '12px 14px' }}
             />
           </div>

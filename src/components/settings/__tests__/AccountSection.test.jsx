@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AccountSection from '../AccountSection';
 import * as auth from '../../../services/auth';
+import * as accountClient from '../../../services/accountClient';
 
 describe('AccountSection (Brief 34bp_fix)', () => {
   const originalLocation = window.location;
@@ -108,5 +109,38 @@ describe('AccountSection (Brief 34bp_fix)', () => {
     await waitFor(() => {
       expect(window.location.reload).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('abre el cambio de contraseña para el usuario y lo cierra al cancelar', () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    vi.spyOn(auth, 'getUser').mockReturnValue({ name: 'Carlos Buch' });
+
+    render(<AccountSection />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar contraseña' }));
+
+    expect(screen.getByLabelText('Contraseña actual')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nueva contraseña')).toBeInTheDocument();
+    expect(screen.getByLabelText('Repite la nueva contraseña')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByLabelText('Contraseña actual')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+  });
+
+  it('muestra el aviso de contraseña actualizada tras guardar', async () => {
+    vi.spyOn(auth, 'isAuthenticated').mockReturnValue(true);
+    vi.spyOn(auth, 'getUser').mockReturnValue({ name: 'Carlos Buch' });
+    vi.spyOn(accountClient, 'changePassword').mockResolvedValue({ ok: true, status: 200, data: {} });
+
+    render(<AccountSection />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar contraseña' }));
+
+    fireEvent.change(screen.getByLabelText('Contraseña actual'), { target: { value: 'Temp1234' } });
+    fireEvent.change(screen.getByLabelText('Nueva contraseña'), { target: { value: 'Nueva1234' } });
+    fireEvent.change(screen.getByLabelText('Repite la nueva contraseña'), { target: { value: 'Nueva1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
+
+    expect(await screen.findByText('Contraseña actualizada.')).toBeInTheDocument();
   });
 });

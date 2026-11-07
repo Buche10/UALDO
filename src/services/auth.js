@@ -55,6 +55,13 @@ export const login = async (email, password, deviceName = 'Mobile PWA') => {
     };
   }
 
+  if (result.status === 403 && result.error) {
+    return {
+      success: false,
+      error: result.error
+    };
+  }
+
   return {
     success: false,
     error: 'Correo o contraseña incorrectos.'
