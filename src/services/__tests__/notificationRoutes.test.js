@@ -29,7 +29,8 @@ describe('notificationRoutes security and routing', () => {
       expect(ALLOWED_SCREENS.has('assets')).toBe(true);
       expect(ALLOWED_SCREENS.has('activos')).toBe(true);
       expect(ALLOWED_SCREENS.has('reserva')).toBe(true);
-      expect(ALLOWED_SCREENS.size).toBe(15);
+      expect(ALLOWED_SCREENS.has('mesas_abiertas')).toBe(true);
+      expect(ALLOWED_SCREENS.size).toBe(16);
     });
   });
 
@@ -62,6 +63,7 @@ describe('notificationRoutes security and routing', () => {
       expect(sanitizeActionParams({ subView: 'overtime' })).toEqual({ subView: 'overtime' });
       expect(sanitizeActionParams({ subView: 'incidents' })).toEqual({ subView: 'incidents' });
       expect(sanitizeActionParams({ subView: 'assets' })).toEqual({ subView: 'assets' });
+      expect(sanitizeActionParams({ subView: 'open_tables' })).toEqual({ subView: 'open_tables' });
       expect(sanitizeActionParams({ subView: 'evil_subview' })).toEqual({});
     });
 
@@ -222,6 +224,56 @@ describe('notificationRoutes security and routing', () => {
         tab: 'mas',
         subView: 'cash_declaration',
         params: { date: '2026-11-02' },
+      });
+    });
+
+    it('resolves mesas_abiertas with fecha to the cash close detail for owner or admin (Brief 47p)', () => {
+      const ownerUser = {
+        id: 1,
+        capabilities: { abilities: [ABILITIES.CASH_REVIEW, ABILITIES.CASH_REGISTER] },
+      };
+
+      expect(resolveNotificationRoute('mesas_abiertas', { fecha: '2026-11-09' }, ownerUser)).toEqual({
+        tab: 'mas',
+        subView: 'cashclose',
+        params: { fecha: '2026-11-09' },
+      });
+    });
+
+    it('resolves mesas_abiertas to the open tables screen for a lounge head (Brief 47p)', () => {
+      const loungeHeadUser = {
+        id: 5,
+        capabilities: { abilities: [ABILITIES.CASH_REGISTER, ABILITIES.TABLES_VIEW] },
+      };
+
+      expect(resolveNotificationRoute('mesas_abiertas', { fecha: '2026-11-09' }, loungeHeadUser)).toEqual({
+        tab: 'mas',
+        subView: 'open_tables',
+        params: { fecha: '2026-11-09' },
+      });
+    });
+
+    it('ignores parameters that sanitizeActionParams does not allow (Brief 47p)', () => {
+      const ownerUser = {
+        id: 1,
+        capabilities: { abilities: [ABILITIES.CASH_REVIEW] },
+      };
+
+      const route = resolveNotificationRoute(
+        'mesas_abiertas',
+        {
+          fecha: '09-11-2026',
+          url: 'https://evil.example',
+          redirect: 'javascript:alert(1)',
+          id: 'abc',
+        },
+        ownerUser
+      );
+
+      expect(route).toEqual({
+        tab: 'mas',
+        subView: 'open_tables',
+        params: {},
       });
     });
 

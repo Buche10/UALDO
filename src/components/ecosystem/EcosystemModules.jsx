@@ -6,6 +6,7 @@ import CashCloseView from '../CashCloseView';
 import CashDeclarationView from '../cashclose/declaration/CashDeclarationView';
 import SupplyRequestsView from '../supplyRequests/SupplyRequestsView';
 import SalesView from '../sales/SalesView';
+import OpenTablesView from '../opentables/OpenTablesView';
 import DailyCloseView from '../inventory/dailyClose/DailyCloseView';
 import WithdrawalsView from '../withdrawals/WithdrawalsView';
 import OvertimeView from '../overtime/OvertimeView';
@@ -49,6 +50,7 @@ const RENDERERS = {
     />
   ),
   ventas: ({ onNavigate }) => <SalesView onBack={() => onNavigate('overview')} />,
+  open_tables: ({ onNavigate }) => <OpenTablesView onBack={() => onNavigate('overview')} />,
   cash_declaration: ({ negociosParams, onNavigate }) => (
     <CashDeclarationView
       fechaInicial={negociosParams?.fecha || negociosParams?.date}
