@@ -59,6 +59,8 @@ export default defineConfig({
         'src/components/settings/ReservationSettingsForm.jsx',
         'src/components/supplyRequests/**',
         'src/components/sales/**',
+        'src/services/openTablesClient.js',
+        'src/components/opentables/**',
         'src/components/runfood/**',
         'src/components/common/**',
         'src/components/EcosystemView.jsx',

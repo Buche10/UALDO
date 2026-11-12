@@ -13,7 +13,7 @@ import {
 describe('permissions service (Brief 30p)', () => {
   it('contiene los 33 permisos congelados del Brief 30', () => {
     expect(Object.isFrozen(ABILITIES)).toBe(true);
-    expect(Object.keys(ABILITIES)).toHaveLength(35);
+    expect(Object.keys(ABILITIES)).toHaveLength(36);
     expect(ABILITIES.TEAM_MANAGE).toBe('team.manage');
     expect(ABILITIES.SETTINGS_MANAGE).toBe('settings.manage');
     expect(ABILITIES.SUPPLY_REQUEST).toBe('supply.request');
@@ -35,6 +35,7 @@ describe('permissions service (Brief 30p)', () => {
     expect(ABILITIES.CASH_REGISTER).toBe('cash.register');
     expect(ABILITIES.CASH_REVIEW).toBe('cash.review');
     expect(ABILITIES.SALES_TOTALS).toBe('sales.totals');
+    expect(ABILITIES.TABLES_VIEW).toBe('tables.view');
     expect(ABILITIES.OVERTIME_REGISTER_KITCHEN).toBe('overtime.register.kitchen');
     expect(ABILITIES.OVERTIME_REGISTER_LOUNGE).toBe('overtime.register.lounge');
     expect(ABILITIES.OVERTIME_REPORT).toBe('overtime.report');

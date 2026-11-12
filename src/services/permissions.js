@@ -25,6 +25,7 @@ export const ABILITIES = Object.freeze({
   CASH_REGISTER: 'cash.register',
   CASH_REVIEW: 'cash.review',
   SALES_TOTALS: 'sales.totals',
+  TABLES_VIEW: 'tables.view',
   OVERTIME_REGISTER_KITCHEN: 'overtime.register.kitchen',
   OVERTIME_REGISTER_LOUNGE: 'overtime.register.lounge',
   OVERTIME_REPORT: 'overtime.report',

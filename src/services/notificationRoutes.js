@@ -16,6 +16,8 @@ import { getStoredUser } from './apiClient';
  * - 'assets' o 'activos': pestaña Más, subvista Vajilla y equipos (Brief 38p).
  * - 'reserva': pestaña Más, subvista Reservas; con `params.id` abre el
  *   detalle y sin id abre la agenda del día (Brief 39p).
+ * - 'mesas_abiertas': pestaña Más. Con `cash.review` y `params.fecha` abre el
+ *   detalle del cierre de esa fecha; en otro caso abre Mesas abiertas (Brief 47p).
  */
 export const ALLOWED_SCREENS = new Set([
   'inventario',
@@ -33,11 +35,12 @@ export const ALLOWED_SCREENS = new Set([
   'assets',
   'activos',
   'reserva',
+  'mesas_abiertas',
 ]);
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
-const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents', 'assets']);
+const ALLOWED_SUBVIEWS = new Set(['daily_close', 'inventory', 'withdrawals', 'retiros', 'overtime', 'incidents', 'assets', 'open_tables']);
 const ALLOWED_TABS = new Set(['catalog', 'catalogo', 'count', 'conteo', 'report', 'reporte']);
 const ALLOWED_OVERTIME_STATUSES = new Set(['pending', 'approved', 'rejected']);
 
@@ -142,6 +145,17 @@ export const resolveNotificationRoute = (action, explicitParams = {}, userContex
       return { tab: 'mas', subView: 'assets', params: cleanParams };
     case 'reserva':
       return { tab: 'mas', subView: 'reservations', params: cleanParams };
+
+    case 'mesas_abiertas': {
+      const activeUser = userContext || getStoredUser();
+      const fecha = cleanParams.fecha;
+      // Solo se acepta `fecha`; cualquier otro parámetro se descarta.
+      const params = typeof fecha === 'string' ? { fecha } : {};
+      if (can(activeUser, ABILITIES.CASH_REVIEW) && typeof fecha === 'string') {
+        return { tab: 'mas', subView: 'cashclose', params };
+      }
+      return { tab: 'mas', subView: 'open_tables', params };
+    }
 
     case 'pedido':
     case 'pedidos':

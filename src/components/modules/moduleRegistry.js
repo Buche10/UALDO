@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ShoppingCart,
   Activity,
+  Armchair,
 } from 'lucide-react';
 import { ABILITIES, canAny } from '../../services/permissions';
 
@@ -84,6 +85,15 @@ export const MODULE_REGISTRY = [
     permissions: [ABILITIES.SALES_TOTALS],
     subView: 'ventas',
     roleRequiredLabel: 'dueño o administración',
+  },
+  {
+    id: 'open_tables',
+    label: 'Mesas abiertas',
+    description: 'Mesas sin cobrar en RunFood, desde qué hora y con qué mesero.',
+    icon: Armchair,
+    permissions: [ABILITIES.TABLES_VIEW],
+    subView: 'open_tables',
+    roleRequiredLabel: 'jefe de salón, administración o dueño',
   },
   {
     id: 'daily_close',

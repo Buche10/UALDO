@@ -6,6 +6,7 @@ import CashCloseReviewForm from './CashCloseReviewForm';
 import CashCloseClosedActions from './CashCloseClosedActions';
 import CashMovementsPanel from './CashMovementsPanel';
 import CashCloseManualForm from './CashCloseManualForm';
+import CashCloseOpenTables from './CashCloseOpenTables';
 
 const SUGGESTED_ACTIONS = {
   sin_conteo_efectivo: 'Cuenta el efectivo y cárgalo abajo.',
@@ -138,6 +139,8 @@ export default function CashCloseDetail({ fecha, onBack, onOpenConfig }) {
         {cierre.forced_reason && <span style={{ fontSize: '12px', color: 'var(--warning)' }}>Forzado: {cierre.forced_reason}</span>}
         {cierre.sheets_status && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)' }}><FileSpreadsheet size={13} /><span>Sheets: {cierre.sheets_status}</span></div>}
       </div>
+
+      <CashCloseOpenTables bloque={cierre.mesas_abiertas_al_cierre} />
 
       {Array.isArray(cierre.discrepancias) && cierre.discrepancias.length > 0 && (
         <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid var(--border-warning)' }}>
